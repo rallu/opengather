@@ -1,0 +1,346 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Instance {
+  id             String               @id @db.Text
+  slug           String               @unique @db.Text
+  name           String               @db.Text
+  description    String?              @db.Text
+  visibilityMode String               @map("visibility_mode") @db.Text
+  approvalMode   String               @map("approval_mode") @db.Text
+  aiSettings     Json                 @map("ai_settings")
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime             @default(now()) @map("updated_at") @db.Timestamptz(6)
+  appConfigs     AppConfig[]
+  memberships    InstanceMembership[]
+  posts          Post[]
+  agents         Agent[]
+  groups         CommunityGroup[]
+  events         CommunityEvent[]
+  modelProviders ModelProviderConfig[]
+  authProviders  InstanceAuthProvider[]
+  processingJobs ProcessingJob[]
+  auditLogs      AuditLog[]
+
+  @@map("instance")
+  @@index([slug], map: "idx_instance_slug")
+}
+
+model AppConfig {
+  id         String    @id @db.Text
+  isSetup    Boolean   @default(false) @map("is_setup")
+  instanceId String?   @map("instance_id") @db.Text
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  instance   Instance? @relation(fields: [instanceId], references: [id], onDelete: SetNull)
+
+  @@map("app_config")
+  @@index([instanceId], map: "idx_app_config_instance_id")
+}
+
+model InstanceMembership {
+  id             String   @id @db.Text
+  instanceId     String   @map("instance_id") @db.Text
+  principalId    String   @map("principal_id") @db.Text
+  principalType  String   @map("principal_type") @db.Text
+  role           String   @db.Text
+  approvalStatus String   @map("approval_status") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  instance       Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, principalId, principalType])
+  @@map("instance_membership")
+  @@index([instanceId], map: "idx_membership_instance_id")
+}
+
+model Post {
+  id               String    @id @db.Text
+  instanceId       String    @map("instance_id") @db.Text
+  authorId         String    @map("author_id") @db.Text
+  authorType       String    @map("author_type") @db.Text
+  groupId          String?   @map("group_id") @db.Text
+  parentPostId     String?   @map("parent_post_id") @db.Text
+  contentType      String    @map("content_type") @db.Text
+  bodyText         String?   @map("body_text") @db.Text
+  moderationStatus String    @map("moderation_status") @db.Text
+  hiddenAt         DateTime? @map("hidden_at") @db.Timestamptz(6)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  instance         Instance  @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  group            CommunityGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  parentPost       Post?     @relation("PostToPost", fields: [parentPostId], references: [id], onDelete: Cascade)
+  childPosts       Post[]    @relation("PostToPost")
+  embeddings       PostEmbedding[]
+  attachments      PostAttachment[]
+  moderationDecisions ModerationDecision[]
+  processingJobs   ProcessingJob[]
+
+  @@map("post")
+  @@index([instanceId], map: "idx_post_instance_id")
+  @@index([parentPostId], map: "idx_post_parent_post_id")
+  @@index([groupId], map: "idx_post_group_id")
+  @@index([deletedAt], map: "idx_post_deleted_at")
+}
+
+model PostEmbedding {
+  id         String   @id @db.Text
+  postId     String   @map("post_id") @db.Text
+  sourceType String   @map("source_type") @db.Text
+  modelName  String   @map("model_name") @db.Text
+  vector     Float[]
+  summaryText String? @map("summary_text") @db.Text
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_embedding")
+  @@index([postId], map: "idx_embedding_post_id")
+}
+
+model ModerationDecision {
+  id        String   @id @db.Text
+  postId    String   @map("post_id") @db.Text
+  status    String   @db.Text
+  reason    String?  @db.Text
+  actorType String   @map("actor_type") @db.Text
+  actorId   String?  @map("actor_id") @db.Text
+  modelName String?  @map("model_name") @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("moderation_decision")
+  @@index([postId], map: "idx_moderation_post_id")
+}
+
+model NotificationOutbox {
+  id                 String   @id @db.Text
+  recipientHubUserId String   @map("recipient_hub_user_id") @db.Text
+  type               String   @db.Text
+  title              String   @db.Text
+  body               String   @db.Text
+  targetUrl          String?  @map("target_url") @db.Text
+  instanceBaseUrl    String   @map("instance_base_url") @db.Text
+  status             String   @db.Text
+  attempts           Int
+  maxAttempts        Int      @map("max_attempts")
+  lastError          String?  @map("last_error") @db.Text
+  nextAttemptAt      DateTime @map("next_attempt_at") @db.Timestamptz(6)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("notification_outbox")
+  @@index([status, nextAttemptAt], map: "idx_notification_outbox_status_next_attempt")
+}
+
+model Agent {
+  id         String   @id @db.Text
+  instanceId String   @map("instance_id") @db.Text
+  displayName String  @map("display_name") @db.Text
+  description String? @db.Text
+  role       String   @db.Text
+  apiKeyHash String   @map("api_key_hash") @unique(map: "idx_agent_api_key_hash") @db.Text
+  isEnabled  Boolean  @default(true) @map("is_enabled")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  instance   Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("agent")
+  @@index([instanceId], map: "idx_agent_instance_id")
+}
+
+model CommunityGroup {
+  id             String           @id @db.Text
+  instanceId     String           @map("instance_id") @db.Text
+  name           String           @db.Text
+  description    String?          @db.Text
+  visibilityMode String           @map("visibility_mode") @db.Text
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  instance       Instance         @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  events         CommunityEvent[]
+  posts          Post[]
+
+  @@map("community_group")
+  @@index([instanceId], map: "idx_group_instance_id")
+}
+
+model CommunityEvent {
+  id             String               @id @db.Text
+  instanceId     String               @map("instance_id") @db.Text
+  groupId        String?              @map("group_id") @db.Text
+  title          String               @db.Text
+  description    String?              @db.Text
+  startsAt       DateTime             @map("starts_at") @db.Timestamptz(6)
+  endsAt         DateTime?            @map("ends_at") @db.Timestamptz(6)
+  visibilityMode String               @map("visibility_mode") @db.Text
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime             @default(now()) @map("updated_at") @db.Timestamptz(6)
+  instance       Instance             @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  group          CommunityGroup?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  participations EventParticipation[]
+
+  @@map("community_event")
+  @@index([instanceId], map: "idx_event_instance_id")
+}
+
+model EventParticipation {
+  id            String        @id @db.Text
+  eventId       String        @map("event_id") @db.Text
+  principalId   String        @map("principal_id") @db.Text
+  principalType String        @map("principal_type") @db.Text
+  status        String        @db.Text
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
+  event         CommunityEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("event_participation")
+  @@index([eventId], map: "idx_event_participation_event_id")
+  @@unique([eventId, principalId, principalType])
+}
+
+model PostAttachment {
+  id        String   @id @db.Text
+  postId    String   @map("post_id") @db.Text
+  url       String   @db.Text
+  mimeType  String?  @map("mime_type") @db.Text
+  title     String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_attachment")
+  @@index([postId], map: "idx_attachment_post_id")
+}
+
+model ModelProviderConfig {
+  id           String   @id @db.Text
+  instanceId   String   @map("instance_id") @db.Text
+  providerType String   @map("provider_type") @db.Text
+  modelUrl     String   @map("model_url") @db.Text
+  modelName    String   @map("model_name") @db.Text
+  apiKeyRef    String   @map("api_key_ref") @db.Text
+  isEnabled    Boolean  @default(true) @map("is_enabled")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  instance     Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("model_provider_config")
+  @@unique([instanceId, providerType])
+}
+
+model InstanceAuthProvider {
+  id         String   @id @db.Text
+  instanceId String   @map("instance_id") @db.Text
+  providerId String   @map("provider_id") @db.Text
+  isEnabled  Boolean  @default(true) @map("is_enabled")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  instance   Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("instance_auth_provider")
+  @@unique([instanceId, providerId])
+}
+
+model ProcessingJob {
+  id          String   @id @db.Text
+  instanceId  String   @map("instance_id") @db.Text
+  postId      String?  @map("post_id") @db.Text
+  jobType     String   @map("job_type") @db.Text
+  status      String   @db.Text
+  payload     Json
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(5) @map("max_attempts")
+  lastError   String?  @map("last_error") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  instance    Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  post        Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("processing_job")
+  @@index([instanceId], map: "idx_processing_job_instance_id")
+  @@index([status], map: "idx_processing_job_status")
+}
+
+model AuditLog {
+  id           String    @id @db.Text
+  instanceId   String?   @map("instance_id") @db.Text
+  actorId      String?   @map("actor_id") @db.Text
+  actorType    String    @map("actor_type") @db.Text
+  action       String    @db.Text
+  resourceType String?   @map("resource_type") @db.Text
+  resourceId   String?   @map("resource_id") @db.Text
+  payload      Json?
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  instance     Instance? @relation(fields: [instanceId], references: [id], onDelete: SetNull)
+
+  @@map("audit_log")
+  @@index([instanceId], map: "idx_audit_log_instance_id")
+  @@index([createdAt], map: "idx_audit_log_created_at")
+}
+
+model AuthUser {
+  id            String        @id @db.Text
+  name          String        @db.Text
+  email         String        @unique @db.Text
+  emailVerified Boolean       @default(false) @map("emailVerified")
+  image         String?       @db.Text
+  createdAt     DateTime      @default(now()) @map("createdAt") @db.Timestamptz(6)
+  updatedAt     DateTime      @default(now()) @map("updatedAt") @db.Timestamptz(6)
+  sessions      AuthSession[]
+  accounts      AuthAccount[]
+
+  @@map("user")
+}
+
+model AuthSession {
+  id        String    @id @db.Text
+  expiresAt DateTime  @map("expiresAt") @db.Timestamptz(6)
+  token     String    @unique @db.Text
+  createdAt DateTime  @default(now()) @map("createdAt") @db.Timestamptz(6)
+  updatedAt DateTime  @map("updatedAt") @db.Timestamptz(6)
+  ipAddress String?   @map("ipAddress") @db.Text
+  userAgent String?   @map("userAgent") @db.Text
+  userId    String    @map("userId") @db.Text
+  user      AuthUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+  @@index([userId], map: "session_userId_idx")
+}
+
+model AuthAccount {
+  id                    String    @id @db.Text
+  accountId             String    @map("accountId") @db.Text
+  providerId            String    @map("providerId") @db.Text
+  userId                String    @map("userId") @db.Text
+  accessToken           String?   @map("accessToken") @db.Text
+  refreshToken          String?   @map("refreshToken") @db.Text
+  idToken               String?   @map("idToken") @db.Text
+  accessTokenExpiresAt  DateTime? @map("accessTokenExpiresAt") @db.Timestamptz(6)
+  refreshTokenExpiresAt DateTime? @map("refreshTokenExpiresAt") @db.Timestamptz(6)
+  scope                 String?   @db.Text
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now()) @map("createdAt") @db.Timestamptz(6)
+  updatedAt             DateTime  @map("updatedAt") @db.Timestamptz(6)
+  user                  AuthUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("account")
+  @@index([userId], map: "account_userId_idx")
+}
+
+model AuthVerification {
+  id         String   @id @db.Text
+  identifier String   @db.Text
+  value      String   @db.Text
+  expiresAt  DateTime @map("expiresAt") @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @map("createdAt") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @map("updatedAt") @db.Timestamptz(6)
+
+  @@map("verification")
+  @@index([identifier], map: "verification_identifier_idx")
+}

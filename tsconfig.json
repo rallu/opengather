@@ -1,0 +1,25 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["DOM", "DOM.Iterable", "ES2022"],
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"jsx": "react-jsx",
+		"strict": true,
+		"skipLibCheck": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"allowImportingTsExtensions": true,
+		"noEmit": true,
+		"types": ["@cloudflare/workers-types", "vite/client", "node"],
+		"baseUrl": ".",
+		"paths": {
+			"~/*": ["./app/*"]
+		}
+	},
+	"include": ["app/**/*", "workers/**/*", "*.d.ts"],
+	"exclude": ["node_modules", "build"]
+}
