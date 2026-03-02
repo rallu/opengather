@@ -19,6 +19,11 @@ export type ConfigValueByKey = {
 		agentUsageEnabled: boolean;
 		moderationEnabled: boolean;
 	};
+	error_monitoring_enabled: boolean;
+	error_monitoring_webhook_url: string;
+	error_monitoring_alert_webhook_url: string;
+	error_monitoring_sample_rate: number;
+	error_monitoring_dedupe_window_seconds: number;
 };
 
 export type ConfigKey = keyof ConfigValueByKey;
@@ -45,6 +50,10 @@ function parseString(raw: unknown, fallback = ""): string {
 
 function parseBoolean(raw: unknown, fallback = false): boolean {
 	return typeof raw === "boolean" ? raw : fallback;
+}
+
+function parseNumber(raw: unknown, fallback = 0): number {
+	return typeof raw === "number" && Number.isFinite(raw) ? raw : fallback;
 }
 
 function parseVisibilityMode(raw: unknown): ConfigValueByKey["server_visibility_mode"] {
@@ -156,6 +165,26 @@ export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
 			moderationEnabled: true,
 		},
 		parse: (raw) => parseAiSettings(raw),
+	},
+	error_monitoring_enabled: {
+		defaultValue: true,
+		parse: (raw) => parseBoolean(raw, true),
+	},
+	error_monitoring_webhook_url: {
+		defaultValue: "",
+		parse: (raw) => parseString(raw),
+	},
+	error_monitoring_alert_webhook_url: {
+		defaultValue: "",
+		parse: (raw) => parseString(raw),
+	},
+	error_monitoring_sample_rate: {
+		defaultValue: 1,
+		parse: (raw) => parseNumber(raw, 1),
+	},
+	error_monitoring_dedupe_window_seconds: {
+		defaultValue: 60,
+		parse: (raw) => parseNumber(raw, 60),
 	},
 };
 

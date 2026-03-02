@@ -8,6 +8,8 @@ import {
 } from "./config.service.server";
 import { getDb } from "./db.server";
 import { linkHubInstanceForUser } from "./hub.service.server";
+import { captureMonitoredError } from "./error-monitoring.server";
+import { logError } from "./logger.server";
 
 export const SINGLETON_INSTANCE_ID = "singleton";
 
@@ -121,7 +123,19 @@ export async function initializeSetup(params: {
 			},
 		});
 	} catch (error) {
-		console.error("initializeSetup: signUpEmail failed", error);
+		void captureMonitoredError({
+			event: "setup.admin_signup_failed",
+			error,
+			tags: {
+				component: "setup.service",
+			},
+		});
+		logError({
+			event: "setup.admin_signup_failed",
+			data: {
+				error: error instanceof Error ? error.message : "unknown error",
+			},
+		});
 		const message = error instanceof Error ? error.message : "unknown error";
 		return { ok: false, error: `Failed to create admin user: ${message}` };
 	}
@@ -169,7 +183,19 @@ export async function initializeSetup(params: {
 			});
 		}
 	} catch (error) {
-		console.error("initializeSetup: transaction failed", error);
+		void captureMonitoredError({
+			event: "setup.persist_failed",
+			error,
+			tags: {
+				component: "setup.service",
+			},
+		});
+		logError({
+			event: "setup.persist_failed",
+			data: {
+				error: error instanceof Error ? error.message : "unknown error",
+			},
+		});
 		const message = error instanceof Error ? error.message : "unknown error";
 		return { ok: false, error: `Failed to persist setup: ${message}` };
 	}

@@ -2,43 +2,24 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Form, Link, useActionData, useLoaderData } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
+import { writeAuditLogSafely } from "~/server/audit-log.service.server";
 import { getServerConfig, setConfig } from "~/server/config.service.server";
-import { getDb } from "~/server/db.server";
 import {
 	getHubIdentityForLocalUser,
 	linkHubInstanceForUser,
 	registerInstanceWithHub,
 	unregisterInstanceFromHub,
 } from "~/server/hub.service.server";
-import { getAuthUserFromRequest } from "~/server/session.server";
-import { getSetupStatus } from "~/server/setup.service.server";
+import { getViewerContext } from "~/server/viewer-role.service.server";
 
 async function resolveViewerRole(params: {
 	request: Request;
 }): Promise<{
-	authUser: Awaited<ReturnType<typeof getAuthUserFromRequest>>;
-	setup: Awaited<ReturnType<typeof getSetupStatus>>;
+	authUser: Awaited<ReturnType<typeof getViewerContext>>["authUser"];
+	setup: Awaited<ReturnType<typeof getViewerContext>>["setup"];
 	viewerRole: "guest" | "member" | "moderator" | "admin";
 }> {
-	const authUser = await getAuthUserFromRequest({ request: params.request });
-	const setup = await getSetupStatus();
-
-	let viewerRole: "guest" | "member" | "moderator" | "admin" = "guest";
-	if (authUser && setup.isSetup && setup.instance) {
-		const membership = await getDb().instanceMembership.findFirst({
-			where: {
-				instanceId: setup.instance.id,
-				principalId: authUser.id,
-				principalType: "user",
-			},
-			select: { role: true, approvalStatus: true },
-		});
-		if (membership && membership.approvalStatus === "approved") {
-			viewerRole = membership.role as "member" | "moderator" | "admin";
-		}
-	}
-
-	return { authUser, setup, viewerRole };
+	return getViewerContext({ request: params.request });
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -75,6 +56,22 @@ export async function action({ request }: ActionFunctionArgs) {
 				setConfig("hub_instance_name", instanceName),
 				setConfig("hub_instance_base_url", appOrigin),
 			]);
+			await writeAuditLogSafely({
+				action: "server_settings.hub_connection_updated",
+				actor: {
+					type: "user",
+					id: authUser.id,
+				},
+				resourceType: "server_settings",
+				resourceId: "hub_connection",
+				request,
+				payload: {
+					hubEnabled: true,
+					instanceName,
+					instanceBaseUrl: appOrigin,
+					outcome: "success",
+				},
+			});
 		} else {
 			await unregisterInstanceFromHub({
 				instanceBaseUrl: currentConfig.hubInstanceBaseUrl || appOrigin,
@@ -87,6 +84,21 @@ export async function action({ request }: ActionFunctionArgs) {
 				setConfig("hub_redirect_uri", ""),
 				setConfig("hub_instance_base_url", ""),
 			]);
+			await writeAuditLogSafely({
+				action: "server_settings.hub_connection_updated",
+				actor: {
+					type: "user",
+					id: authUser.id,
+				},
+				resourceType: "server_settings",
+				resourceId: "hub_connection",
+				request,
+				payload: {
+					hubEnabled: false,
+					instanceBaseUrl: currentConfig.hubInstanceBaseUrl || appOrigin,
+					outcome: "success",
+				},
+			});
 		}
 
 		if (hubEnabled) {
@@ -283,6 +295,23 @@ export default function ServerSettingsPage() {
 					) : null}
 					<Button type="submit">Save</Button>
 				</Form>
+			</section>
+
+			<section className="rounded-md border border-border p-4">
+				<h2 className="mb-3 text-base font-semibold">Audit Logs</h2>
+				<p className="mb-3 text-sm text-muted-foreground">
+					Review security-sensitive admin actions and request context.
+				</p>
+				<div className="flex flex-wrap gap-2">
+					<Button variant="outline" asChild>
+						<Link to="/audit-logs">Open Audit Logs</Link>
+					</Button>
+					<Button variant="outline" asChild>
+						<Link to="/debug/error-monitoring" prefetch="intent">
+							Send Test Error Event
+						</Link>
+					</Button>
+				</div>
 			</section>
 		</AppShell>
 	);

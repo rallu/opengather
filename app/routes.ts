@@ -26,6 +26,14 @@ const routes: RouteConfig = [
 		file: "routes/api-auth.ts",
 	},
 	{
+		path: "/metrics",
+		file: "routes/metrics.tsx",
+	},
+	{
+		path: "/debug/error-monitoring",
+		file: "routes/debug-error-monitoring.tsx",
+	},
+	{
 		path: "/setup",
 		file: "routes/setup.tsx",
 	},
@@ -56,6 +64,10 @@ const routes: RouteConfig = [
 	{
 		path: "/server-settings",
 		file: "routes/server-settings.tsx",
+	},
+	{
+		path: "/audit-logs",
+		file: "routes/audit-logs.tsx",
 	},
 ];
 

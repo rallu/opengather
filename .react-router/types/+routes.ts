@@ -31,6 +31,12 @@ type Pages = {
       "*": string;
     };
   };
+  "/metrics": {
+    params: {};
+  };
+  "/debug/error-monitoring": {
+    params: {};
+  };
   "/setup": {
     params: {};
   };
@@ -55,12 +61,15 @@ type Pages = {
   "/server-settings": {
     params: {};
   };
+  "/audit-logs": {
+    params: {};
+  };
 };
 
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/setup" | "/database-required" | "/feed" | "/community" | "/profile" | "/notifications" | "/settings" | "/server-settings";
+    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/metrics" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/feed" | "/community" | "/profile" | "/notifications" | "/settings" | "/server-settings" | "/audit-logs";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -85,6 +94,14 @@ type RouteFiles = {
   "routes/api-auth.ts": {
     id: "routes/api-auth";
     page: "/api/auth/*";
+  };
+  "routes/metrics.tsx": {
+    id: "routes/metrics";
+    page: "/metrics";
+  };
+  "routes/debug-error-monitoring.tsx": {
+    id: "routes/debug-error-monitoring";
+    page: "/debug/error-monitoring";
   };
   "routes/setup.tsx": {
     id: "routes/setup";
@@ -118,6 +135,10 @@ type RouteFiles = {
     id: "routes/server-settings";
     page: "/server-settings";
   };
+  "routes/audit-logs.tsx": {
+    id: "routes/audit-logs";
+    page: "/audit-logs";
+  };
 };
 
 type RouteModules = {
@@ -128,6 +149,8 @@ type RouteModules = {
   "routes/hub-login": typeof import("./app/routes/hub-login.tsx");
   "routes/hub-callback": typeof import("./app/routes/hub-callback.tsx");
   "routes/api-auth": typeof import("./app/routes/api-auth.ts");
+  "routes/metrics": typeof import("./app/routes/metrics.tsx");
+  "routes/debug-error-monitoring": typeof import("./app/routes/debug-error-monitoring.tsx");
   "routes/setup": typeof import("./app/routes/setup.tsx");
   "routes/database-required": typeof import("./app/routes/database-required.tsx");
   "routes/feed": typeof import("./app/routes/feed.tsx");
@@ -136,4 +159,5 @@ type RouteModules = {
   "routes/notifications": typeof import("./app/routes/notifications.tsx");
   "routes/settings": typeof import("./app/routes/settings.tsx");
   "routes/server-settings": typeof import("./app/routes/server-settings.tsx");
+  "routes/audit-logs": typeof import("./app/routes/audit-logs.tsx");
 };

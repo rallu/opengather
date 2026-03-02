@@ -7,8 +7,10 @@ import {
 	useNavigation,
 } from "react-router";
 import { Button } from "~/components/ui/button";
+import { captureMonitoredError } from "~/server/error-monitoring.server";
 import { hasDatabaseConfig } from "~/server/env.server";
 import { registerInstanceWithHub } from "~/server/hub.service.server";
+import { buildRequestContext, getRequestId, logError } from "~/server/logger.server";
 import { getSetupStatus, initializeSetup } from "~/server/setup.service.server";
 
 export async function loader() {
@@ -28,6 +30,7 @@ export async function loader() {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+	const requestId = getRequestId(request);
 	if (!hasDatabaseConfig()) {
 		return redirect("/database-required");
 	}
@@ -102,7 +105,18 @@ export async function action({ request }: ActionFunctionArgs) {
 
 		return redirect("/");
 	} catch (error) {
-		console.error("setup action failed", error);
+		void captureMonitoredError({
+			event: "setup.action.failed",
+			error,
+			request,
+		});
+		logError({
+			event: "setup.action.failed",
+			data: {
+				...buildRequestContext({ request, requestId }),
+				error: error instanceof Error ? error.message : "unknown error",
+			},
+		});
 		const message = error instanceof Error ? error.message : "unknown error";
 		return { error: `Setup failed: ${message}` };
 	}

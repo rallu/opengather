@@ -59,7 +59,7 @@ function createAuth(params: {
 									clientSecret: params.hub.clientSecret,
 									scopes: ["openid", "profile", "email", "offline_access"],
 									redirectURI: `${params.betterAuthUrl}/api/auth/oauth2/callback/hub`,
-									pkce: false,
+									pkce: true,
 								},
 							],
 						}),

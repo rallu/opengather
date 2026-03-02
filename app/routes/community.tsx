@@ -7,6 +7,7 @@ import {
 } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
+import { writeAuditLogSafely } from "~/server/audit-log.service.server";
 import {
 	type CommunityUser,
 	createPost,
@@ -14,6 +15,20 @@ import {
 	moderatePost,
 	softDeletePost,
 } from "~/server/community.service.server";
+import { captureMonitoredError } from "~/server/error-monitoring.server";
+import {
+	buildRateLimitHeaders,
+	checkRateLimit,
+	getRequestIp,
+} from "~/server/rate-limit.server";
+import {
+	buildRequestContext,
+	getRequestId,
+	logError,
+	logInfo,
+	logWarn,
+} from "~/server/logger.server";
+import { recordPostMetric } from "~/server/metrics.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 
 function toCommunityUser(params: {
@@ -56,21 +71,80 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+	const startedAt = Date.now();
+	const requestId = getRequestId(request);
 	const formData = await request.formData();
 	const actionType = String(formData.get("_action") ?? "");
 
 	try {
 		const authUser = await getAuthUserFromRequest({ request });
+		const requestContext = buildRequestContext({
+			request,
+			requestId,
+			userId: authUser?.id,
+		});
 		const user = toCommunityUser({ authUser });
 
 		if (actionType === "post") {
+			const actorKey = authUser?.id
+				? `user:${authUser.id}`
+				: `ip:${getRequestIp(request)}`;
+			const rateLimitResult = checkRateLimit({
+				bucket: "community:post",
+				key: actorKey,
+				limit: 20,
+				windowMs: 60_000,
+			});
+			if (!rateLimitResult.allowed) {
+				recordPostMetric({ outcome: "rate_limited" });
+				logWarn({
+					event: "community.post.rate_limited",
+					data: {
+						...requestContext,
+						actionType,
+						actorKey,
+						retryAfterSeconds: rateLimitResult.retryAfterSeconds,
+					},
+				});
+				return new Response(
+					JSON.stringify({ error: "Too many posts. Please retry shortly." }),
+					{
+						status: 429,
+						headers: {
+							"Content-Type": "application/json",
+							"X-Request-Id": requestId,
+							...buildRateLimitHeaders({ result: rateLimitResult }),
+						},
+					},
+				);
+			}
+
 			const text = String(formData.get("bodyText") ?? "");
 			const parentPostId =
 				String(formData.get("parentPostId") ?? "").trim() || undefined;
 			const result = await createPost({ user, text, parentPostId });
 			if (!result.ok) {
+				recordPostMetric({ outcome: "rejected" });
+				logWarn({
+					event: "community.post.rejected",
+					data: {
+						...requestContext,
+						actionType,
+						error: result.error,
+					},
+				});
 				return { error: result.error };
 			}
+			logInfo({
+				event: "community.post.created",
+				data: {
+					...requestContext,
+					actionType,
+					durationMs: Date.now() - startedAt,
+					isReply: Boolean(parentPostId),
+				},
+			});
+			recordPostMetric({ outcome: "created" });
 			return { ok: true };
 		}
 
@@ -85,6 +159,21 @@ export async function action({ request }: ActionFunctionArgs) {
 			if (!result.ok) {
 				return { error: result.error };
 			}
+			await writeAuditLogSafely({
+				action: "post.moderate",
+				actor: {
+					type: "user",
+					id: authUser?.id,
+				},
+				resourceType: "post",
+				resourceId: postId,
+				request,
+				payload: {
+					status,
+					hide,
+					outcome: "success",
+				},
+			});
 			return { ok: true };
 		}
 
@@ -94,11 +183,43 @@ export async function action({ request }: ActionFunctionArgs) {
 			if (!result.ok) {
 				return { error: result.error };
 			}
+			await writeAuditLogSafely({
+				action: "post.delete",
+				actor: {
+					type: "user",
+					id: authUser?.id,
+				},
+				resourceType: "post",
+				resourceId: postId,
+				request,
+				payload: {
+					outcome: "success",
+				},
+			});
 			return { ok: true };
 		}
 
 		return { error: "Unsupported action" };
-	} catch {
+	} catch (error) {
+		void captureMonitoredError({
+			event: "community.action.failed",
+			error,
+			request,
+			tags: {
+				actionType,
+			},
+		});
+		recordPostMetric({ outcome: "failed" });
+		logError({
+			event: "community.action.failed",
+			data: {
+				requestId,
+				actionType,
+				method: request.method,
+				path: new URL(request.url).pathname,
+				durationMs: Date.now() - startedAt,
+			},
+		});
 		return { error: "Request failed" };
 	}
 }
