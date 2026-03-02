@@ -9,6 +9,7 @@ import { getSetupStatus } from "./setup.service.server";
 
 export type CommunityUser = {
 	id: string;
+	hubUserId?: string;
 	role: "admin" | "member" | "moderator";
 };
 
@@ -355,7 +356,7 @@ export async function createPost(params: {
 		data: {
 			id: randomUUID(),
 			instanceId: status.instance.id,
-			authorId: params.user.id,
+			authorId: params.user.hubUserId ?? params.user.id,
 			authorType: "user",
 			groupId: null,
 			parentPostId: params.parentPostId ?? null,
@@ -401,24 +402,33 @@ export async function createPost(params: {
 	const notifiedHubUsers = new Set<string>();
 	if (mentionEmails.length > 0) {
 		const mentionedUsers = await db.$queryRaw<
-			Array<{ id: string; email: string }>
+			Array<{ local_id: string; hub_user_id: string | null; email: string }>
 		>(
-			Prisma.sql`SELECT id, email FROM "user" WHERE email IN (${Prisma.join(mentionEmails)})`,
+			Prisma.sql`SELECT u.id AS local_id,
+				a."accountId" AS hub_user_id,
+				u.email
+			FROM "user" u
+			LEFT JOIN "account" a ON a."userId" = u.id AND a."providerId" = 'hub'
+			WHERE u.email IN (${Prisma.join(mentionEmails)})`,
 		);
 
 		for (const user of mentionedUsers) {
-			if (user.id === params.user.id) {
+			const resolvedHubUserId = user.hub_user_id ?? user.local_id;
+			if (
+				user.local_id === params.user.id ||
+				resolvedHubUserId === (params.user.hubUserId ?? params.user.id)
+			) {
 				continue;
 			}
-			notifiedHubUsers.add(user.id);
+			notifiedHubUsers.add(resolvedHubUserId);
 			await db.notificationOutbox.create({
 				data: {
 					id: randomUUID(),
-					recipientHubUserId: user.id,
+					recipientHubUserId: resolvedHubUserId,
 					type: "mention",
 					title: "You were mentioned in a post",
 					body: text,
-					targetUrl: `/community#post-${created.id}`,
+					targetUrl: `/feed#post-${created.id}`,
 					instanceBaseUrl: getServerEnv().HUB_INSTANCE_BASE_URL,
 					status: "pending",
 					attempts: 0,
@@ -438,7 +448,8 @@ export async function createPost(params: {
 			select: { authorId: true },
 		});
 
-		if (parent && parent.authorId !== params.user.id) {
+		const postingAuthorId = params.user.hubUserId ?? params.user.id;
+		if (parent && parent.authorId !== postingAuthorId) {
 			if (!notifiedHubUsers.has(parent.authorId)) {
 				await db.notificationOutbox.create({
 					data: {
@@ -447,7 +458,7 @@ export async function createPost(params: {
 						type: "reply",
 						title: "New reply to your post",
 						body: text,
-						targetUrl: `/community#post-${created.id}`,
+						targetUrl: `/feed#post-${created.id}`,
 						instanceBaseUrl: getServerEnv().HUB_INSTANCE_BASE_URL,
 						status: "pending",
 						attempts: 0,

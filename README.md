@@ -45,7 +45,11 @@ Test runtime rule:
 - `/register` - Sign up page
 - `/setup` - First-run single-tenant setup wizard
   - includes initial admin account creation
-- `/community` - MVP text posts, replies, semantic search, moderation controls
+- `/feed` - Default server feed (posts, replies, semantic search, moderation controls)
+- `/community` - Legacy alias to `/feed`
+- `/profile` - Signed-in profile activity feed (posts and actions)
+- `/settings` - Personal profile/account settings
+- `/server-settings` - Server-level settings for admins
 - `/auth/hub/login` - Start Hub OIDC login
 - `/auth/hub/callback` - Hub OIDC callback handler
 

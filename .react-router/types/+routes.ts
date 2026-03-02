@@ -34,7 +34,19 @@ type Pages = {
   "/setup": {
     params: {};
   };
+  "/feed": {
+    params: {};
+  };
   "/community": {
+    params: {};
+  };
+  "/profile": {
+    params: {};
+  };
+  "/settings": {
+    params: {};
+  };
+  "/server-settings": {
     params: {};
   };
 };
@@ -42,7 +54,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/setup" | "/community";
+    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/setup" | "/feed" | "/community" | "/profile" | "/settings" | "/server-settings";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -72,9 +84,25 @@ type RouteFiles = {
     id: "routes/setup";
     page: "/setup";
   };
+  "routes/feed.tsx": {
+    id: "routes/feed";
+    page: "/feed";
+  };
   "routes/community.tsx": {
     id: "routes/community";
     page: "/community";
+  };
+  "routes/profile.tsx": {
+    id: "routes/profile";
+    page: "/profile";
+  };
+  "routes/settings.tsx": {
+    id: "routes/settings";
+    page: "/settings";
+  };
+  "routes/server-settings.tsx": {
+    id: "routes/server-settings";
+    page: "/server-settings";
   };
 };
 
@@ -87,5 +115,9 @@ type RouteModules = {
   "routes/hub-callback": typeof import("./app/routes/hub-callback.tsx");
   "routes/api-auth": typeof import("./app/routes/api-auth.ts");
   "routes/setup": typeof import("./app/routes/setup.tsx");
+  "routes/feed": typeof import("./app/routes/feed.tsx");
   "routes/community": typeof import("./app/routes/community.tsx");
+  "routes/profile": typeof import("./app/routes/profile.tsx");
+  "routes/settings": typeof import("./app/routes/settings.tsx");
+  "routes/server-settings": typeof import("./app/routes/server-settings.tsx");
 };

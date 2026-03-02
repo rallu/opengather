@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { genericOAuth } from "better-auth/plugins/generic-oauth";
 import { getDb } from "./db.server";
 import { getServerEnv, hasDatabaseConfig } from "./env.server";
 
@@ -25,6 +26,25 @@ function createBetterAuth() {
 							clientSecret: env.GOOGLE_CLIENT_SECRET,
 						},
 					},
+				}
+			: {}),
+		...(env.HUB_CLIENT_ID && env.HUB_CLIENT_SECRET
+			? {
+					plugins: [
+						genericOAuth({
+							config: [
+								{
+									providerId: "hub",
+									discoveryUrl: env.HUB_OIDC_DISCOVERY_URL,
+									clientId: env.HUB_CLIENT_ID,
+									clientSecret: env.HUB_CLIENT_SECRET,
+									scopes: ["openid", "profile", "email", "offline_access"],
+									redirectURI: `${env.BETTER_AUTH_URL}/api/auth/oauth2/callback/hub`,
+									pkce: false,
+								},
+							],
+						}),
+					],
 				}
 			: {}),
 		emailAndPassword: {

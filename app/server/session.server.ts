@@ -1,4 +1,8 @@
 import { getBetterAuth } from "./auth.server";
+import {
+	getHubIdentityForLocalUser,
+	linkHubInstanceForUser,
+} from "./hub.service.server";
 
 export function parseCookieHeader(params: {
 	cookieHeader: string | null;
@@ -23,6 +27,7 @@ export async function getAuthUserFromRequest(params: {
 	request: Request;
 }): Promise<{
 	id: string;
+	hubUserId?: string;
 	name: string;
 	email: string;
 } | null> {
@@ -34,8 +39,20 @@ export async function getAuthUserFromRequest(params: {
 		if (!session?.user?.id) {
 			return null;
 		}
+
+		const hubIdentity = await getHubIdentityForLocalUser({
+			localUserId: session.user.id,
+		});
+		if (hubIdentity?.hubAccessToken && hubIdentity.hubUserId) {
+			await linkHubInstanceForUser({
+				hubAccessToken: hubIdentity.hubAccessToken,
+				hubUserId: hubIdentity.hubUserId,
+			});
+		}
+
 		return {
 			id: session.user.id,
+			hubUserId: hubIdentity?.hubUserId,
 			name: session.user.name,
 			email: session.user.email,
 		};

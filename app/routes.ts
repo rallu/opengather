@@ -30,8 +30,24 @@ const routes: RouteConfig = [
 		file: "routes/setup.tsx",
 	},
 	{
+		path: "/feed",
+		file: "routes/feed.tsx",
+	},
+	{
 		path: "/community",
 		file: "routes/community.tsx",
+	},
+	{
+		path: "/profile",
+		file: "routes/profile.tsx",
+	},
+	{
+		path: "/settings",
+		file: "routes/settings.tsx",
+	},
+	{
+		path: "/server-settings",
+		file: "routes/server-settings.tsx",
 	},
 ];
 

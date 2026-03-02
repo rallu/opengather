@@ -14,6 +14,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 	const env = getServerEnv();
 	return {
+		hubAuthEnabled: Boolean(env.HUB_CLIENT_ID && env.HUB_CLIENT_SECRET),
 		googleAuthEnabled: Boolean(
 			env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET,
 		),
@@ -21,7 +22,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export default function Register() {
-	const { googleAuthEnabled } = useLoaderData<typeof loader>();
+	const { googleAuthEnabled, hubAuthEnabled } = useLoaderData<typeof loader>();
 	const navigate = useNavigate();
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
@@ -29,6 +30,8 @@ export default function Register() {
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [socialLoading, setSocialLoading] = useState(false);
+	const [hubLoading, setHubLoading] = useState(false);
+	const isAnyLoading = loading || socialLoading || hubLoading;
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -51,6 +54,35 @@ export default function Register() {
 			setError("An unexpected error occurred");
 		} finally {
 			setLoading(false);
+		}
+	};
+
+	const handleHubRegister = async () => {
+		if (!hubAuthEnabled || typeof window === "undefined") return;
+
+		setError("");
+		setHubLoading(true);
+
+		try {
+			const result = await signIn.oauth2({
+				providerId: "hub",
+				callbackURL: `${window.location.origin}/`,
+			});
+
+			if (result.error) {
+				throw new Error(result.error.message || "Hub signup failed");
+			}
+
+			const redirectUrl = result.data?.url;
+			if (!redirectUrl) {
+				throw new Error("Missing Hub redirect URL");
+			}
+
+			window.location.href = redirectUrl;
+		} catch (err) {
+			const message = err instanceof Error ? err.message : "Hub signup failed";
+			setError(message);
+			setHubLoading(false);
 		}
 	};
 
@@ -94,12 +126,41 @@ export default function Register() {
 					</p>
 				</div>
 
-				<form onSubmit={handleSubmit} className="space-y-4">
-					{error && (
-						<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-							{error}
+				{error && (
+					<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+						{error}
+					</div>
+				)}
+
+				{hubAuthEnabled ? (
+					<section className="space-y-3 rounded-lg border bg-muted/40 p-4">
+						<div>
+							<p className="text-sm font-semibold">Recommended</p>
+							<p className="text-sm text-muted-foreground">
+								Create or access your account through Hub first.
+							</p>
 						</div>
-					)}
+						<Button
+							type="button"
+							className="h-11 w-full"
+							disabled={isAnyLoading}
+							onClick={handleHubRegister}
+						>
+							{hubLoading ? "Redirecting..." : "Continue with Hub"}
+						</Button>
+					</section>
+				) : null}
+
+				<div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
+					<div className="h-px flex-1 bg-border" />
+					<span>Other sign up methods</span>
+					<div className="h-px flex-1 bg-border" />
+				</div>
+
+				<form onSubmit={handleSubmit} className="space-y-4">
+					<p className="text-sm text-muted-foreground">
+						Create a local account with email and password.
+					</p>
 
 					<div className="space-y-2">
 						<label htmlFor="name" className="text-sm font-medium">
@@ -147,7 +208,7 @@ export default function Register() {
 						/>
 					</div>
 
-					<Button type="submit" className="w-full" disabled={loading}>
+					<Button type="submit" className="w-full" disabled={isAnyLoading}>
 						{loading ? "Creating account..." : "Sign Up"}
 					</Button>
 
@@ -156,7 +217,7 @@ export default function Register() {
 							type="button"
 							variant="outline"
 							className="w-full"
-							disabled={loading || socialLoading}
+							disabled={isAnyLoading}
 							onClick={handleGoogleRegister}
 						>
 							{socialLoading ? "Redirecting..." : "Continue with Google"}

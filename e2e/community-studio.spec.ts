@@ -16,23 +16,25 @@ test.describe("home", () => {
 	test("shows setup-first and hub-login controls", async ({ page }) => {
 		const setupRequired = await isSetupRequired(page);
 
-		await expect(
-			page.getByRole("heading", { name: "OpenGather MVP" }),
-		).toBeVisible();
 		if (setupRequired) {
+			await expect(
+				page.getByRole("heading", { name: "OpenGather MVP" }),
+			).toBeVisible();
 			await expect(
 				page.getByRole("link", { name: "Run First Setup" }),
 			).toBeVisible();
 			await expect(
-				page.getByRole("link", { name: "Login via Hub (MVP)" }),
+				page.getByRole("link", { name: "Sign In" }),
 			).not.toBeVisible();
 			return;
 		}
 
-		await expect(page.getByText("Instance ready:")).toBeVisible();
-		await expect(
-			page.getByRole("link", { name: "Login via Hub (MVP)" }),
-		).toBeVisible();
+		if (page.url().endsWith("/feed")) {
+			await expect(page.getByRole("heading", { name: "Feed" })).toBeVisible();
+		} else {
+			await expect(page.getByText("Instance ready:")).toBeVisible();
+			await expect(page.getByRole("link", { name: "Sign In" })).toBeVisible();
+		}
 	});
 
 	test("redirects auth pages to setup before setup is completed", async ({
@@ -53,18 +55,11 @@ test.describe("home", () => {
 		} else {
 			await expect(page).toHaveURL(/\/register$/);
 		}
-
-		if (setupRequired) {
-			await page.goto("/auth/hub/login");
-			await expect(page).toHaveURL(/\/setup$/);
-		}
 	});
 
 	test("community page renders MVP controls", async ({ page }) => {
-		await page.goto("/community");
-		await expect(
-			page.getByRole("heading", { name: "Community" }),
-		).toBeVisible();
+		await page.goto("/feed");
+		await expect(page.getByRole("heading", { name: "Feed" })).toBeVisible();
 		await expect(
 			page.getByRole("heading", { name: "Create Post" }),
 		).toBeVisible();

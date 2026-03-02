@@ -131,7 +131,7 @@ export default function SetupWizard() {
 				<p className="text-muted-foreground">
 					{activeStep === "database"
 						? "Step 1: configure DATABASE_URL"
-						: "Step 2: configure your single-tenant community instance."}
+						: "Step 2: configure your single-server feed settings."}
 				</p>
 			</div>
 
@@ -175,7 +175,7 @@ export default function SetupWizard() {
 						<input type="hidden" name="_action" value="initialize" />
 						<div className="space-y-2">
 							<label htmlFor="setup-name" className="text-sm font-medium">
-								Instance name
+								Server name
 							</label>
 							<input
 								id="setup-name"

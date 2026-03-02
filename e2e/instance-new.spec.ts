@@ -2,6 +2,17 @@ import { expect, test } from "@playwright/test";
 
 test.describe.configure({ mode: "serial" });
 
+async function expectConfiguredLanding(
+	page: import("@playwright/test").Page,
+): Promise<void> {
+	if (page.url().endsWith("/feed")) {
+		await expect(page.getByRole("heading", { name: "Feed" })).toBeVisible();
+		return;
+	}
+
+	await expect(page.getByText("Instance ready:")).toBeVisible();
+}
+
 async function isSetupRequired(
 	page: import("@playwright/test").Page,
 ): Promise<boolean> {
@@ -48,8 +59,8 @@ test.describe("setup wizard", () => {
 		}
 
 		await page.goto("/setup");
-		await expect(page).toHaveURL(/\/$/);
-		await expect(page.getByText("Instance ready:")).toBeVisible();
+		await expect(page).toHaveURL(/\/$|\/feed$/);
+		await expectConfiguredLanding(page);
 	});
 
 	test("renders setup controls and defaults", async ({ page }) => {
@@ -86,13 +97,14 @@ test.describe("setup wizard", () => {
 		const setupRequired = await moveToInstanceStep(page);
 		if (!setupRequired) {
 			await page.goto("/");
-			await expect(page.getByText("Instance ready:")).toBeVisible();
-			await expect(
-				page.getByRole("link", { name: "Login via Hub (MVP)" }),
-			).toBeVisible();
+			await expectConfiguredLanding(page);
 			await expect(
 				page.getByRole("link", { name: "Run First Setup" }),
 			).not.toBeVisible();
+			await page.getByRole("link", { name: "Sign In" }).click();
+			await expect(
+				page.getByRole("heading", { name: "Sign In" }),
+			).toBeVisible();
 			return;
 		}
 
@@ -104,16 +116,13 @@ test.describe("setup wizard", () => {
 		await page.locator("#setup-admin-password").fill("admin-pass-123");
 		await page.getByRole("button", { name: "Initialize Instance" }).click();
 
-		await expect(page).toHaveURL(/\/$/);
-		await expect(page.getByText("Instance ready:")).toBeVisible();
-		await expect(
-			page.getByRole("link", { name: "Login via Hub (MVP)" }),
-		).toBeVisible();
+		await expect(page).toHaveURL(/\/$|\/feed$/);
+		await expectConfiguredLanding(page);
 		await expect(
 			page.getByRole("link", { name: "Run First Setup" }),
 		).not.toBeVisible();
-		await expect(page.getByRole("link", { name: "Sign In" })).toBeVisible();
-		await expect(page.getByRole("link", { name: "Sign Up" })).toBeVisible();
+		await page.goto("/login");
+		await expect(page.getByRole("heading", { name: "Sign In" })).toBeVisible();
 	});
 
 	test("keeps google auth hidden when not configured", async ({ page }) => {
@@ -132,17 +141,15 @@ test.describe("setup wizard", () => {
 		page,
 	}) => {
 		await page.goto("/setup");
-		await expect(page).toHaveURL(/\/$/);
-		await expect(page.getByText("Instance ready:")).toBeVisible();
+		await expect(page).toHaveURL(/\/$|\/feed$/);
+		await expectConfiguredLanding(page);
 	});
 
 	test("community no longer shows setup error after setup", async ({
 		page,
 	}) => {
-		await page.goto("/community");
-		await expect(
-			page.getByRole("heading", { name: "Community" }),
-		).toBeVisible();
+		await page.goto("/feed");
+		await expect(page.getByRole("heading", { name: "Feed" })).toBeVisible();
 		await expect(page.getByText("Setup is not completed.")).not.toBeVisible();
 	});
 });

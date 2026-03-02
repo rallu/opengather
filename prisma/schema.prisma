@@ -284,7 +284,7 @@ model AuditLog {
   @@index([createdAt], map: "idx_audit_log_created_at")
 }
 
-model AuthUser {
+model User {
   id            String        @id @db.Text
   name          String        @db.Text
   email         String        @unique @db.Text
@@ -292,13 +292,13 @@ model AuthUser {
   image         String?       @db.Text
   createdAt     DateTime      @default(now()) @map("createdAt") @db.Timestamptz(6)
   updatedAt     DateTime      @default(now()) @map("updatedAt") @db.Timestamptz(6)
-  sessions      AuthSession[]
-  accounts      AuthAccount[]
+  sessions      Session[]
+  accounts      Account[]
 
   @@map("user")
 }
 
-model AuthSession {
+model Session {
   id        String    @id @db.Text
   expiresAt DateTime  @map("expiresAt") @db.Timestamptz(6)
   token     String    @unique @db.Text
@@ -307,13 +307,13 @@ model AuthSession {
   ipAddress String?   @map("ipAddress") @db.Text
   userAgent String?   @map("userAgent") @db.Text
   userId    String    @map("userId") @db.Text
-  user      AuthUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("session")
   @@index([userId], map: "session_userId_idx")
 }
 
-model AuthAccount {
+model Account {
   id                    String    @id @db.Text
   accountId             String    @map("accountId") @db.Text
   providerId            String    @map("providerId") @db.Text
@@ -327,13 +327,13 @@ model AuthAccount {
   password              String?   @db.Text
   createdAt             DateTime  @default(now()) @map("createdAt") @db.Timestamptz(6)
   updatedAt             DateTime  @map("updatedAt") @db.Timestamptz(6)
-  user                  AuthUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("account")
   @@index([userId], map: "account_userId_idx")
 }
 
-model AuthVerification {
+model Verification {
   id         String   @id @db.Text
   identifier String   @db.Text
   value      String   @db.Text

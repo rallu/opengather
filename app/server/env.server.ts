@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 export type ServerEnv = {
 	DATABASE_URL: string;
 	BETTER_AUTH_SECRET: string;
@@ -5,6 +7,7 @@ export type ServerEnv = {
 	GOOGLE_CLIENT_ID: string;
 	GOOGLE_CLIENT_SECRET: string;
 	HUB_BASE_URL: string;
+	HUB_OIDC_DISCOVERY_URL: string;
 	HUB_CLIENT_ID: string;
 	HUB_CLIENT_SECRET: string;
 	HUB_REDIRECT_URI: string;
@@ -21,6 +24,9 @@ export function getServerEnv(): ServerEnv {
 		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? "",
 		GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ?? "",
 		HUB_BASE_URL: process.env.HUB_BASE_URL ?? "http://localhost:9000",
+		HUB_OIDC_DISCOVERY_URL:
+			process.env.HUB_OIDC_DISCOVERY_URL ??
+			`${process.env.HUB_BASE_URL ?? "http://localhost:9000"}/api/auth/.well-known/openid-configuration`,
 		HUB_CLIENT_ID: process.env.HUB_CLIENT_ID ?? "",
 		HUB_CLIENT_SECRET: process.env.HUB_CLIENT_SECRET ?? "",
 		HUB_REDIRECT_URI:

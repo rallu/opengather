@@ -1,73 +1,73 @@
+import { getDb } from "./db.server";
 import { getServerEnv } from "./env.server";
 
 export function createHubAuthorizeUrl(params: { state: string }): string {
 	const env = getServerEnv();
 	const query = new URLSearchParams({
 		client_id: env.HUB_CLIENT_ID,
-		redirect_uri: env.HUB_REDIRECT_URI,
+		redirect_uri: `${env.BETTER_AUTH_URL}/api/auth/oauth2/callback/hub`,
 		response_type: "code",
-		scope: "openid profile email",
+		scope: "openid profile email offline_access",
 		state: params.state,
 	});
-	return `${env.HUB_BASE_URL}/oidc/authorize?${query.toString()}`;
+	return `${env.HUB_BASE_URL}/api/auth/oauth2/authorize?${query.toString()}`;
 }
 
-export async function completeHubLogin(params: {
+export async function completeHubLogin(_params: {
 	code: string;
 }): Promise<void> {
-	const env = getServerEnv();
+	// Legacy route compatibility: login is handled by Better Auth generic OAuth callbacks.
+	return;
+}
 
-	const tokenResponse = await fetch(`${env.HUB_BASE_URL}/oidc/token`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
+export async function getHubIdentityForLocalUser(params: {
+	localUserId: string;
+}): Promise<{
+	hubUserId: string;
+	hubAccessToken?: string;
+} | null> {
+	const account = await getDb().account.findFirst({
+		where: {
+			userId: params.localUserId,
+			providerId: "hub",
 		},
-		body: JSON.stringify({
-			grant_type: "authorization_code",
-			code: params.code,
-			client_id: env.HUB_CLIENT_ID,
-			client_secret: env.HUB_CLIENT_SECRET,
-			redirect_uri: env.HUB_REDIRECT_URI,
-		}),
-	});
-
-	if (!tokenResponse.ok) {
-		throw new Error("Failed to exchange OIDC code");
-	}
-
-	const tokenBody = (await tokenResponse.json()) as { access_token: string };
-
-	const userInfoResponse = await fetch(`${env.HUB_BASE_URL}/oidc/userinfo`, {
-		headers: {
-			Authorization: `Bearer ${tokenBody.access_token}`,
+		select: {
+			accountId: true,
+			accessToken: true,
 		},
 	});
 
-	if (!userInfoResponse.ok) {
-		throw new Error("Failed to fetch user info from hub");
+	if (!account?.accountId) {
+		return null;
 	}
 
-	const userInfo = (await userInfoResponse.json()) as {
-		sub: string;
-		email: string;
-		name: string;
-		picture?: string;
+	return {
+		hubUserId: account.accountId,
+		hubAccessToken: account.accessToken ?? undefined,
 	};
+}
 
-	await fetch(`${env.HUB_BASE_URL}/instances/link`, {
+export async function linkHubInstanceForUser(params: {
+	hubAccessToken: string;
+	hubUserId: string;
+}): Promise<void> {
+	const env = getServerEnv();
+	if (!params.hubAccessToken) {
+		return;
+	}
+
+	await fetch(`${env.HUB_BASE_URL}/api/instances/link`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			Authorization: `Bearer ${tokenBody.access_token}`,
+			Authorization: `Bearer ${params.hubAccessToken}`,
 		},
 		body: JSON.stringify({
-			hubUserId: userInfo.sub,
+			hubUserId: params.hubUserId,
 			instanceName: env.HUB_INSTANCE_NAME,
 			instanceBaseUrl: env.HUB_INSTANCE_BASE_URL,
 		}),
 	}).catch(() => undefined);
-
-	return;
 }
 
 export async function pushHubNotification(params: {
@@ -86,7 +86,7 @@ export async function pushHubNotification(params: {
 		? new URL(params.targetUrl, env.HUB_INSTANCE_BASE_URL).toString()
 		: undefined;
 
-	const response = await fetch(`${env.HUB_BASE_URL}/notifications/push`, {
+	const response = await fetch(`${env.HUB_BASE_URL}/api/notifications/push`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",

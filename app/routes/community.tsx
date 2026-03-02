@@ -1,11 +1,11 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import {
 	Form,
-	Link,
 	useActionData,
 	useLoaderData,
 	useNavigation,
 } from "react-router";
+import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
 import {
 	type CommunityUser,
@@ -24,6 +24,7 @@ function toCommunityUser(params: {
 	}
 	return {
 		id: params.authUser.id,
+		hubUserId: params.authUser.hubUserId,
 		role: "member",
 	};
 }
@@ -109,14 +110,11 @@ export default function CommunityPage() {
 	const loading = navigation.state === "submitting";
 
 	return (
-		<div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-6 p-8">
-			<div className="flex items-center justify-between">
-				<h1 className="text-3xl font-bold">Community</h1>
-				<Button variant="outline" asChild>
-					<Link to="/">Back home</Link>
-				</Button>
-			</div>
-
+		<AppShell
+			authUser={data.authUser}
+			showServerSettings={data.viewerRole === "admin"}
+			searchQuery={data.q}
+		>
 			{data.status === "not_setup" ? (
 				<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
 					Setup is not completed.
@@ -125,15 +123,9 @@ export default function CommunityPage() {
 
 			{data.status === "forbidden" ? (
 				<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-					You do not have access to this community.
+					Access denied.
 				</div>
 			) : null}
-
-			<p className="text-sm text-muted-foreground">
-				{data.authUser
-					? `Signed in as ${data.authUser.name} (${data.viewerRole})`
-					: "Read-only mode. Sign in to post."}
-			</p>
 
 			{actionData && "error" in actionData ? (
 				<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -142,14 +134,13 @@ export default function CommunityPage() {
 			) : null}
 
 			<div className="rounded-md border border-border p-4">
-				<h2 className="mb-3 text-lg font-semibold">Create Post</h2>
 				<Form method="post" className="space-y-3">
 					<input type="hidden" name="_action" value="post" />
 					<input type="hidden" name="parentPostId" value={""} />
 					<textarea
 						name="bodyText"
 						className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-						placeholder="Write text post"
+						placeholder="What's on your mind?"
 					/>
 					<Button
 						type="submit"
@@ -160,36 +151,35 @@ export default function CommunityPage() {
 				</Form>
 			</div>
 
-			<div className="rounded-md border border-border p-4">
-				<h2 className="mb-3 text-lg font-semibold">Semantic Search</h2>
-				<Form method="get" className="flex gap-3">
-					<input
-						name="q"
-						defaultValue={data.q}
-						className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-						placeholder="Search similar text"
-					/>
-					<Button type="submit" variant="outline">
-						Search
-					</Button>
-				</Form>
-				<div className="mt-3 space-y-2">
-					{data.search.map((item) => (
-						<div
-							key={item.post.id}
-							className="rounded border border-border p-2 text-sm"
-						>
-							<p>{item.post.bodyText}</p>
-							<p className="text-xs text-muted-foreground">
-								score: {item.score.toFixed(4)}
-							</p>
-						</div>
-					))}
+			{data.q ? (
+				<div className="rounded-md border border-border p-4">
+					<p className="mb-3 text-sm text-muted-foreground">
+						Results for{" "}
+						<span className="font-medium text-foreground">{data.q}</span>
+					</p>
+					<div className="space-y-2">
+						{data.search.map((item) => (
+							<div
+								key={item.post.id}
+								className="rounded border border-border p-2 text-sm"
+							>
+								<p>{item.post.bodyText}</p>
+								<p className="text-xs text-muted-foreground">
+									score: {item.score.toFixed(4)}
+								</p>
+							</div>
+						))}
+						{data.search.length === 0 ? (
+							<p className="text-sm text-muted-foreground">No matches.</p>
+						) : null}
+					</div>
 				</div>
-			</div>
+			) : null}
 
-			<div className="space-y-3">
-				<h2 className="text-lg font-semibold">Posts</h2>
+			<div className="space-y-2">
+				{data.posts.length === 0 ? (
+					<p className="text-sm text-muted-foreground">No posts yet.</p>
+				) : null}
 				{data.posts.map((post) => (
 					<div
 						key={post.id}
@@ -205,7 +195,8 @@ export default function CommunityPage() {
 							{post.bodyText}
 						</p>
 						<p className="mt-1 text-xs text-muted-foreground">
-							{post.moderationStatus}
+							{post.moderationStatus} •{" "}
+							{new Date(post.createdAt).toLocaleString()}
 							{post.isHidden ? " • hidden" : ""}
 							{post.isDeleted ? " • deleted" : ""}
 						</p>
@@ -215,7 +206,7 @@ export default function CommunityPage() {
 								<input type="hidden" name="parentPostId" value={post.id} />
 								<input
 									name="bodyText"
-									placeholder="Reply text"
+									placeholder="Reply"
 									className="rounded-l-md border border-input bg-background px-3 py-2 text-sm"
 								/>
 								<Button
@@ -258,6 +249,6 @@ export default function CommunityPage() {
 					</div>
 				))}
 			</div>
-		</div>
+		</AppShell>
 	);
 }
