@@ -3,7 +3,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import { Link, redirect, useLoaderData, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { signIn } from "~/lib/auth-client";
-import { getServerEnv } from "~/server/env.server";
+import { getServerConfig } from "~/server/config.service.server";
 import { isSetupCompleteForRequest } from "~/server/setup.service.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -12,12 +12,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		return redirect("/setup");
 	}
 
-	const env = getServerEnv();
-	console.log(env);
+	const config = await getServerConfig();
 	return {
-		hubAuthEnabled: Boolean(env.HUB_CLIENT_ID && env.HUB_CLIENT_SECRET),
+		hubAuthEnabled: Boolean(
+			config.hubEnabled && config.hubClientId && config.hubClientSecret,
+		),
 		googleAuthEnabled: Boolean(
-			env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET,
+			config.googleClientId && config.googleClientSecret,
 		),
 	};
 }
@@ -72,6 +73,10 @@ export default function Login() {
 				throw new Error(result.error.message || "Hub login failed");
 			}
 
+			if (result.data?.redirect) {
+				return;
+			}
+
 			const redirectUrl = result.data?.url;
 			if (!redirectUrl) {
 				throw new Error("Missing Hub redirect URL");
@@ -101,6 +106,10 @@ export default function Login() {
 				throw new Error(result.error.message || "Google login failed");
 			}
 
+			if (result.data?.redirect) {
+				return;
+			}
+
 			const redirectUrl = result.data?.url;
 			if (!redirectUrl) {
 				throw new Error("Missing Google redirect URL");
@@ -119,7 +128,7 @@ export default function Login() {
 		<div className="flex min-h-screen items-center justify-center p-8">
 			<div className="w-full max-w-md space-y-8">
 				<div className="text-center">
-					<h1 className="text-3xl font-bold">Sign In</h1>
+					<h1 className="text-3xl font-bold" data-testid="login-title">Sign In</h1>
 					<p className="mt-2 text-muted-foreground">
 						Welcome back to opengather
 					</p>
@@ -140,11 +149,12 @@ export default function Login() {
 							</p>
 						</div>
 						<Button
-							type="button"
-							className="h-11 w-full"
-							disabled={isAnyLoading}
-							onClick={handleHubLogin}
-						>
+						type="button"
+						className="h-11 w-full"
+						disabled={isAnyLoading}
+						onClick={handleHubLogin}
+						data-testid="login-hub-button"
+					>
 							{hubLoading ? "Redirecting..." : "Continue with Hub"}
 						</Button>
 					</section>
@@ -166,7 +176,8 @@ export default function Login() {
 							Email
 						</label>
 						<input
-							id="email"
+						id="email"
+						data-testid="login-email"
 							type="email"
 							value={email}
 							onChange={(e) => setEmail(e.target.value)}
@@ -181,7 +192,8 @@ export default function Login() {
 							Password
 						</label>
 						<input
-							id="password"
+						id="password"
+						data-testid="login-password"
 							type="password"
 							value={password}
 							onChange={(e) => setPassword(e.target.value)}
@@ -191,18 +203,19 @@ export default function Login() {
 						/>
 					</div>
 
-					<Button type="submit" className="w-full" disabled={isAnyLoading}>
+					<Button type="submit" className="w-full" disabled={isAnyLoading} data-testid="login-submit">
 						{loading ? "Signing in..." : "Sign In"}
 					</Button>
 
 					{googleAuthEnabled ? (
 						<Button
-							type="button"
-							variant="outline"
-							className="w-full"
-							disabled={isAnyLoading}
-							onClick={handleGoogleLogin}
-						>
+						type="button"
+						variant="outline"
+						className="w-full"
+						disabled={isAnyLoading}
+						onClick={handleGoogleLogin}
+						data-testid="login-google-button"
+					>
 							{socialLoading ? "Redirecting..." : "Continue with Google"}
 						</Button>
 					) : null}

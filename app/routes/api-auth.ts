@@ -1,13 +1,11 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { auth } from "~/server/auth.server";
+import { getBetterAuth } from "~/server/auth.server";
 
 async function handleAuthRequest(params: {
 	request: Request;
 }): Promise<Response> {
 	try {
-		if (!auth) {
-			throw new Error("Auth unavailable");
-		}
+		const auth = await getBetterAuth();
 		return await auth.handler(params.request);
 	} catch (_error) {
 		return new Response(JSON.stringify({ error: "Auth unavailable" }), {

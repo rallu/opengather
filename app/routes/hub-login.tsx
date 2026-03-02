@@ -10,7 +10,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 	}
 
 	const state = crypto.randomUUID();
-	const url = createHubAuthorizeUrl({ state });
+	const url = await createHubAuthorizeUrl({ state });
 	return redirect(url);
 }
 

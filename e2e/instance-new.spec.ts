@@ -6,21 +6,18 @@ async function expectConfiguredLanding(
 	page: import("@playwright/test").Page,
 ): Promise<void> {
 	if (page.url().endsWith("/feed")) {
-		await expect(page.getByRole("heading", { name: "Feed" })).toBeVisible();
+		await expect(page.getByTestId("feed-composer")).toBeVisible();
 		return;
 	}
 
-	await expect(page.getByText("Instance ready:")).toBeVisible();
+	await expect(page.getByTestId("home-instance-ready")).toBeVisible();
 }
 
 async function isSetupRequired(
 	page: import("@playwright/test").Page,
 ): Promise<boolean> {
 	await page.goto("/");
-	return page
-		.getByRole("link", { name: "Run First Setup" })
-		.isVisible()
-		.catch(() => false);
+	return page.getByTestId("home-run-setup-link").isVisible().catch(() => false);
 }
 
 async function moveToInstanceStep(
@@ -32,16 +29,7 @@ async function moveToInstanceStep(
 	}
 
 	await page.goto("/setup");
-	const dbUrlField = page.locator("#setup-database-url");
-	const hasDbStep = await dbUrlField.isVisible().catch(() => false);
-	if (hasDbStep) {
-		await dbUrlField.fill(
-			"postgres://opengather:opengather@localhost:5432/opengather",
-		);
-		await page.getByRole("button", { name: "Save Database URL" }).click();
-		await expect(page).toHaveURL(/\/setup$/);
-	}
-	await expect(page.locator("#setup-name")).toBeVisible();
+	await expect(page.getByTestId("setup-name")).toBeVisible();
 	return true;
 }
 
@@ -50,11 +38,9 @@ test.describe("setup wizard", () => {
 		const setupRequired = await isSetupRequired(page);
 
 		if (setupRequired) {
-			await page.getByRole("link", { name: "Run First Setup" }).click();
+			await page.getByTestId("home-run-setup-link").click();
 			await expect(page).toHaveURL(/\/setup$/);
-			await expect(
-				page.getByRole("heading", { name: "First Run Setup" }),
-			).toBeVisible();
+			await expect(page.getByTestId("setup-title")).toBeVisible();
 			return;
 		}
 
@@ -69,28 +55,24 @@ test.describe("setup wizard", () => {
 			!setupRequired,
 			"Instance already configured; setup form not available.",
 		);
-		await expect(
-			page.getByRole("heading", { name: "First Run Setup" }),
-		).toBeVisible();
+		await expect(page.getByTestId("setup-title")).toBeVisible();
 
-		await page.locator("#setup-name").fill("OpenGather Finland");
-		await page.locator("#setup-slug").fill("opengather-fi");
+		await page.getByTestId("setup-name").fill("OpenGather Finland");
 		await page
-			.locator("#setup-description")
+			.getByTestId("setup-description")
 			.fill("Community for collaborative text posts");
-		await page.locator("#setup-admin-name").fill("Admin User");
-		await page.locator("#setup-admin-email").fill("admin@example.com");
-		await page.locator("#setup-admin-password").fill("admin-pass-123");
-		await page.locator("#setup-visibility").selectOption("registered");
-		await page.locator("#setup-approval").selectOption("manual");
+		await page.getByTestId("setup-admin-name").fill("Admin User");
+		await page.getByTestId("setup-admin-email").fill("admin@example.com");
+		await page.getByTestId("setup-admin-password").fill("admin-pass-123");
+		await page.getByTestId("setup-visibility").selectOption("registered");
+		await page.getByTestId("setup-approval").selectOption("manual");
 
-		await expect(page.locator("#setup-name")).toHaveValue("OpenGather Finland");
-		await expect(page.locator("#setup-slug")).toHaveValue("opengather-fi");
-		await expect(page.locator("#setup-admin-email")).toHaveValue(
+		await expect(page.getByTestId("setup-name")).toHaveValue("OpenGather Finland");
+		await expect(page.getByTestId("setup-admin-email")).toHaveValue(
 			"admin@example.com",
 		);
-		await expect(page.locator("#setup-visibility")).toHaveValue("registered");
-		await expect(page.locator("#setup-approval")).toHaveValue("manual");
+		await expect(page.getByTestId("setup-visibility")).toHaveValue("registered");
+		await expect(page.getByTestId("setup-approval")).toHaveValue("manual");
 	});
 
 	test("runs setup progress and unlocks login controls", async ({ page }) => {
@@ -98,43 +80,37 @@ test.describe("setup wizard", () => {
 		if (!setupRequired) {
 			await page.goto("/");
 			await expectConfiguredLanding(page);
-			await expect(
-				page.getByRole("link", { name: "Run First Setup" }),
-			).not.toBeVisible();
-			await page.getByRole("link", { name: "Sign In" }).click();
-			await expect(
-				page.getByRole("heading", { name: "Sign In" }),
-			).toBeVisible();
+			await expect(page.getByTestId("home-run-setup-link")).not.toBeVisible();
+			const homeSignInLink = page.getByTestId("home-sign-in-link");
+			if (await homeSignInLink.isVisible().catch(() => false)) {
+				await homeSignInLink.click();
+			} else {
+				await page.getByTestId("shell-sign-in-link").click();
+			}
+			await expect(page.getByTestId("login-title")).toBeVisible();
 			return;
 		}
 
-		await page.locator("#setup-name").fill("OpenGather Local");
-		await page.locator("#setup-slug").fill("opengather-local");
-		await page.locator("#setup-description").fill("Local test instance");
-		await page.locator("#setup-admin-name").fill("Admin User");
-		await page.locator("#setup-admin-email").fill("admin@example.com");
-		await page.locator("#setup-admin-password").fill("admin-pass-123");
-		await page.getByRole("button", { name: "Initialize Instance" }).click();
+		await page.getByTestId("setup-name").fill("OpenGather Local");
+		await page.getByTestId("setup-description").fill("Local test instance");
+		await page.getByTestId("setup-admin-name").fill("Admin User");
+		await page.getByTestId("setup-admin-email").fill("admin@example.com");
+		await page.getByTestId("setup-admin-password").fill("admin-pass-123");
+		await page.getByTestId("setup-submit").click();
 
 		await expect(page).toHaveURL(/\/$|\/feed$/);
 		await expectConfiguredLanding(page);
-		await expect(
-			page.getByRole("link", { name: "Run First Setup" }),
-		).not.toBeVisible();
+		await expect(page.getByTestId("home-run-setup-link")).not.toBeVisible();
 		await page.goto("/login");
-		await expect(page.getByRole("heading", { name: "Sign In" })).toBeVisible();
+		await expect(page.getByTestId("login-title")).toBeVisible();
 	});
 
 	test("keeps google auth hidden when not configured", async ({ page }) => {
 		await page.goto("/login");
-		await expect(
-			page.getByRole("button", { name: "Continue with Google" }),
-		).not.toBeVisible();
+		await expect(page.getByTestId("login-google-button")).not.toBeVisible();
 
 		await page.goto("/register");
-		await expect(
-			page.getByRole("button", { name: "Continue with Google" }),
-		).not.toBeVisible();
+		await expect(page.getByTestId("register-google-button")).not.toBeVisible();
 	});
 
 	test("redirects setup page to home after setup is completed", async ({
@@ -149,7 +125,7 @@ test.describe("setup wizard", () => {
 		page,
 	}) => {
 		await page.goto("/feed");
-		await expect(page.getByRole("heading", { name: "Feed" })).toBeVisible();
-		await expect(page.getByText("Setup is not completed.")).not.toBeVisible();
+		await expect(page.getByTestId("feed-composer")).toBeVisible();
+		await expect(page.getByTestId("feed-setup-error")).not.toBeVisible();
 	});
 });

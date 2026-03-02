@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { Prisma } from "../generated/prisma/client";
+import { getConfig } from "./config.service.server";
 import { getDb } from "./db.server";
 import { cosineSimilarity, toTextVector } from "./embedding.service.server";
-import { getServerEnv } from "./env.server";
 import { processNotificationOutbox } from "./jobs.service.server";
 import { extractMentionEmails } from "./mentions.server";
+import { createNotification } from "./notification.service.server";
 import { getSetupStatus } from "./setup.service.server";
 
 export type CommunityUser = {
@@ -104,16 +105,9 @@ async function ensureCanRead(params: {
 	instanceId: string;
 	user: CommunityUser | null;
 }): Promise<boolean> {
-	const db = getDb();
-	const instance = await db.instance.findUnique({
-		where: { id: params.instanceId },
-		select: { visibilityMode: true },
-	});
-	if (!instance) {
-		return false;
-	}
+	const visibilityMode = await getConfig("server_visibility_mode");
 
-	if (instance.visibilityMode === "public") {
+	if (visibilityMode === "public") {
 		return true;
 	}
 
@@ -399,7 +393,7 @@ export async function createPost(params: {
 	});
 
 	const mentionEmails = extractMentionEmails({ text });
-	const notifiedHubUsers = new Set<string>();
+	const notifiedLocalUsers = new Set<string>();
 	if (mentionEmails.length > 0) {
 		const mentionedUsers = await db.$queryRaw<
 			Array<{ local_id: string; hub_user_id: string | null; email: string }>
@@ -413,30 +407,20 @@ export async function createPost(params: {
 		);
 
 		for (const user of mentionedUsers) {
-			const resolvedHubUserId = user.hub_user_id ?? user.local_id;
-			if (
-				user.local_id === params.user.id ||
-				resolvedHubUserId === (params.user.hubUserId ?? params.user.id)
-			) {
+			if (user.local_id === params.user.id) {
 				continue;
 			}
-			notifiedHubUsers.add(resolvedHubUserId);
-			await db.notificationOutbox.create({
-				data: {
-					id: randomUUID(),
-					recipientHubUserId: resolvedHubUserId,
-					type: "mention",
-					title: "You were mentioned in a post",
-					body: text,
-					targetUrl: `/feed#post-${created.id}`,
-					instanceBaseUrl: getServerEnv().HUB_INSTANCE_BASE_URL,
-					status: "pending",
-					attempts: 0,
-					maxAttempts: 8,
-					lastError: null,
-					nextAttemptAt: new Date(),
-					createdAt: new Date(),
-					updatedAt: new Date(),
+			notifiedLocalUsers.add(user.local_id);
+			await createNotification({
+				userId: user.local_id,
+				kind: "mention",
+				title: "You were mentioned in a post",
+				body: text,
+				targetUrl: `/feed#post-${created.id}`,
+				relatedEntityId: created.id,
+				payload: {
+					actorUserId: params.user.id,
+					postId: created.id,
 				},
 			});
 		}
@@ -450,23 +434,39 @@ export async function createPost(params: {
 
 		const postingAuthorId = params.user.hubUserId ?? params.user.id;
 		if (parent && parent.authorId !== postingAuthorId) {
-			if (!notifiedHubUsers.has(parent.authorId)) {
-				await db.notificationOutbox.create({
-					data: {
-						id: randomUUID(),
-						recipientHubUserId: parent.authorId,
-						type: "reply",
-						title: "New reply to your post",
-						body: text,
-						targetUrl: `/feed#post-${created.id}`,
-						instanceBaseUrl: getServerEnv().HUB_INSTANCE_BASE_URL,
-						status: "pending",
-						attempts: 0,
-						maxAttempts: 8,
-						lastError: null,
-						nextAttemptAt: new Date(),
-						createdAt: new Date(),
-						updatedAt: new Date(),
+			const localParentAuthor = await db.user.findFirst({
+				where: {
+					OR: [
+						{ id: parent.authorId },
+						{
+							accounts: {
+								some: {
+									providerId: "hub",
+									accountId: parent.authorId,
+								},
+							},
+						},
+					],
+				},
+				select: { id: true },
+			});
+
+			if (
+				localParentAuthor &&
+				localParentAuthor.id !== params.user.id &&
+				!notifiedLocalUsers.has(localParentAuthor.id)
+			) {
+				await createNotification({
+					userId: localParentAuthor.id,
+					kind: "reply_to_post",
+					title: "New reply to your post",
+					body: text,
+					targetUrl: `/feed#post-${created.id}`,
+					relatedEntityId: created.id,
+					payload: {
+						actorUserId: params.user.id,
+						postId: created.id,
+						parentPostId: params.parentPostId,
 					},
 				});
 			}

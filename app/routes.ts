@@ -30,6 +30,10 @@ const routes: RouteConfig = [
 		file: "routes/setup.tsx",
 	},
 	{
+		path: "/database-required",
+		file: "routes/database-required.tsx",
+	},
+	{
 		path: "/feed",
 		file: "routes/feed.tsx",
 	},
@@ -40,6 +44,10 @@ const routes: RouteConfig = [
 	{
 		path: "/profile",
 		file: "routes/profile.tsx",
+	},
+	{
+		path: "/notifications",
+		file: "routes/notifications.tsx",
 	},
 	{
 		path: "/settings",

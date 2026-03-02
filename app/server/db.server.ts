@@ -1,6 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
-import { getServerEnv, hasDatabaseConfig } from "./env.server";
+import { getDatabaseEnv, hasDatabaseConfig } from "./env.server";
 
 let prismaSingleton: PrismaClient | null = null;
 
@@ -14,7 +14,7 @@ export function getDb(): PrismaClient {
 	}
 
 	const adapter = new PrismaPg({
-		connectionString: getServerEnv().DATABASE_URL,
+		connectionString: getDatabaseEnv().DATABASE_URL,
 	});
 	prismaSingleton = new PrismaClient({ adapter });
 	return prismaSingleton;

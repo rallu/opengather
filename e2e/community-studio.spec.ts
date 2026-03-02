@@ -6,10 +6,7 @@ async function isSetupRequired(
 	page: import("@playwright/test").Page,
 ): Promise<boolean> {
 	await page.goto("/");
-	return page
-		.getByRole("link", { name: "Run First Setup" })
-		.isVisible()
-		.catch(() => false);
+	return page.getByTestId("home-run-setup-link").isVisible().catch(() => false);
 }
 
 test.describe("home", () => {
@@ -17,23 +14,17 @@ test.describe("home", () => {
 		const setupRequired = await isSetupRequired(page);
 
 		if (setupRequired) {
-			await expect(
-				page.getByRole("heading", { name: "OpenGather MVP" }),
-			).toBeVisible();
-			await expect(
-				page.getByRole("link", { name: "Run First Setup" }),
-			).toBeVisible();
-			await expect(
-				page.getByRole("link", { name: "Sign In" }),
-			).not.toBeVisible();
+			await expect(page.getByTestId("home-title")).toBeVisible();
+			await expect(page.getByTestId("home-run-setup-link")).toBeVisible();
+			await expect(page.getByTestId("home-sign-in-link")).not.toBeVisible();
 			return;
 		}
 
 		if (page.url().endsWith("/feed")) {
-			await expect(page.getByRole("heading", { name: "Feed" })).toBeVisible();
+			await expect(page.getByTestId("feed-composer")).toBeVisible();
 		} else {
-			await expect(page.getByText("Instance ready:")).toBeVisible();
-			await expect(page.getByRole("link", { name: "Sign In" })).toBeVisible();
+			await expect(page.getByTestId("home-instance-ready")).toBeVisible();
+			await expect(page.getByTestId("home-sign-in-link")).toBeVisible();
 		}
 	});
 
@@ -59,12 +50,8 @@ test.describe("home", () => {
 
 	test("community page renders MVP controls", async ({ page }) => {
 		await page.goto("/feed");
-		await expect(page.getByRole("heading", { name: "Feed" })).toBeVisible();
-		await expect(
-			page.getByRole("heading", { name: "Create Post" }),
-		).toBeVisible();
-		await expect(
-			page.getByRole("heading", { name: "Semantic Search" }),
-		).toBeVisible();
+		await expect(page.getByTestId("feed-composer")).toBeVisible();
+		await expect(page.getByTestId("feed-post-button")).toBeVisible();
+		await expect(page.getByTestId("shell-search")).toBeVisible();
 	});
 });

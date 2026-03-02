@@ -1,13 +1,21 @@
 import { randomUUID } from "node:crypto";
 import { getBetterAuth } from "./auth.server";
+import {
+	getConfig,
+	hasAnyConfig,
+	initializeConfigDefaults,
+	setConfig,
+} from "./config.service.server";
 import { getDb } from "./db.server";
+import { linkHubInstanceForUser } from "./hub.service.server";
+
+export const SINGLETON_INSTANCE_ID = "singleton";
 
 export type SetupStatus = {
 	isSetup: boolean;
 	instance?: {
 		id: string;
 		name: string;
-		slug: string;
 		description?: string;
 		visibilityMode: "public" | "registered" | "approval";
 		approvalMode: "automatic" | "manual";
@@ -15,69 +23,89 @@ export type SetupStatus = {
 };
 
 export async function getSetupStatus(): Promise<SetupStatus> {
-	const db = getDb();
-	const config = await db.appConfig.findUnique({
-		where: { id: "singleton" },
-	});
-
-	if (!config?.isSetup || !config.instanceId) {
+	if (!(await hasAnyConfig())) {
 		return { isSetup: false };
 	}
 
-	const instance = await db.instance.findUnique({
-		where: { id: config.instanceId },
-	});
+	let isSetup = false;
+	let setupInstanceId = "";
+	let name = "";
+	let description = "";
+	let visibilityMode: "public" | "registered" | "approval" = "public";
+	let approvalMode: "automatic" | "manual" = "automatic";
+	try {
+		[isSetup, setupInstanceId, name, description, visibilityMode, approvalMode] =
+			await Promise.all([
+				getConfig("setup_completed"),
+				getConfig("setup_instance_id"),
+				getConfig("server_name"),
+				getConfig("server_description"),
+				getConfig("server_visibility_mode"),
+				getConfig("server_approval_mode"),
+			]);
+	} catch {
+		return { isSetup: false };
+	}
 
-	if (!instance) {
+	if (!isSetup || !setupInstanceId) {
 		return { isSetup: false };
 	}
 
 	return {
 		isSetup: true,
 		instance: {
-			id: instance.id,
-			name: instance.name,
-			slug: instance.slug,
-			description: instance.description ?? undefined,
-			visibilityMode: instance.visibilityMode as
-				| "public"
-				| "registered"
-				| "approval",
-			approvalMode: instance.approvalMode as "automatic" | "manual",
+			id: setupInstanceId,
+			name,
+			description: description || undefined,
+			visibilityMode,
+			approvalMode,
 		},
 	};
 }
 
 export async function initializeSetup(params: {
 	name: string;
-	slug: string;
 	description?: string;
-	visibilityMode: "public" | "registered";
+	visibilityMode: "public" | "registered" | "approval";
 	approvalMode: "automatic" | "manual";
+	betterAuthUrl: string;
 	adminName: string;
 	adminEmail: string;
 	adminPassword: string;
+	hub: {
+		enabled: boolean;
+		baseUrl: string;
+		oidcDiscoveryUrl: string;
+		clientId: string;
+		clientSecret: string;
+		redirectUri: string;
+		instanceName: string;
+		instanceBaseUrl: string;
+		instancePushSecret: string;
+	};
 }): Promise<{ ok: true } | { ok: false; error: string }> {
 	const db = getDb();
-	const existing = await db.appConfig.findUnique({
-		where: { id: "singleton" },
-		select: { isSetup: true },
-	});
-
-	if (existing?.isSetup) {
+	await initializeConfigDefaults();
+	const existingSetup = await getConfig("setup_completed");
+	if (existingSetup) {
 		return { ok: false, error: "Setup already completed" };
 	}
 
-	const existingInstance = await db.instance.findFirst({
-		select: { id: true },
-	});
-	if (existingInstance) {
-		return { ok: false, error: "Single-tenant instance already exists" };
-	}
+	await Promise.all([
+		setConfig("better_auth_url", params.betterAuthUrl),
+		setConfig("hub_enabled", params.hub.enabled),
+		setConfig("hub_base_url", params.hub.baseUrl),
+		setConfig("hub_oidc_discovery_url", params.hub.oidcDiscoveryUrl),
+		setConfig("hub_client_id", params.hub.clientId),
+		setConfig("hub_client_secret", params.hub.clientSecret),
+		setConfig("hub_redirect_uri", params.hub.redirectUri),
+		setConfig("hub_instance_name", params.hub.instanceName),
+		setConfig("hub_instance_base_url", params.hub.instanceBaseUrl),
+		setConfig("hub_instance_push_secret", params.hub.instancePushSecret),
+	]);
 
 	const now = new Date();
-	const instanceId = randomUUID();
-	const auth = getBetterAuth();
+	const auth = await getBetterAuth();
 	let adminResult:
 		| {
 				user?: {
@@ -116,43 +144,10 @@ export async function initializeSetup(params: {
 
 	try {
 		await db.$transaction(async (trx) => {
-			await trx.instance.create({
-				data: {
-					id: instanceId,
-					slug: params.slug,
-					name: params.name,
-					description: params.description ?? null,
-					visibilityMode: params.visibilityMode,
-					approvalMode: params.approvalMode,
-					aiSettings: {
-						agentUsageEnabled: false,
-						moderationEnabled: true,
-					},
-					createdAt: now,
-					updatedAt: now,
-				},
-			});
-
-			await trx.appConfig.upsert({
-				where: { id: "singleton" },
-				create: {
-					id: "singleton",
-					isSetup: true,
-					instanceId,
-					createdAt: now,
-					updatedAt: now,
-				},
-				update: {
-					isSetup: true,
-					instanceId,
-					updatedAt: now,
-				},
-			});
-
 			await trx.instanceMembership.create({
 				data: {
 					id: randomUUID(),
-					instanceId,
+					instanceId: SINGLETON_INSTANCE_ID,
 					principalId: adminUser.id,
 					principalType: "user",
 					role: "admin",
@@ -162,6 +157,21 @@ export async function initializeSetup(params: {
 				},
 			});
 		});
+
+		await Promise.all([
+			setConfig("setup_completed", true),
+			setConfig("setup_instance_id", SINGLETON_INSTANCE_ID),
+			setConfig("server_name", params.name),
+			setConfig("server_description", params.description ?? ""),
+			setConfig("server_visibility_mode", params.visibilityMode),
+			setConfig("server_approval_mode", params.approvalMode),
+		]);
+
+		if (params.hub.enabled) {
+			await linkHubInstanceForUser({
+				hubUserId: adminUser.id,
+			});
+		}
 	} catch (error) {
 		console.error("initializeSetup: transaction failed", error);
 		const message = error instanceof Error ? error.message : "unknown error";

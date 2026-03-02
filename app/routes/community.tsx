@@ -117,7 +117,7 @@ export default function CommunityPage() {
 		>
 			{data.status === "not_setup" ? (
 				<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-					Setup is not completed.
+					<span data-testid="feed-setup-error">Setup is not completed.</span>
 				</div>
 			) : null}
 
@@ -139,12 +139,14 @@ export default function CommunityPage() {
 					<input type="hidden" name="parentPostId" value={""} />
 					<textarea
 						name="bodyText"
+						data-testid="feed-composer"
 						className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 						placeholder="What's on your mind?"
 					/>
 					<Button
 						type="submit"
 						disabled={loading || !data.authUser || data.status !== "ok"}
+						data-testid="feed-post-button"
 					>
 						{loading ? "Saving..." : "Post"}
 					</Button>

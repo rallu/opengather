@@ -1,45 +1,55 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
+import { getServerConfig } from "./config.service.server";
 import { getDb } from "./db.server";
-import { getServerEnv, hasDatabaseConfig } from "./env.server";
+import { hasDatabaseConfig } from "./env.server";
 
-function createBetterAuth() {
-	const env = getServerEnv();
+async function createBetterAuth() {
+	const config = await getServerConfig();
+	const googleAuthEnabled = Boolean(
+		config.googleClientId && config.googleClientSecret,
+	);
+	const hubAuthEnabled = Boolean(
+		config.hubEnabled && config.hubClientId && config.hubClientSecret,
+	);
 
 	return betterAuth({
 		database: prismaAdapter(getDb(), {
 			provider: "postgresql",
 		}),
-		baseURL: env.BETTER_AUTH_URL,
+		baseURL: config.betterAuthUrl,
 		trustedOrigins: [
-			env.BETTER_AUTH_URL,
+			config.betterAuthUrl,
 			"http://localhost:5173",
 			"http://127.0.0.1:5173",
 		],
-		secret: env.BETTER_AUTH_SECRET,
-		...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+		secret: config.betterAuthSecret,
+		advanced: {
+			cookiePrefix: "opengather",
+		},
+		...(googleAuthEnabled
 			? {
 					socialProviders: {
 						google: {
-							clientId: env.GOOGLE_CLIENT_ID,
-							clientSecret: env.GOOGLE_CLIENT_SECRET,
+							clientId: config.googleClientId,
+							clientSecret: config.googleClientSecret,
 						},
 					},
 				}
 			: {}),
-		...(env.HUB_CLIENT_ID && env.HUB_CLIENT_SECRET
+		...(hubAuthEnabled
 			? {
 					plugins: [
 						genericOAuth({
 							config: [
 								{
 									providerId: "hub",
-									discoveryUrl: env.HUB_OIDC_DISCOVERY_URL,
-									clientId: env.HUB_CLIENT_ID,
-									clientSecret: env.HUB_CLIENT_SECRET,
+									discoveryUrl: config.hubOidcDiscoveryUrl,
+									clientId: config.hubClientId,
+									clientSecret: config.hubClientSecret,
 									scopes: ["openid", "profile", "email", "offline_access"],
-									redirectURI: `${env.BETTER_AUTH_URL}/api/auth/oauth2/callback/hub`,
+									redirectURI: `${config.betterAuthUrl}/api/auth/oauth2/callback/hub`,
 									pkce: false,
 								},
 							],
@@ -62,22 +72,22 @@ function createBetterAuth() {
 	});
 }
 
-type BetterAuthInstance = ReturnType<typeof createBetterAuth>;
+type BetterAuthInstance = Awaited<ReturnType<typeof createBetterAuth>>;
 
-let authSingleton: BetterAuthInstance | null = null;
+let authSingletonPromise: Promise<BetterAuthInstance> | null = null;
 
-export function getBetterAuth(): BetterAuthInstance {
-	if (authSingleton) {
-		return authSingleton;
+export async function getBetterAuth(): Promise<BetterAuthInstance> {
+	if (authSingletonPromise) {
+		return authSingletonPromise;
 	}
 
 	if (!hasDatabaseConfig()) {
 		throw new Error("DATABASE_URL is not configured");
 	}
 
-	authSingleton = createBetterAuth();
-
-	return authSingleton;
+	authSingletonPromise = createBetterAuth().catch((error) => {
+		authSingletonPromise = null;
+		throw error;
+	});
+	return authSingletonPromise;
 }
-
-export const auth = hasDatabaseConfig() ? getBetterAuth() : null;

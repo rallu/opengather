@@ -1,16 +1,18 @@
 import { getDb } from "./db.server";
-import { getServerEnv } from "./env.server";
+import { getServerConfig } from "./config.service.server";
 
-export function createHubAuthorizeUrl(params: { state: string }): string {
-	const env = getServerEnv();
+export async function createHubAuthorizeUrl(params: {
+	state: string;
+}): Promise<string> {
+	const config = await getServerConfig();
 	const query = new URLSearchParams({
-		client_id: env.HUB_CLIENT_ID,
-		redirect_uri: `${env.BETTER_AUTH_URL}/api/auth/oauth2/callback/hub`,
+		client_id: config.hubClientId,
+		redirect_uri: `${config.betterAuthUrl}/api/auth/oauth2/callback/hub`,
 		response_type: "code",
 		scope: "openid profile email offline_access",
 		state: params.state,
 	});
-	return `${env.HUB_BASE_URL}/api/auth/oauth2/authorize?${query.toString()}`;
+	return `${config.hubBaseUrl}/api/auth/oauth2/authorize?${query.toString()}`;
 }
 
 export async function completeHubLogin(_params: {
@@ -48,24 +50,24 @@ export async function getHubIdentityForLocalUser(params: {
 }
 
 export async function linkHubInstanceForUser(params: {
-	hubAccessToken: string;
 	hubUserId: string;
+	hubAccessToken?: string;
 }): Promise<void> {
-	const env = getServerEnv();
-	if (!params.hubAccessToken) {
-		return;
+	const config = await getServerConfig();
+	const headers: Record<string, string> = {
+		"Content-Type": "application/json",
+	};
+	if (params.hubAccessToken) {
+		headers.Authorization = `Bearer ${params.hubAccessToken}`;
 	}
 
-	await fetch(`${env.HUB_BASE_URL}/api/instances/link`, {
+	await fetch(`${config.hubBaseUrl}/api/instances/link`, {
 		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${params.hubAccessToken}`,
-		},
+		headers,
 		body: JSON.stringify({
 			hubUserId: params.hubUserId,
-			instanceName: env.HUB_INSTANCE_NAME,
-			instanceBaseUrl: env.HUB_INSTANCE_BASE_URL,
+			instanceName: config.hubInstanceName,
+			instanceBaseUrl: config.hubInstanceBaseUrl,
 		}),
 	}).catch(() => undefined);
 }
@@ -77,20 +79,20 @@ export async function pushHubNotification(params: {
 	body: string;
 	targetUrl?: string;
 }): Promise<void> {
-	const env = getServerEnv();
-	if (!env.HUB_INSTANCE_PUSH_SECRET) {
+	const config = await getServerConfig();
+	if (!config.hubInstancePushSecret) {
 		return;
 	}
 
 	const targetUrl = params.targetUrl
-		? new URL(params.targetUrl, env.HUB_INSTANCE_BASE_URL).toString()
+		? new URL(params.targetUrl, config.hubInstanceBaseUrl).toString()
 		: undefined;
 
-	const response = await fetch(`${env.HUB_BASE_URL}/api/notifications/push`, {
+	const response = await fetch(`${config.hubBaseUrl}/api/notifications/push`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			"X-Instance-Secret": env.HUB_INSTANCE_PUSH_SECRET,
+			"X-Instance-Secret": config.hubInstancePushSecret,
 		},
 		body: JSON.stringify({
 			recipientHubUserId: params.recipientHubUserId,
@@ -98,7 +100,7 @@ export async function pushHubNotification(params: {
 			title: params.title,
 			body: params.body,
 			targetUrl,
-			instanceBaseUrl: env.HUB_INSTANCE_BASE_URL,
+			instanceBaseUrl: config.hubInstanceBaseUrl,
 		}),
 	});
 

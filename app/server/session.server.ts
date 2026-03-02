@@ -32,7 +32,7 @@ export async function getAuthUserFromRequest(params: {
 	email: string;
 } | null> {
 	try {
-		const auth = getBetterAuth();
+		const auth = await getBetterAuth();
 		const session = await auth.api.getSession({
 			headers: params.request.headers,
 		});

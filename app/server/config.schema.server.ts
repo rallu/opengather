@@ -1,0 +1,187 @@
+export type ConfigValueByKey = {
+	better_auth_secret: string;
+	better_auth_url: string;
+	google_client_id: string;
+	google_client_secret: string;
+	hub_enabled: boolean;
+	hub_base_url: string;
+	hub_oidc_discovery_url: string;
+	hub_client_id: string;
+	hub_client_secret: string;
+	hub_redirect_uri: string;
+	hub_instance_name: string;
+	hub_instance_base_url: string;
+	hub_instance_push_secret: string;
+	server_name: string;
+	server_description: string;
+	server_visibility_mode: "public" | "registered" | "approval";
+	server_approval_mode: "automatic" | "manual";
+	setup_completed: boolean;
+	setup_instance_id: string;
+	ai_settings: {
+		agentUsageEnabled: boolean;
+		moderationEnabled: boolean;
+	};
+};
+
+export type ConfigKey = keyof ConfigValueByKey;
+
+type ConfigDefinition<K extends ConfigKey> = {
+	defaultValue: ConfigValueByKey[K];
+	parse: (raw: unknown) => ConfigValueByKey[K];
+};
+
+const visibilityModes = new Set<ConfigValueByKey["server_visibility_mode"]>([
+	"public",
+	"registered",
+	"approval",
+]);
+
+const approvalModes = new Set<ConfigValueByKey["server_approval_mode"]>([
+	"automatic",
+	"manual",
+]);
+
+function parseString(raw: unknown, fallback = ""): string {
+	return typeof raw === "string" ? raw : fallback;
+}
+
+function parseBoolean(raw: unknown, fallback = false): boolean {
+	return typeof raw === "boolean" ? raw : fallback;
+}
+
+function parseVisibilityMode(raw: unknown): ConfigValueByKey["server_visibility_mode"] {
+	if (typeof raw === "string" && visibilityModes.has(raw as never)) {
+		return raw as ConfigValueByKey["server_visibility_mode"];
+	}
+	return "public";
+}
+
+function parseApprovalMode(raw: unknown): ConfigValueByKey["server_approval_mode"] {
+	if (typeof raw === "string" && approvalModes.has(raw as never)) {
+		return raw as ConfigValueByKey["server_approval_mode"];
+	}
+	return "automatic";
+}
+
+function parseAiSettings(raw: unknown): ConfigValueByKey["ai_settings"] {
+	if (typeof raw !== "object" || raw === null) {
+		return {
+			agentUsageEnabled: false,
+			moderationEnabled: true,
+		};
+	}
+
+	const data = raw as Partial<ConfigValueByKey["ai_settings"]>;
+	return {
+		agentUsageEnabled: typeof data.agentUsageEnabled === "boolean"
+			? data.agentUsageEnabled
+			: false,
+		moderationEnabled: typeof data.moderationEnabled === "boolean"
+			? data.moderationEnabled
+			: true,
+	};
+}
+
+export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
+	better_auth_secret: {
+		defaultValue: "dev-secret",
+		parse: (raw) => parseString(raw, "dev-secret"),
+	},
+	better_auth_url: {
+		defaultValue: "http://localhost:5173",
+		parse: (raw) => parseString(raw, "http://localhost:5173"),
+	},
+	google_client_id: {
+		defaultValue: "",
+		parse: (raw) => parseString(raw),
+	},
+	google_client_secret: {
+		defaultValue: "",
+		parse: (raw) => parseString(raw),
+	},
+	hub_enabled: {
+		defaultValue: false,
+		parse: (raw) => parseBoolean(raw, false),
+	},
+	hub_base_url: {
+		defaultValue: "http://localhost:9000",
+		parse: (raw) => parseString(raw, "http://localhost:9000"),
+	},
+	hub_oidc_discovery_url: {
+		defaultValue: "http://localhost:9000/api/auth/.well-known/openid-configuration",
+		parse: (raw) =>
+			parseString(
+				raw,
+				"http://localhost:9000/api/auth/.well-known/openid-configuration",
+			),
+	},
+	hub_client_id: {
+		defaultValue: "",
+		parse: (raw) => parseString(raw),
+	},
+	hub_client_secret: {
+		defaultValue: "",
+		parse: (raw) => parseString(raw),
+	},
+	hub_redirect_uri: {
+		defaultValue: "http://localhost:5173/auth/hub/callback",
+		parse: (raw) => parseString(raw, "http://localhost:5173/auth/hub/callback"),
+	},
+	hub_instance_name: {
+		defaultValue: "OpenGather Instance",
+		parse: (raw) => parseString(raw, "OpenGather Instance"),
+	},
+	hub_instance_base_url: {
+		defaultValue: "http://localhost:5173",
+		parse: (raw) => parseString(raw, "http://localhost:5173"),
+	},
+	hub_instance_push_secret: {
+		defaultValue: "",
+		parse: (raw) => parseString(raw),
+	},
+	server_name: {
+		defaultValue: "OpenGather",
+		parse: (raw) => parseString(raw, "OpenGather"),
+	},
+	server_description: {
+		defaultValue: "",
+		parse: (raw) => parseString(raw),
+	},
+	server_visibility_mode: {
+		defaultValue: "public",
+		parse: (raw) => parseVisibilityMode(raw),
+	},
+	server_approval_mode: {
+		defaultValue: "automatic",
+		parse: (raw) => parseApprovalMode(raw),
+	},
+	setup_completed: {
+		defaultValue: false,
+		parse: (raw) => parseBoolean(raw, false),
+	},
+	setup_instance_id: {
+		defaultValue: "",
+		parse: (raw) => parseString(raw),
+	},
+	ai_settings: {
+		defaultValue: {
+			agentUsageEnabled: false,
+			moderationEnabled: true,
+		},
+		parse: (raw) => parseAiSettings(raw),
+	},
+};
+
+export function parseConfigValue<K extends ConfigKey>(
+	key: K,
+	rawValue: unknown,
+): ConfigValueByKey[K] {
+	return configDefinitions[key].parse(rawValue);
+}
+
+export function getDefaultConfigValue<K extends ConfigKey>(
+	key: K,
+): ConfigValueByKey[K] {
+	return configDefinitions[key].defaultValue;
+}

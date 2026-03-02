@@ -1,10 +1,35 @@
-import type { LoaderFunctionArgs } from "react-router";
-import { Link, useLoaderData } from "react-router";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import { Form, Link, useActionData, useLoaderData } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
 import { getDb } from "~/server/db.server";
+import {
+	getNotificationChannels,
+	setNotificationChannels,
+} from "~/server/notification.service.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
+
+export async function action({ request }: ActionFunctionArgs) {
+	const authUser = await getAuthUserFromRequest({ request });
+	if (!authUser) {
+		return { ok: false, error: "Sign in required." };
+	}
+
+	const formData = await request.formData();
+	await setNotificationChannels({
+		userId: authUser.id,
+		channels: {
+			email: String(formData.get("channelEmail") ?? "") === "on",
+			push: String(formData.get("channelPush") ?? "") === "on",
+			webhook: String(formData.get("channelWebhook") ?? "") === "on",
+			hub: String(formData.get("channelHub") ?? "") === "on",
+			webhookUrl: String(formData.get("webhookUrl") ?? "").trim(),
+		},
+	});
+
+	return { ok: true };
+}
 
 export async function loader({ request }: LoaderFunctionArgs) {
 	try {
@@ -30,18 +55,23 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			authUser,
 			viewerRole,
 			setup,
+			notificationChannels: authUser
+				? await getNotificationChannels({ userId: authUser.id })
+				: null,
 		};
 	} catch {
 		return {
 			authUser: null,
 			viewerRole: "guest" as const,
 			setup: { isSetup: false },
+			notificationChannels: null,
 		};
 	}
 }
 
 export default function SettingsPage() {
 	const data = useLoaderData<typeof loader>();
+	const actionData = useActionData<typeof action>();
 
 	return (
 		<AppShell
@@ -79,6 +109,61 @@ export default function SettingsPage() {
 								</Button>
 							) : null}
 						</div>
+					</section>
+
+					<section className="space-y-3 rounded-md border border-border p-4">
+						<h2 className="text-base font-semibold">Notification channels</h2>
+						{actionData && "ok" in actionData ? (
+							<p className="text-sm text-emerald-700">Saved.</p>
+						) : null}
+						<Form method="post" className="space-y-3">
+							<label className="flex items-center gap-2 text-sm">
+								<input
+									type="checkbox"
+									name="channelHub"
+									defaultChecked={Boolean(data.notificationChannels?.hub)}
+								/>
+								Hub
+							</label>
+							<label className="flex items-center gap-2 text-sm">
+								<input
+									type="checkbox"
+									name="channelEmail"
+									defaultChecked={Boolean(data.notificationChannels?.email)}
+								/>
+								Email
+							</label>
+							<label className="flex items-center gap-2 text-sm">
+								<input
+									type="checkbox"
+									name="channelPush"
+									defaultChecked={Boolean(data.notificationChannels?.push)}
+								/>
+								Push
+							</label>
+							<label className="flex items-center gap-2 text-sm">
+								<input
+									type="checkbox"
+									name="channelWebhook"
+									defaultChecked={Boolean(data.notificationChannels?.webhook)}
+								/>
+								Webhook
+							</label>
+							<div className="space-y-2">
+								<label className="text-sm font-medium" htmlFor="webhook-url">
+									Webhook URL
+								</label>
+								<input
+									id="webhook-url"
+									name="webhookUrl"
+									defaultValue={data.notificationChannels?.webhookUrl ?? ""}
+									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+								/>
+							</div>
+							<Button type="submit" variant="outline">
+								Save notification channels
+							</Button>
+						</Form>
 					</section>
 				</>
 			) : (

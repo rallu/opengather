@@ -3,7 +3,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import { Link, redirect, useLoaderData, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { signIn, signUp } from "~/lib/auth-client";
-import { getServerEnv } from "~/server/env.server";
+import { getServerConfig } from "~/server/config.service.server";
 import { isSetupCompleteForRequest } from "~/server/setup.service.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -12,11 +12,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		return redirect("/setup");
 	}
 
-	const env = getServerEnv();
+	const config = await getServerConfig();
 	return {
-		hubAuthEnabled: Boolean(env.HUB_CLIENT_ID && env.HUB_CLIENT_SECRET),
+		hubAuthEnabled: Boolean(
+			config.hubEnabled && config.hubClientId && config.hubClientSecret,
+		),
 		googleAuthEnabled: Boolean(
-			env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET,
+			config.googleClientId && config.googleClientSecret,
 		),
 	};
 }
@@ -73,6 +75,10 @@ export default function Register() {
 				throw new Error(result.error.message || "Hub signup failed");
 			}
 
+			if (result.data?.redirect) {
+				return;
+			}
+
 			const redirectUrl = result.data?.url;
 			if (!redirectUrl) {
 				throw new Error("Missing Hub redirect URL");
@@ -102,6 +108,10 @@ export default function Register() {
 				throw new Error(result.error.message || "Google signup failed");
 			}
 
+			if (result.data?.redirect) {
+				return;
+			}
+
 			const redirectUrl = result.data?.url;
 			if (!redirectUrl) {
 				throw new Error("Missing Google redirect URL");
@@ -120,7 +130,7 @@ export default function Register() {
 		<div className="flex min-h-screen items-center justify-center p-8">
 			<div className="w-full max-w-md space-y-8">
 				<div className="text-center">
-					<h1 className="text-3xl font-bold">Create Account</h1>
+					<h1 className="text-3xl font-bold" data-testid="register-title">Create Account</h1>
 					<p className="mt-2 text-muted-foreground">
 						Get started with opengather
 					</p>
@@ -145,7 +155,8 @@ export default function Register() {
 							className="h-11 w-full"
 							disabled={isAnyLoading}
 							onClick={handleHubRegister}
-						>
+						data-testid="register-hub-button"
+					>
 							{hubLoading ? "Redirecting..." : "Continue with Hub"}
 						</Button>
 					</section>
@@ -167,7 +178,8 @@ export default function Register() {
 							Name
 						</label>
 						<input
-							id="name"
+						id="name"
+						data-testid="register-name"
 							type="text"
 							value={name}
 							onChange={(e) => setName(e.target.value)}
@@ -182,7 +194,8 @@ export default function Register() {
 							Email
 						</label>
 						<input
-							id="email"
+						id="email"
+						data-testid="register-email"
 							type="email"
 							value={email}
 							onChange={(e) => setEmail(e.target.value)}
@@ -197,7 +210,8 @@ export default function Register() {
 							Password
 						</label>
 						<input
-							id="password"
+						id="password"
+						data-testid="register-password"
 							type="password"
 							value={password}
 							onChange={(e) => setPassword(e.target.value)}
@@ -208,7 +222,7 @@ export default function Register() {
 						/>
 					</div>
 
-					<Button type="submit" className="w-full" disabled={isAnyLoading}>
+					<Button type="submit" className="w-full" disabled={isAnyLoading} data-testid="register-submit">
 						{loading ? "Creating account..." : "Sign Up"}
 					</Button>
 
@@ -219,7 +233,8 @@ export default function Register() {
 							className="w-full"
 							disabled={isAnyLoading}
 							onClick={handleGoogleRegister}
-						>
+						data-testid="register-google-button"
+					>
 							{socialLoading ? "Redirecting..." : "Continue with Google"}
 						</Button>
 					) : null}

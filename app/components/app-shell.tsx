@@ -19,6 +19,7 @@ type AppShellProps = {
 
 const baseNavItems = [
 	{ to: "/feed", label: "Feed" },
+	{ to: "/notifications", label: "Notifications" },
 	{ to: "/profile", label: "Profile" },
 	{ to: "/settings", label: "Settings" },
 ];
@@ -64,6 +65,7 @@ export function AppShell(props: AppShellProps) {
 						<Form method="get" action="/feed" className="flex-1 sm:w-72">
 							<input
 								name="q"
+								data-testid="shell-search"
 								defaultValue={searchQuery}
 								className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 								placeholder="Search"
@@ -74,14 +76,14 @@ export function AppShell(props: AppShellProps) {
 								<span className="hidden text-sm text-muted-foreground md:inline">
 									{props.authUser.name}
 								</span>
-								<Button variant="outline" size="sm" onClick={() => signOut()}>
+								<Button variant="outline" size="sm" onClick={() => signOut()} data-testid="shell-sign-out">
 									Sign Out
 								</Button>
 							</>
 						) : (
 							<>
 								<Button variant="outline" size="sm" asChild>
-									<Link to="/login">Sign In</Link>
+									<Link to="/login" data-testid="shell-sign-in-link">Sign In</Link>
 								</Button>
 								<Button size="sm" asChild>
 									<Link to="/register">Register</Link>

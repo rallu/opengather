@@ -34,6 +34,9 @@ type Pages = {
   "/setup": {
     params: {};
   };
+  "/database-required": {
+    params: {};
+  };
   "/feed": {
     params: {};
   };
@@ -41,6 +44,9 @@ type Pages = {
     params: {};
   };
   "/profile": {
+    params: {};
+  };
+  "/notifications": {
     params: {};
   };
   "/settings": {
@@ -54,7 +60,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/setup" | "/feed" | "/community" | "/profile" | "/settings" | "/server-settings";
+    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/setup" | "/database-required" | "/feed" | "/community" | "/profile" | "/notifications" | "/settings" | "/server-settings";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -84,6 +90,10 @@ type RouteFiles = {
     id: "routes/setup";
     page: "/setup";
   };
+  "routes/database-required.tsx": {
+    id: "routes/database-required";
+    page: "/database-required";
+  };
   "routes/feed.tsx": {
     id: "routes/feed";
     page: "/feed";
@@ -95,6 +105,10 @@ type RouteFiles = {
   "routes/profile.tsx": {
     id: "routes/profile";
     page: "/profile";
+  };
+  "routes/notifications.tsx": {
+    id: "routes/notifications";
+    page: "/notifications";
   };
   "routes/settings.tsx": {
     id: "routes/settings";
@@ -115,9 +129,11 @@ type RouteModules = {
   "routes/hub-callback": typeof import("./app/routes/hub-callback.tsx");
   "routes/api-auth": typeof import("./app/routes/api-auth.ts");
   "routes/setup": typeof import("./app/routes/setup.tsx");
+  "routes/database-required": typeof import("./app/routes/database-required.tsx");
   "routes/feed": typeof import("./app/routes/feed.tsx");
   "routes/community": typeof import("./app/routes/community.tsx");
   "routes/profile": typeof import("./app/routes/profile.tsx");
+  "routes/notifications": typeof import("./app/routes/notifications.tsx");
   "routes/settings": typeof import("./app/routes/settings.tsx");
   "routes/server-settings": typeof import("./app/routes/server-settings.tsx");
 };

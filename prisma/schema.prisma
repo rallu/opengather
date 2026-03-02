@@ -7,41 +7,13 @@ datasource db {
   provider = "postgresql"
 }
 
-model Instance {
-  id             String               @id @db.Text
-  slug           String               @unique @db.Text
-  name           String               @db.Text
-  description    String?              @db.Text
-  visibilityMode String               @map("visibility_mode") @db.Text
-  approvalMode   String               @map("approval_mode") @db.Text
-  aiSettings     Json                 @map("ai_settings")
-  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime             @default(now()) @map("updated_at") @db.Timestamptz(6)
-  appConfigs     AppConfig[]
-  memberships    InstanceMembership[]
-  posts          Post[]
-  agents         Agent[]
-  groups         CommunityGroup[]
-  events         CommunityEvent[]
-  modelProviders ModelProviderConfig[]
-  authProviders  InstanceAuthProvider[]
-  processingJobs ProcessingJob[]
-  auditLogs      AuditLog[]
+model Config {
+  key       String   @id @db.Text
+  value     Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  @@map("instance")
-  @@index([slug], map: "idx_instance_slug")
-}
-
-model AppConfig {
-  id         String    @id @db.Text
-  isSetup    Boolean   @default(false) @map("is_setup")
-  instanceId String?   @map("instance_id") @db.Text
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
-  instance   Instance? @relation(fields: [instanceId], references: [id], onDelete: SetNull)
-
-  @@map("app_config")
-  @@index([instanceId], map: "idx_app_config_instance_id")
+  @@map("config")
 }
 
 model InstanceMembership {
@@ -53,8 +25,6 @@ model InstanceMembership {
   approvalStatus String   @map("approval_status") @db.Text
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-  instance       Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
-
   @@unique([instanceId, principalId, principalType])
   @@map("instance_membership")
   @@index([instanceId], map: "idx_membership_instance_id")
@@ -74,7 +44,6 @@ model Post {
   deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(6)
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
-  instance         Instance  @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   group            CommunityGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
   parentPost       Post?     @relation("PostToPost", fields: [parentPostId], references: [id], onDelete: Cascade)
   childPosts       Post[]    @relation("PostToPost")
@@ -139,6 +108,33 @@ model NotificationOutbox {
   @@index([status, nextAttemptAt], map: "idx_notification_outbox_status_next_attempt")
 }
 
+model Notification {
+  id              String    @id @db.Text
+  userId          String    @map("user_id") @db.Text
+  kind            String    @db.Text
+  title           String    @db.Text
+  body            String    @db.Text
+  targetUrl       String?   @map("target_url") @db.Text
+  relatedEntityId String?   @map("related_entity_id") @db.Text
+  payload         Json?
+  readAt          DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("notification")
+  @@index([userId, createdAt], map: "idx_notification_user_created")
+  @@index([userId, readAt], map: "idx_notification_user_read")
+}
+
+model NotificationPreference {
+  id        String   @id @db.Text
+  userId    String   @unique(map: "notification_preference_user_unique") @map("user_id") @db.Text
+  channels  Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("notification_preference")
+}
+
 model Agent {
   id         String   @id @db.Text
   instanceId String   @map("instance_id") @db.Text
@@ -149,8 +145,6 @@ model Agent {
   isEnabled  Boolean  @default(true) @map("is_enabled")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-  instance   Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
-
   @@map("agent")
   @@index([instanceId], map: "idx_agent_instance_id")
 }
@@ -163,7 +157,6 @@ model CommunityGroup {
   visibilityMode String           @map("visibility_mode") @db.Text
   createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
-  instance       Instance         @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   events         CommunityEvent[]
   posts          Post[]
 
@@ -182,7 +175,6 @@ model CommunityEvent {
   visibilityMode String               @map("visibility_mode") @db.Text
   createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime             @default(now()) @map("updated_at") @db.Timestamptz(6)
-  instance       Instance             @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   group          CommunityGroup?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
   participations EventParticipation[]
 
@@ -228,8 +220,6 @@ model ModelProviderConfig {
   isEnabled    Boolean  @default(true) @map("is_enabled")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-  instance     Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
-
   @@map("model_provider_config")
   @@unique([instanceId, providerType])
 }
@@ -241,8 +231,6 @@ model InstanceAuthProvider {
   isEnabled  Boolean  @default(true) @map("is_enabled")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-  instance   Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
-
   @@map("instance_auth_provider")
   @@unique([instanceId, providerId])
 }
@@ -259,7 +247,6 @@ model ProcessingJob {
   lastError   String?  @map("last_error") @db.Text
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-  instance    Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   post        Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@map("processing_job")
@@ -277,8 +264,6 @@ model AuditLog {
   resourceId   String?   @map("resource_id") @db.Text
   payload      Json?
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  instance     Instance? @relation(fields: [instanceId], references: [id], onDelete: SetNull)
-
   @@map("audit_log")
   @@index([instanceId], map: "idx_audit_log_instance_id")
   @@index([createdAt], map: "idx_audit_log_created_at")
