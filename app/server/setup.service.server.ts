@@ -74,14 +74,12 @@ export async function initializeSetup(params: {
 	adminPassword: string;
 	hub: {
 		enabled: boolean;
-		baseUrl: string;
 		oidcDiscoveryUrl: string;
 		clientId: string;
 		clientSecret: string;
 		redirectUri: string;
 		instanceName: string;
 		instanceBaseUrl: string;
-		instancePushSecret: string;
 	};
 }): Promise<{ ok: true } | { ok: false; error: string }> {
 	const db = getDb();
@@ -94,14 +92,12 @@ export async function initializeSetup(params: {
 	await Promise.all([
 		setConfig("better_auth_url", params.betterAuthUrl),
 		setConfig("hub_enabled", params.hub.enabled),
-		setConfig("hub_base_url", params.hub.baseUrl),
 		setConfig("hub_oidc_discovery_url", params.hub.oidcDiscoveryUrl),
 		setConfig("hub_client_id", params.hub.clientId),
 		setConfig("hub_client_secret", params.hub.clientSecret),
 		setConfig("hub_redirect_uri", params.hub.redirectUri),
 		setConfig("hub_instance_name", params.hub.instanceName),
 		setConfig("hub_instance_base_url", params.hub.instanceBaseUrl),
-		setConfig("hub_instance_push_secret", params.hub.instancePushSecret),
 	]);
 
 	const now = new Date();

@@ -1,17 +1,14 @@
 export type ConfigValueByKey = {
-	better_auth_secret: string;
 	better_auth_url: string;
 	google_client_id: string;
 	google_client_secret: string;
 	hub_enabled: boolean;
-	hub_base_url: string;
 	hub_oidc_discovery_url: string;
 	hub_client_id: string;
 	hub_client_secret: string;
 	hub_redirect_uri: string;
 	hub_instance_name: string;
 	hub_instance_base_url: string;
-	hub_instance_push_secret: string;
 	server_name: string;
 	server_description: string;
 	server_visibility_mode: "public" | "registered" | "approval";
@@ -84,10 +81,6 @@ function parseAiSettings(raw: unknown): ConfigValueByKey["ai_settings"] {
 }
 
 export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
-	better_auth_secret: {
-		defaultValue: "dev-secret",
-		parse: (raw) => parseString(raw, "dev-secret"),
-	},
 	better_auth_url: {
 		defaultValue: "http://localhost:5173",
 		parse: (raw) => parseString(raw, "http://localhost:5173"),
@@ -103,10 +96,6 @@ export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
 	hub_enabled: {
 		defaultValue: false,
 		parse: (raw) => parseBoolean(raw, false),
-	},
-	hub_base_url: {
-		defaultValue: "http://localhost:9000",
-		parse: (raw) => parseString(raw, "http://localhost:9000"),
 	},
 	hub_oidc_discovery_url: {
 		defaultValue: "http://localhost:9000/api/auth/.well-known/openid-configuration",
@@ -125,8 +114,9 @@ export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
 		parse: (raw) => parseString(raw),
 	},
 	hub_redirect_uri: {
-		defaultValue: "http://localhost:5173/auth/hub/callback",
-		parse: (raw) => parseString(raw, "http://localhost:5173/auth/hub/callback"),
+		defaultValue: "http://localhost:5173/api/auth/oauth2/callback/hub",
+		parse: (raw) =>
+			parseString(raw, "http://localhost:5173/api/auth/oauth2/callback/hub"),
 	},
 	hub_instance_name: {
 		defaultValue: "OpenGather Instance",
@@ -135,10 +125,6 @@ export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
 	hub_instance_base_url: {
 		defaultValue: "http://localhost:5173",
 		parse: (raw) => parseString(raw, "http://localhost:5173"),
-	},
-	hub_instance_push_secret: {
-		defaultValue: "",
-		parse: (raw) => parseString(raw),
 	},
 	server_name: {
 		defaultValue: "OpenGather",

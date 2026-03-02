@@ -1,9 +1,11 @@
 import type { Prisma } from "../generated/prisma/client";
 import { getDb } from "./db.server";
+import { getHubEnv } from "./env.server";
 import {
 	configDefinitions,
 	type ConfigKey,
 	type ConfigValueByKey,
+	getDefaultConfigValue,
 	parseConfigValue,
 } from "./config.schema.server";
 
@@ -37,7 +39,19 @@ export async function getConfig<K extends ConfigKey>(
 	});
 
 	if (!row) {
-		throw new Error(`Missing required config key: ${key}`);
+		const defaultValue = getDefaultConfigValue(key);
+		await getDb().config.upsert({
+			where: { key },
+			create: {
+				key,
+				value: defaultValue as Prisma.InputJsonValue,
+			},
+			update: {
+				value: defaultValue as Prisma.InputJsonValue,
+				updatedAt: new Date(),
+			},
+		});
+		return defaultValue;
 	}
 
 	return parseConfigValue(key, row.value);
@@ -70,7 +84,6 @@ export async function hasAnyConfig(): Promise<boolean> {
 }
 
 export async function getServerConfig(): Promise<{
-	betterAuthSecret: string;
 	betterAuthUrl: string;
 	googleClientId: string;
 	googleClientSecret: string;
@@ -82,51 +95,44 @@ export async function getServerConfig(): Promise<{
 	hubRedirectUri: string;
 	hubInstanceName: string;
 	hubInstanceBaseUrl: string;
-	hubInstancePushSecret: string;
 }> {
 	const [
-		betterAuthSecret,
 		betterAuthUrl,
 		googleClientId,
 		googleClientSecret,
 		hubEnabled,
-		hubBaseUrl,
 		hubOidcDiscoveryUrl,
 		hubClientId,
 		hubClientSecret,
 		hubRedirectUri,
 		hubInstanceName,
 		hubInstanceBaseUrl,
-		hubInstancePushSecret,
 	] = await Promise.all([
-		getConfig("better_auth_secret"),
 		getConfig("better_auth_url"),
 		getConfig("google_client_id"),
 		getConfig("google_client_secret"),
 		getConfig("hub_enabled"),
-		getConfig("hub_base_url"),
 		getConfig("hub_oidc_discovery_url"),
 		getConfig("hub_client_id"),
 		getConfig("hub_client_secret"),
 		getConfig("hub_redirect_uri"),
 		getConfig("hub_instance_name"),
 		getConfig("hub_instance_base_url"),
-		getConfig("hub_instance_push_secret"),
 	]);
 
+	const hubEnv = getHubEnv();
+
 	return {
-		betterAuthSecret,
 		betterAuthUrl,
 		googleClientId,
 		googleClientSecret,
 		hubEnabled,
-		hubBaseUrl,
+		hubBaseUrl: hubEnv.HUB_BASE_URL,
 		hubOidcDiscoveryUrl,
 		hubClientId,
 		hubClientSecret,
 		hubRedirectUri,
 		hubInstanceName,
 		hubInstanceBaseUrl,
-		hubInstancePushSecret,
 	};
 }

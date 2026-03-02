@@ -1,11 +1,21 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { getBetterAuth } from "~/server/auth.server";
+import { getBetterAuth, getBetterAuthForHubOAuth } from "~/server/auth.server";
+
+function requiresHubOAuthHandler(request: Request): boolean {
+	const url = new URL(request.url);
+	return (
+		url.pathname.endsWith("/api/auth/sign-in/oauth2") ||
+		url.pathname.includes("/api/auth/oauth2/")
+	);
+}
 
 async function handleAuthRequest(params: {
 	request: Request;
 }): Promise<Response> {
 	try {
-		const auth = await getBetterAuth();
+		const auth = requiresHubOAuthHandler(params.request)
+			? await getBetterAuthForHubOAuth()
+			: getBetterAuth();
 		return await auth.handler(params.request);
 	} catch (_error) {
 		return new Response(JSON.stringify({ error: "Auth unavailable" }), {

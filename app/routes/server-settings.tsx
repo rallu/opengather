@@ -7,6 +7,8 @@ import { getDb } from "~/server/db.server";
 import {
 	getHubIdentityForLocalUser,
 	linkHubInstanceForUser,
+	registerInstanceWithHub,
+	unregisterInstanceFromHub,
 } from "~/server/hub.service.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
@@ -41,7 +43,7 @@ async function resolveViewerRole(params: {
 
 export async function action({ request }: ActionFunctionArgs) {
 	try {
-		const { authUser, viewerRole } = await resolveViewerRole({ request });
+		const { authUser, viewerRole, setup } = await resolveViewerRole({ request });
 		if (!authUser) {
 			return { error: "Sign in required." };
 		}
@@ -51,42 +53,41 @@ export async function action({ request }: ActionFunctionArgs) {
 
 		const formData = await request.formData();
 		const hubEnabled = String(formData.get("hubEnabled") ?? "") === "on";
-		const hubBaseUrl = String(formData.get("hubBaseUrl") ?? "").trim();
-		const hubOidcDiscoveryUrl = String(
-			formData.get("hubOidcDiscoveryUrl") ?? "",
-		).trim();
-		const hubClientId = String(formData.get("hubClientId") ?? "").trim();
-		const hubClientSecret = String(formData.get("hubClientSecret") ?? "").trim();
-		const hubRedirectUri = String(formData.get("hubRedirectUri") ?? "").trim();
-		const hubInstanceName = String(formData.get("hubInstanceName") ?? "").trim();
-		const hubInstanceBaseUrl = String(
-			formData.get("hubInstanceBaseUrl") ?? "",
-		).trim();
-		const hubInstancePushSecret = String(
-			formData.get("hubInstancePushSecret") ?? "",
-		).trim();
+		const appOrigin = new URL(request.url).origin;
+		const currentConfig = await getServerConfig();
 
-		await Promise.all([
-			setConfig("hub_enabled", hubEnabled),
-			setConfig("hub_base_url", hubBaseUrl || "http://localhost:9000"),
-			setConfig(
-				"hub_oidc_discovery_url",
-				hubOidcDiscoveryUrl ||
-					`${hubBaseUrl || "http://localhost:9000"}/api/auth/.well-known/openid-configuration`,
-			),
-			setConfig("hub_client_id", hubClientId),
-			setConfig("hub_client_secret", hubClientSecret),
-			setConfig(
-				"hub_redirect_uri",
-				hubRedirectUri || "http://localhost:5173/auth/hub/callback",
-			),
-			setConfig("hub_instance_name", hubInstanceName || "OpenGather Instance"),
-			setConfig(
-				"hub_instance_base_url",
-				hubInstanceBaseUrl || "http://localhost:5173",
-			),
-			setConfig("hub_instance_push_secret", hubInstancePushSecret),
-		]);
+		if (hubEnabled) {
+			const instanceName =
+				currentConfig.hubInstanceName ||
+				setup.instance?.name ||
+				"OpenGather Instance";
+			const registration = await registerInstanceWithHub({
+				instanceName,
+				instanceBaseUrl: appOrigin,
+				redirectUri: `${appOrigin}/api/auth/oauth2/callback/hub`,
+			});
+			await Promise.all([
+				setConfig("hub_enabled", true),
+				setConfig("hub_oidc_discovery_url", registration.hubOidcDiscoveryUrl),
+				setConfig("hub_client_id", registration.hubClientId),
+				setConfig("hub_client_secret", registration.hubClientSecret),
+				setConfig("hub_redirect_uri", `${appOrigin}/api/auth/oauth2/callback/hub`),
+				setConfig("hub_instance_name", instanceName),
+				setConfig("hub_instance_base_url", appOrigin),
+			]);
+		} else {
+			await unregisterInstanceFromHub({
+				instanceBaseUrl: currentConfig.hubInstanceBaseUrl || appOrigin,
+			});
+			await Promise.all([
+				setConfig("hub_enabled", false),
+				setConfig("hub_oidc_discovery_url", ""),
+				setConfig("hub_client_id", ""),
+				setConfig("hub_client_secret", ""),
+				setConfig("hub_redirect_uri", ""),
+				setConfig("hub_instance_base_url", ""),
+			]);
+		}
 
 		if (hubEnabled) {
 			const identity = await getHubIdentityForLocalUser({
@@ -256,57 +257,31 @@ export default function ServerSettingsPage() {
 						/>
 						Enable Hub connection
 					</label>
-					<div className="grid gap-4 sm:grid-cols-2">
-						<ConfigField
-							id="hub-base-url"
-							name="hubBaseUrl"
-							label="Hub base URL"
-							defaultValue={data.hubConfig?.hubBaseUrl ?? ""}
-						/>
-						<ConfigField
-							id="hub-oidc-discovery-url"
-							name="hubOidcDiscoveryUrl"
-							label="Hub OIDC discovery URL"
-							defaultValue={data.hubConfig?.hubOidcDiscoveryUrl ?? ""}
-						/>
-						<ConfigField
-							id="hub-client-id"
-							name="hubClientId"
-							label="Hub client ID"
-							defaultValue={data.hubConfig?.hubClientId ?? ""}
-						/>
-						<ConfigField
-							id="hub-client-secret"
-							name="hubClientSecret"
-							label="Hub client secret"
-							defaultValue={data.hubConfig?.hubClientSecret ?? ""}
-						/>
-						<ConfigField
-							id="hub-redirect-uri"
-							name="hubRedirectUri"
-							label="Hub redirect URI"
-							defaultValue={data.hubConfig?.hubRedirectUri ?? ""}
-						/>
-						<ConfigField
-							id="hub-instance-name"
-							name="hubInstanceName"
-							label="Instance name in Hub"
-							defaultValue={data.hubConfig?.hubInstanceName ?? ""}
-						/>
-						<ConfigField
-							id="hub-instance-base-url"
-							name="hubInstanceBaseUrl"
-							label="Instance base URL"
-							defaultValue={data.hubConfig?.hubInstanceBaseUrl ?? ""}
-						/>
-						<ConfigField
-							id="hub-instance-push-secret"
-							name="hubInstancePushSecret"
-							label="Hub push secret"
-							defaultValue={data.hubConfig?.hubInstancePushSecret ?? ""}
-						/>
-					</div>
-					<Button type="submit">Save and re-register</Button>
+					<p className="text-sm text-muted-foreground">
+						Hub URL is resolved from environment. Enabling auto-registers this
+						server and stores returned OAuth + push credentials.
+					</p>
+					{data.hubConfig?.hubEnabled ? (
+						<div className="rounded-md border border-border p-3 text-sm">
+							<p>
+								<span className="text-muted-foreground">Hub URL:</span>{" "}
+								{data.hubConfig.hubBaseUrl}
+							</p>
+							<p>
+								<span className="text-muted-foreground">Client ID:</span>{" "}
+								{data.hubConfig.hubClientId || "-"}
+							</p>
+							<p>
+								<span className="text-muted-foreground">Discovery URL:</span>{" "}
+								{data.hubConfig.hubOidcDiscoveryUrl || "-"}
+							</p>
+							<p>
+								<span className="text-muted-foreground">Instance URL:</span>{" "}
+								{data.hubConfig.hubInstanceBaseUrl || "-"}
+							</p>
+						</div>
+					) : null}
+					<Button type="submit">Save</Button>
 				</Form>
 			</section>
 		</AppShell>
@@ -331,27 +306,6 @@ function AuthProviderTile(params: {
 					{params.enabled ? "Enabled" : "Disabled"}
 				</span>
 			</p>
-		</div>
-	);
-}
-
-function ConfigField(params: {
-	id: string;
-	name: string;
-	label: string;
-	defaultValue: string;
-}) {
-	return (
-		<div className="space-y-2">
-			<label htmlFor={params.id} className="text-sm font-medium">
-				{params.label}
-			</label>
-			<input
-				id={params.id}
-				name={params.name}
-				defaultValue={params.defaultValue}
-				className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-			/>
 		</div>
 	);
 }

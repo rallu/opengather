@@ -8,6 +8,7 @@ import {
 } from "react-router";
 import { Button } from "~/components/ui/button";
 import { hasDatabaseConfig } from "~/server/env.server";
+import { registerInstanceWithHub } from "~/server/hub.service.server";
 import { getSetupStatus, initializeSetup } from "~/server/setup.service.server";
 
 export async function loader() {
@@ -33,9 +34,6 @@ export async function action({ request }: ActionFunctionArgs) {
 
 	const requestUrl = new URL(request.url);
 	const appOrigin = requestUrl.origin;
-	const defaultHubBaseUrl = appOrigin.includes("127.0.0.1")
-		? "http://127.0.0.1:9000"
-		: "http://localhost:9000";
 
 	const formData = await request.formData();
 	const name = String(formData.get("name") ?? "").trim();
@@ -53,17 +51,6 @@ export async function action({ request }: ActionFunctionArgs) {
 		| "automatic"
 		| "manual";
 	const hubEnabled = String(formData.get("hubEnabled") ?? "") === "on";
-	const hubBaseUrl = String(formData.get("hubBaseUrl") ?? "").trim();
-	const hubClientId = String(formData.get("hubClientId") ?? "").trim();
-	const hubClientSecret = String(formData.get("hubClientSecret") ?? "").trim();
-	const hubRedirectUri = String(formData.get("hubRedirectUri") ?? "").trim();
-	const hubInstanceName = String(formData.get("hubInstanceName") ?? "").trim();
-	const hubInstanceBaseUrl = String(formData.get("hubInstanceBaseUrl") ?? "")
-		.trim();
-	const hubInstancePushSecret = String(formData.get("hubInstancePushSecret") ?? "")
-		.trim();
-	const hubOidcDiscoveryUrl = String(formData.get("hubOidcDiscoveryUrl") ?? "")
-		.trim();
 
 	if (!name || !adminName || !adminEmail || !adminPassword) {
 		return {
@@ -78,6 +65,15 @@ export async function action({ request }: ActionFunctionArgs) {
 	}
 
 	try {
+		const hubRegistration =
+			hubEnabled
+				? await registerInstanceWithHub({
+						instanceName: name,
+						instanceBaseUrl: appOrigin,
+						redirectUri: `${appOrigin}/api/auth/oauth2/callback/hub`,
+					})
+				: null;
+
 		const result = await initializeSetup({
 			name,
 			description: description || undefined,
@@ -89,16 +85,14 @@ export async function action({ request }: ActionFunctionArgs) {
 			adminPassword,
 			hub: {
 				enabled: hubEnabled,
-				baseUrl: hubBaseUrl || defaultHubBaseUrl,
-				oidcDiscoveryUrl:
-					hubOidcDiscoveryUrl ||
-					`${hubBaseUrl || defaultHubBaseUrl}/api/auth/.well-known/openid-configuration`,
-				clientId: hubClientId,
-				clientSecret: hubClientSecret,
-				redirectUri: hubRedirectUri || `${appOrigin}/auth/hub/callback`,
-				instanceName: hubInstanceName || name,
-				instanceBaseUrl: hubInstanceBaseUrl || appOrigin,
-				instancePushSecret: hubInstancePushSecret,
+				oidcDiscoveryUrl: hubRegistration?.hubOidcDiscoveryUrl ?? "",
+				clientId: hubRegistration?.hubClientId ?? "",
+				clientSecret: hubRegistration?.hubClientSecret ?? "",
+				redirectUri: hubEnabled
+					? `${appOrigin}/api/auth/oauth2/callback/hub`
+					: "",
+				instanceName: hubEnabled ? name : "",
+				instanceBaseUrl: hubEnabled ? appOrigin : "",
 			},
 		});
 
@@ -258,115 +252,10 @@ export default function SetupWizard() {
 							<input name="hubEnabled" type="checkbox" data-testid="setup-hub-enabled" />
 							Enable Hub connection
 						</label>
-						<div className="grid gap-4 sm:grid-cols-2">
-							<div className="space-y-2">
-								<label htmlFor="setup-hub-base-url" className="text-sm font-medium">
-									Hub base URL
-								</label>
-								<input
-									id="setup-hub-base-url"
-						data-testid="setup-hub-base-url"
-									name="hubBaseUrl"
-									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-									placeholder="http://localhost:9000"
-								/>
-							</div>
-							<div className="space-y-2">
-								<label
-									htmlFor="setup-hub-oidc-discovery-url"
-									className="text-sm font-medium"
-								>
-									Hub OIDC discovery URL
-								</label>
-								<input
-									id="setup-hub-oidc-discovery-url"
-						data-testid="setup-hub-oidc-discovery-url"
-									name="hubOidcDiscoveryUrl"
-									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-									placeholder="http://localhost:9000/api/auth/.well-known/openid-configuration"
-								/>
-							</div>
-							<div className="space-y-2">
-								<label htmlFor="setup-hub-client-id" className="text-sm font-medium">
-									Hub client ID
-								</label>
-								<input
-									id="setup-hub-client-id"
-						data-testid="setup-hub-client-id"
-									name="hubClientId"
-									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-								/>
-							</div>
-							<div className="space-y-2">
-								<label
-									htmlFor="setup-hub-client-secret"
-									className="text-sm font-medium"
-								>
-									Hub client secret
-								</label>
-								<input
-									id="setup-hub-client-secret"
-						data-testid="setup-hub-client-secret"
-									name="hubClientSecret"
-									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-								/>
-							</div>
-							<div className="space-y-2">
-								<label htmlFor="setup-hub-redirect-uri" className="text-sm font-medium">
-									Hub redirect URI
-								</label>
-								<input
-									id="setup-hub-redirect-uri"
-						data-testid="setup-hub-redirect-uri"
-									name="hubRedirectUri"
-									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-									placeholder="http://localhost:5173/auth/hub/callback"
-								/>
-							</div>
-							<div className="space-y-2">
-								<label
-									htmlFor="setup-hub-instance-name"
-									className="text-sm font-medium"
-								>
-									Instance name in Hub
-								</label>
-								<input
-									id="setup-hub-instance-name"
-						data-testid="setup-hub-instance-name"
-									name="hubInstanceName"
-									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-								/>
-							</div>
-							<div className="space-y-2">
-								<label
-									htmlFor="setup-hub-instance-base-url"
-									className="text-sm font-medium"
-								>
-									Instance base URL
-								</label>
-								<input
-									id="setup-hub-instance-base-url"
-						data-testid="setup-hub-instance-base-url"
-									name="hubInstanceBaseUrl"
-									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-									placeholder="http://localhost:5173"
-								/>
-							</div>
-							<div className="space-y-2">
-								<label
-									htmlFor="setup-hub-instance-push-secret"
-									className="text-sm font-medium"
-								>
-									Hub push secret
-								</label>
-								<input
-									id="setup-hub-instance-push-secret"
-						data-testid="setup-hub-instance-push-secret"
-									name="hubInstancePushSecret"
-									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-								/>
-							</div>
-						</div>
+						<p className="text-sm text-muted-foreground">
+							When enabled, this server auto-registers against Hub using
+							environment configuration and stores returned OAuth credentials.
+						</p>
 					</div>
 				</div>
 

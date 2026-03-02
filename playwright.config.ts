@@ -20,6 +20,9 @@ export default defineConfig({
 			DATABASE_URL:
 				process.env.DATABASE_URL ??
 				"postgres://opengather:opengather@localhost:5432/opengather",
+			BETTER_AUTH_SECRET:
+				process.env.BETTER_AUTH_SECRET ?? "opengather-dev-secret",
+			HUB_BASE_URL: process.env.HUB_BASE_URL ?? "http://127.0.0.1:9000",
 		},
 	},
 	projects: [

@@ -3,53 +3,62 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
 import { getServerConfig } from "./config.service.server";
 import { getDb } from "./db.server";
-import { hasDatabaseConfig } from "./env.server";
+import { getAuthEnv, hasDatabaseConfig } from "./env.server";
 
-async function createBetterAuth() {
-	const config = await getServerConfig();
-	const googleAuthEnabled = Boolean(
-		config.googleClientId && config.googleClientSecret,
-	);
-	const hubAuthEnabled = Boolean(
-		config.hubEnabled && config.hubClientId && config.hubClientSecret,
-	);
+function createAuth(params: {
+	betterAuthUrl: string;
+	google:
+		| {
+				clientId: string;
+				clientSecret: string;
+		  }
+		| null;
+	hub:
+		| {
+				discoveryUrl: string;
+				clientId: string;
+				clientSecret: string;
+		  }
+		| null;
+}) {
+	const env = getAuthEnv();
 
 	return betterAuth({
 		database: prismaAdapter(getDb(), {
 			provider: "postgresql",
 		}),
-		baseURL: config.betterAuthUrl,
+		baseURL: params.betterAuthUrl,
 		trustedOrigins: [
-			config.betterAuthUrl,
+			params.betterAuthUrl,
 			"http://localhost:5173",
 			"http://127.0.0.1:5173",
 		],
-		secret: config.betterAuthSecret,
+		secret: env.BETTER_AUTH_SECRET,
 		advanced: {
 			cookiePrefix: "opengather",
 		},
-		...(googleAuthEnabled
+		...(params.google
 			? {
 					socialProviders: {
 						google: {
-							clientId: config.googleClientId,
-							clientSecret: config.googleClientSecret,
+							clientId: params.google.clientId,
+							clientSecret: params.google.clientSecret,
 						},
 					},
 				}
 			: {}),
-		...(hubAuthEnabled
+		...(params.hub
 			? {
 					plugins: [
 						genericOAuth({
 							config: [
 								{
 									providerId: "hub",
-									discoveryUrl: config.hubOidcDiscoveryUrl,
-									clientId: config.hubClientId,
-									clientSecret: config.hubClientSecret,
+									discoveryUrl: params.hub.discoveryUrl,
+									clientId: params.hub.clientId,
+									clientSecret: params.hub.clientSecret,
 									scopes: ["openid", "profile", "email", "offline_access"],
-									redirectURI: `${config.betterAuthUrl}/api/auth/oauth2/callback/hub`,
+									redirectURI: `${params.betterAuthUrl}/api/auth/oauth2/callback/hub`,
 									pkce: false,
 								},
 							],
@@ -72,22 +81,75 @@ async function createBetterAuth() {
 	});
 }
 
-type BetterAuthInstance = Awaited<ReturnType<typeof createBetterAuth>>;
+type BetterAuthInstance = ReturnType<typeof createAuth>;
 
-let authSingletonPromise: Promise<BetterAuthInstance> | null = null;
+let baseAuthSingleton: BetterAuthInstance | null = null;
+let hubAuthSingleton:
+	| {
+			key: string;
+			auth: BetterAuthInstance;
+	  }
+	| null = null;
 
-export async function getBetterAuth(): Promise<BetterAuthInstance> {
-	if (authSingletonPromise) {
-		return authSingletonPromise;
+export function getBetterAuth(): BetterAuthInstance {
+	if (baseAuthSingleton) {
+		return baseAuthSingleton;
 	}
 
 	if (!hasDatabaseConfig()) {
 		throw new Error("DATABASE_URL is not configured");
 	}
 
-	authSingletonPromise = createBetterAuth().catch((error) => {
-		authSingletonPromise = null;
-		throw error;
+	baseAuthSingleton = createAuth({
+		betterAuthUrl: "http://localhost:5173",
+		google: null,
+		hub: null,
 	});
-	return authSingletonPromise;
+	return baseAuthSingleton;
+}
+
+export async function getBetterAuthForHubOAuth(): Promise<BetterAuthInstance> {
+	if (!hasDatabaseConfig()) {
+		throw new Error("DATABASE_URL is not configured");
+	}
+
+	const config = await getServerConfig();
+	const hubAuthEnabled = Boolean(
+		config.hubEnabled && config.hubClientId && config.hubClientSecret,
+	);
+	const googleAuthEnabled = Boolean(
+		config.googleClientId && config.googleClientSecret,
+	);
+
+	const key = [
+		config.betterAuthUrl,
+		config.googleClientId,
+		config.googleClientSecret,
+		config.hubOidcDiscoveryUrl,
+		config.hubClientId,
+		config.hubClientSecret,
+		String(config.hubEnabled),
+	].join("|");
+	if (hubAuthSingleton && hubAuthSingleton.key === key) {
+		return hubAuthSingleton.auth;
+	}
+
+	const auth = createAuth({
+		betterAuthUrl: config.betterAuthUrl,
+		google: googleAuthEnabled
+			? {
+					clientId: config.googleClientId,
+					clientSecret: config.googleClientSecret,
+				}
+			: null,
+		hub: hubAuthEnabled
+			? {
+					discoveryUrl: config.hubOidcDiscoveryUrl,
+					clientId: config.hubClientId,
+					clientSecret: config.hubClientSecret,
+				}
+			: null,
+	});
+	hubAuthSingleton = { key, auth };
+	return auth;
 }

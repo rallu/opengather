@@ -13,9 +13,8 @@ Use a Prisma 7-compatible Node version:
 nvm use
 ```
 
-1. Ensure env vars are set (`DATABASE_URL`, `BETTER_AUTH_SECRET`, hub values).
+1. Ensure env vars are set (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `HUB_BASE_URL`).
    Default local DB URL: `postgres://opengather:opengather@localhost:5432/opengather`.
-   Optional: set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to enable Google auth via `better-auth`.
 2. Start dev server:
    ```bash
    npm run dev
@@ -36,7 +35,7 @@ Test runtime rule:
 
 - better-auth client: `app/lib/auth-client.ts`
 - better-auth server handler route: `/api/auth/*`
-- Google OAuth is handled by `better-auth` social provider config (when Google env vars are present)
+- Google OAuth is handled by `better-auth` social provider config (when configured in the app database)
 
 ## Pages
 
