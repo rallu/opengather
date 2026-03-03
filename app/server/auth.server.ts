@@ -7,19 +7,15 @@ import { getAuthEnv, hasDatabaseConfig } from "./env.server";
 
 function createAuth(params: {
 	betterAuthUrl: string;
-	google:
-		| {
-				clientId: string;
-				clientSecret: string;
-		  }
-		| null;
-	hub:
-		| {
-				discoveryUrl: string;
-				clientId: string;
-				clientSecret: string;
-		  }
-		| null;
+	google: {
+		clientId: string;
+		clientSecret: string;
+	} | null;
+	hub: {
+		discoveryUrl: string;
+		clientId: string;
+		clientSecret: string;
+	} | null;
 }) {
 	const env = getAuthEnv();
 
@@ -84,12 +80,10 @@ function createAuth(params: {
 type BetterAuthInstance = ReturnType<typeof createAuth>;
 
 let baseAuthSingleton: BetterAuthInstance | null = null;
-let hubAuthSingleton:
-	| {
-			key: string;
-			auth: BetterAuthInstance;
-	  }
-	| null = null;
+let hubAuthSingleton: {
+	key: string;
+	auth: BetterAuthInstance;
+} | null = null;
 
 export function getBetterAuth(): BetterAuthInstance {
 	if (baseAuthSingleton) {

@@ -119,7 +119,9 @@ test("captureMonitoredError routes high severity events to alert webhook", async
 
 	assert.equal(sent.length, 2);
 	assert.equal(
-		sent.some((entry) => entry.webhookUrl === "https://example.invalid/default"),
+		sent.some(
+			(entry) => entry.webhookUrl === "https://example.invalid/default",
+		),
 		true,
 	);
 	assert.equal(

@@ -23,7 +23,9 @@ export function resolveViewerRoleFromMembership(
 	return "guest";
 }
 
-export function canAccessAuditLogs(params: { viewerRole: ViewerRole }): boolean {
+export function canAccessAuditLogs(params: {
+	viewerRole: ViewerRole;
+}): boolean {
 	return params.viewerRole === "admin";
 }
 

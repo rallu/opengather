@@ -76,14 +76,21 @@ export function AppShell(props: AppShellProps) {
 								<span className="hidden text-sm text-muted-foreground md:inline">
 									{props.authUser.name}
 								</span>
-								<Button variant="outline" size="sm" onClick={() => signOut()} data-testid="shell-sign-out">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => signOut()}
+									data-testid="shell-sign-out"
+								>
 									Sign Out
 								</Button>
 							</>
 						) : (
 							<>
 								<Button variant="outline" size="sm" asChild>
-									<Link to="/login" data-testid="shell-sign-in-link">Sign In</Link>
+									<Link to="/login" data-testid="shell-sign-in-link">
+										Sign In
+									</Link>
 								</Button>
 								<Button size="sm" asChild>
 									<Link to="/register">Register</Link>

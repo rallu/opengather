@@ -7,8 +7,8 @@ import {
 	setConfig,
 } from "./config.service.server";
 import { getDb } from "./db.server";
-import { linkHubInstanceForUser } from "./hub.service.server";
 import { captureMonitoredError } from "./error-monitoring.server";
+import { linkHubInstanceForUser } from "./hub.service.server";
 import { logError } from "./logger.server";
 
 export const SINGLETON_INSTANCE_ID = "singleton";
@@ -36,15 +36,21 @@ export async function getSetupStatus(): Promise<SetupStatus> {
 	let visibilityMode: "public" | "registered" | "approval" = "public";
 	let approvalMode: "automatic" | "manual" = "automatic";
 	try {
-		[isSetup, setupInstanceId, name, description, visibilityMode, approvalMode] =
-			await Promise.all([
-				getConfig("setup_completed"),
-				getConfig("setup_instance_id"),
-				getConfig("server_name"),
-				getConfig("server_description"),
-				getConfig("server_visibility_mode"),
-				getConfig("server_approval_mode"),
-			]);
+		[
+			isSetup,
+			setupInstanceId,
+			name,
+			description,
+			visibilityMode,
+			approvalMode,
+		] = await Promise.all([
+			getConfig("setup_completed"),
+			getConfig("setup_instance_id"),
+			getConfig("server_name"),
+			getConfig("server_description"),
+			getConfig("server_visibility_mode"),
+			getConfig("server_approval_mode"),
+		]);
 	} catch {
 		return { isSetup: false };
 	}

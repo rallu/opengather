@@ -30,7 +30,9 @@ function makeSeriesKey(name: string, labels: LabelSet): string {
 	const entries = Object.entries(labels).sort(([left], [right]) =>
 		left.localeCompare(right),
 	);
-	const labelString = entries.map(([key, value]) => `${key}=${String(value)}`).join(",");
+	const labelString = entries
+		.map(([key, value]) => `${key}=${String(value)}`)
+		.join(",");
 	return `${name}|${labelString}`;
 }
 
@@ -131,11 +133,17 @@ export function renderPrometheusMetrics(params: {
 	lines.push("# TYPE opengather_instance_up gauge");
 	lines.push("opengather_instance_up 1");
 
-	lines.push("# HELP opengather_instance_uptime_seconds Process uptime in seconds.");
+	lines.push(
+		"# HELP opengather_instance_uptime_seconds Process uptime in seconds.",
+	);
 	lines.push("# TYPE opengather_instance_uptime_seconds gauge");
-	lines.push(`opengather_instance_uptime_seconds ${Math.floor((nowMs - processStartedAtMs) / 1000)}`);
+	lines.push(
+		`opengather_instance_uptime_seconds ${Math.floor((nowMs - processStartedAtMs) / 1000)}`,
+	);
 
-	lines.push("# HELP opengather_database_up Database dependency health (1=up, 0=down).");
+	lines.push(
+		"# HELP opengather_database_up Database dependency health (1=up, 0=down).",
+	);
 	lines.push("# TYPE opengather_database_up gauge");
 	lines.push(`opengather_database_up ${params.databaseUp ? 1 : 0}`);
 

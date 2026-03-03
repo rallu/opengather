@@ -82,7 +82,13 @@ function severityForEvent(event: string): "high" | "medium" | "low" {
 export async function loadErrorMonitoringConfig(): Promise<ErrorMonitoringConfig> {
 	const { getConfig } = await import("./config.service.server.ts");
 
-	const [enabled, webhookUrl, alertWebhookUrl, sampleRate, dedupeWindowSeconds] = await Promise.all([
+	const [
+		enabled,
+		webhookUrl,
+		alertWebhookUrl,
+		sampleRate,
+		dedupeWindowSeconds,
+	] = await Promise.all([
 		getConfig("error_monitoring_enabled"),
 		getConfig("error_monitoring_webhook_url"),
 		getConfig("error_monitoring_alert_webhook_url"),
@@ -111,9 +117,12 @@ export async function captureMonitoredError(params: {
 	random?: () => number;
 	transport?: (payload: ErrorPayload, webhookUrl: string) => Promise<void>;
 }): Promise<{ captured: boolean; reason?: string }> {
-	const error = params.error instanceof Error
-		? params.error
-		: new Error(typeof params.error === "string" ? params.error : "Unknown error");
+	const error =
+		params.error instanceof Error
+			? params.error
+			: new Error(
+					typeof params.error === "string" ? params.error : "Unknown error",
+				);
 	const config = params.config ?? (await loadErrorMonitoringConfig());
 	const nowMs = params.nowMs ?? Date.now();
 	const random = params.random ?? Math.random;
@@ -126,7 +135,9 @@ export async function captureMonitoredError(params: {
 		return { captured: false, reason: "sampled_out" };
 	}
 
-	const path = params.request ? new URL(params.request.url).pathname : undefined;
+	const path = params.request
+		? new URL(params.request.url).pathname
+		: undefined;
 	const fingerprint = fingerprintFor({
 		event: params.event,
 		error,
@@ -160,12 +171,12 @@ export async function captureMonitoredError(params: {
 		extra: params.extra,
 		...(params.request
 			? {
-				request: {
-					requestId,
-					method: params.request.method,
-					path: new URL(params.request.url).pathname,
-				},
-			}
+					request: {
+						requestId,
+						method: params.request.method,
+						path: new URL(params.request.url).pathname,
+					},
+				}
 			: {}),
 	};
 

@@ -8,14 +8,20 @@ import {
 test("resolveViewerRoleFromMembership returns guest for missing or unapproved membership", () => {
 	assert.equal(resolveViewerRoleFromMembership(null), "guest");
 	assert.equal(
-		resolveViewerRoleFromMembership({ role: "admin", approvalStatus: "pending" }),
+		resolveViewerRoleFromMembership({
+			role: "admin",
+			approvalStatus: "pending",
+		}),
 		"guest",
 	);
 });
 
 test("resolveViewerRoleFromMembership returns approved supported roles", () => {
 	assert.equal(
-		resolveViewerRoleFromMembership({ role: "member", approvalStatus: "approved" }),
+		resolveViewerRoleFromMembership({
+			role: "member",
+			approvalStatus: "approved",
+		}),
 		"member",
 	);
 	assert.equal(
@@ -26,7 +32,10 @@ test("resolveViewerRoleFromMembership returns approved supported roles", () => {
 		"moderator",
 	);
 	assert.equal(
-		resolveViewerRoleFromMembership({ role: "admin", approvalStatus: "approved" }),
+		resolveViewerRoleFromMembership({
+			role: "admin",
+			approvalStatus: "approved",
+		}),
 		"admin",
 	);
 });

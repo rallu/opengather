@@ -6,7 +6,10 @@ async function isSetupRequired(
 	page: import("@playwright/test").Page,
 ): Promise<boolean> {
 	await page.goto("/");
-	return page.getByTestId("home-run-setup-link").isVisible().catch(() => false);
+	return page
+		.getByTestId("home-run-setup-link")
+		.isVisible()
+		.catch(() => false);
 }
 
 test.describe("home", () => {

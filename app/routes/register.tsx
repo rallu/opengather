@@ -130,7 +130,9 @@ export default function Register() {
 		<div className="flex min-h-screen items-center justify-center p-8">
 			<div className="w-full max-w-md space-y-8">
 				<div className="text-center">
-					<h1 className="text-3xl font-bold" data-testid="register-title">Create Account</h1>
+					<h1 className="text-3xl font-bold" data-testid="register-title">
+						Create Account
+					</h1>
 					<p className="mt-2 text-muted-foreground">
 						Get started with opengather
 					</p>
@@ -155,8 +157,8 @@ export default function Register() {
 							className="h-11 w-full"
 							disabled={isAnyLoading}
 							onClick={handleHubRegister}
-						data-testid="register-hub-button"
-					>
+							data-testid="register-hub-button"
+						>
 							{hubLoading ? "Redirecting..." : "Continue with Hub"}
 						</Button>
 					</section>
@@ -178,8 +180,8 @@ export default function Register() {
 							Name
 						</label>
 						<input
-						id="name"
-						data-testid="register-name"
+							id="name"
+							data-testid="register-name"
 							type="text"
 							value={name}
 							onChange={(e) => setName(e.target.value)}
@@ -194,8 +196,8 @@ export default function Register() {
 							Email
 						</label>
 						<input
-						id="email"
-						data-testid="register-email"
+							id="email"
+							data-testid="register-email"
 							type="email"
 							value={email}
 							onChange={(e) => setEmail(e.target.value)}
@@ -210,8 +212,8 @@ export default function Register() {
 							Password
 						</label>
 						<input
-						id="password"
-						data-testid="register-password"
+							id="password"
+							data-testid="register-password"
 							type="password"
 							value={password}
 							onChange={(e) => setPassword(e.target.value)}
@@ -222,7 +224,12 @@ export default function Register() {
 						/>
 					</div>
 
-					<Button type="submit" className="w-full" disabled={isAnyLoading} data-testid="register-submit">
+					<Button
+						type="submit"
+						className="w-full"
+						disabled={isAnyLoading}
+						data-testid="register-submit"
+					>
 						{loading ? "Creating account..." : "Sign Up"}
 					</Button>
 
@@ -233,8 +240,8 @@ export default function Register() {
 							className="w-full"
 							disabled={isAnyLoading}
 							onClick={handleGoogleRegister}
-						data-testid="register-google-button"
-					>
+							data-testid="register-google-button"
+						>
 							{socialLoading ? "Redirecting..." : "Continue with Google"}
 						</Button>
 					) : null}

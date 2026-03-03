@@ -36,7 +36,9 @@ async function handleAuthRequest(params: {
 		requestId,
 	});
 	const ip = getRequestIp(params.request);
-	const flow = requiresHubOAuthHandler(params.request) ? "hub_oauth" : "local_auth";
+	const flow = requiresHubOAuthHandler(params.request)
+		? "hub_oauth"
+		: "local_auth";
 	const rateLimitResult = checkRateLimit({
 		bucket: "auth:endpoints",
 		key: `ip:${ip}`,

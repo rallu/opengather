@@ -32,11 +32,7 @@ export async function writeAuditLog(params: {
 	};
 	instanceId?: string | null;
 }): Promise<void> {
-	const db =
-		params.db ??
-		(
-			await import("./db.server.ts")
-		).getDb();
+	const db = params.db ?? (await import("./db.server.ts")).getDb();
 	const instanceId = (() => {
 		if (params.instanceId !== undefined) {
 			return Promise.resolve(params.instanceId);

@@ -128,7 +128,9 @@ export default function Login() {
 		<div className="flex min-h-screen items-center justify-center p-8">
 			<div className="w-full max-w-md space-y-8">
 				<div className="text-center">
-					<h1 className="text-3xl font-bold" data-testid="login-title">Sign In</h1>
+					<h1 className="text-3xl font-bold" data-testid="login-title">
+						Sign In
+					</h1>
 					<p className="mt-2 text-muted-foreground">
 						Welcome back to opengather
 					</p>
@@ -149,12 +151,12 @@ export default function Login() {
 							</p>
 						</div>
 						<Button
-						type="button"
-						className="h-11 w-full"
-						disabled={isAnyLoading}
-						onClick={handleHubLogin}
-						data-testid="login-hub-button"
-					>
+							type="button"
+							className="h-11 w-full"
+							disabled={isAnyLoading}
+							onClick={handleHubLogin}
+							data-testid="login-hub-button"
+						>
 							{hubLoading ? "Redirecting..." : "Continue with Hub"}
 						</Button>
 					</section>
@@ -176,8 +178,8 @@ export default function Login() {
 							Email
 						</label>
 						<input
-						id="email"
-						data-testid="login-email"
+							id="email"
+							data-testid="login-email"
 							type="email"
 							value={email}
 							onChange={(e) => setEmail(e.target.value)}
@@ -192,8 +194,8 @@ export default function Login() {
 							Password
 						</label>
 						<input
-						id="password"
-						data-testid="login-password"
+							id="password"
+							data-testid="login-password"
 							type="password"
 							value={password}
 							onChange={(e) => setPassword(e.target.value)}
@@ -203,19 +205,24 @@ export default function Login() {
 						/>
 					</div>
 
-					<Button type="submit" className="w-full" disabled={isAnyLoading} data-testid="login-submit">
+					<Button
+						type="submit"
+						className="w-full"
+						disabled={isAnyLoading}
+						data-testid="login-submit"
+					>
 						{loading ? "Signing in..." : "Sign In"}
 					</Button>
 
 					{googleAuthEnabled ? (
 						<Button
-						type="button"
-						variant="outline"
-						className="w-full"
-						disabled={isAnyLoading}
-						onClick={handleGoogleLogin}
-						data-testid="login-google-button"
-					>
+							type="button"
+							variant="outline"
+							className="w-full"
+							disabled={isAnyLoading}
+							onClick={handleGoogleLogin}
+							data-testid="login-google-button"
+						>
 							{socialLoading ? "Redirecting..." : "Continue with Google"}
 						</Button>
 					) : null}

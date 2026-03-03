@@ -12,9 +12,7 @@ import {
 } from "~/server/hub.service.server";
 import { getViewerContext } from "~/server/viewer-role.service.server";
 
-async function resolveViewerRole(params: {
-	request: Request;
-}): Promise<{
+async function resolveViewerRole(params: { request: Request }): Promise<{
 	authUser: Awaited<ReturnType<typeof getViewerContext>>["authUser"];
 	setup: Awaited<ReturnType<typeof getViewerContext>>["setup"];
 	viewerRole: "guest" | "member" | "moderator" | "admin";
@@ -24,7 +22,9 @@ async function resolveViewerRole(params: {
 
 export async function action({ request }: ActionFunctionArgs) {
 	try {
-		const { authUser, viewerRole, setup } = await resolveViewerRole({ request });
+		const { authUser, viewerRole, setup } = await resolveViewerRole({
+			request,
+		});
 		if (!authUser) {
 			return { error: "Sign in required." };
 		}
@@ -52,7 +52,10 @@ export async function action({ request }: ActionFunctionArgs) {
 				setConfig("hub_oidc_discovery_url", registration.hubOidcDiscoveryUrl),
 				setConfig("hub_client_id", registration.hubClientId),
 				setConfig("hub_client_secret", registration.hubClientSecret),
-				setConfig("hub_redirect_uri", `${appOrigin}/api/auth/oauth2/callback/hub`),
+				setConfig(
+					"hub_redirect_uri",
+					`${appOrigin}/api/auth/oauth2/callback/hub`,
+				),
 				setConfig("hub_instance_name", instanceName),
 				setConfig("hub_instance_base_url", appOrigin),
 			]);
@@ -120,7 +123,9 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export async function loader({ request }: LoaderFunctionArgs) {
 	try {
-		const { authUser, setup, viewerRole } = await resolveViewerRole({ request });
+		const { authUser, setup, viewerRole } = await resolveViewerRole({
+			request,
+		});
 		const config = await getServerConfig();
 
 		return {

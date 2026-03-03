@@ -17,7 +17,10 @@ async function isSetupRequired(
 	page: import("@playwright/test").Page,
 ): Promise<boolean> {
 	await page.goto("/");
-	return page.getByTestId("home-run-setup-link").isVisible().catch(() => false);
+	return page
+		.getByTestId("home-run-setup-link")
+		.isVisible()
+		.catch(() => false);
 }
 
 async function moveToInstanceStep(
@@ -67,11 +70,15 @@ test.describe("setup wizard", () => {
 		await page.getByTestId("setup-visibility").selectOption("registered");
 		await page.getByTestId("setup-approval").selectOption("manual");
 
-		await expect(page.getByTestId("setup-name")).toHaveValue("OpenGather Finland");
+		await expect(page.getByTestId("setup-name")).toHaveValue(
+			"OpenGather Finland",
+		);
 		await expect(page.getByTestId("setup-admin-email")).toHaveValue(
 			"admin@example.com",
 		);
-		await expect(page.getByTestId("setup-visibility")).toHaveValue("registered");
+		await expect(page.getByTestId("setup-visibility")).toHaveValue(
+			"registered",
+		);
 		await expect(page.getByTestId("setup-approval")).toHaveValue("manual");
 	});
 

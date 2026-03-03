@@ -38,8 +38,7 @@ export default async function handleRequest(
 						data: {
 							requestId,
 							path: new URL(request.url).pathname,
-							error:
-								error instanceof Error ? error.message : "render_error",
+							error: error instanceof Error ? error.message : "render_error",
 						},
 					});
 				}

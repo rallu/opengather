@@ -1,13 +1,13 @@
 import type { Prisma } from "../generated/prisma/client";
-import { getDb } from "./db.server";
-import { getHubEnv } from "./env.server";
 import {
-	configDefinitions,
 	type ConfigKey,
 	type ConfigValueByKey,
+	configDefinitions,
 	getDefaultConfigValue,
 	parseConfigValue,
 } from "./config.schema.server";
+import { getDb } from "./db.server";
+import { getHubEnv } from "./env.server";
 
 export async function initializeConfigDefaults(): Promise<void> {
 	const db = getDb();

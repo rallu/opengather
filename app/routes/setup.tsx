@@ -7,10 +7,14 @@ import {
 	useNavigation,
 } from "react-router";
 import { Button } from "~/components/ui/button";
-import { captureMonitoredError } from "~/server/error-monitoring.server";
 import { hasDatabaseConfig } from "~/server/env.server";
+import { captureMonitoredError } from "~/server/error-monitoring.server";
 import { registerInstanceWithHub } from "~/server/hub.service.server";
-import { buildRequestContext, getRequestId, logError } from "~/server/logger.server";
+import {
+	buildRequestContext,
+	getRequestId,
+	logError,
+} from "~/server/logger.server";
 import { getSetupStatus, initializeSetup } from "~/server/setup.service.server";
 
 export async function loader() {
@@ -68,14 +72,13 @@ export async function action({ request }: ActionFunctionArgs) {
 	}
 
 	try {
-		const hubRegistration =
-			hubEnabled
-				? await registerInstanceWithHub({
-						instanceName: name,
-						instanceBaseUrl: appOrigin,
-						redirectUri: `${appOrigin}/api/auth/oauth2/callback/hub`,
-					})
-				: null;
+		const hubRegistration = hubEnabled
+			? await registerInstanceWithHub({
+					instanceName: name,
+					instanceBaseUrl: appOrigin,
+					redirectUri: `${appOrigin}/api/auth/oauth2/callback/hub`,
+				})
+			: null;
 
 		const result = await initializeSetup({
 			name,
@@ -130,7 +133,9 @@ export default function SetupWizard() {
 	return (
 		<div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-8 p-8">
 			<div className="space-y-2">
-				<h1 className="text-3xl font-bold" data-testid="setup-title">First Run Setup</h1>
+				<h1 className="text-3xl font-bold" data-testid="setup-title">
+					First Run Setup
+				</h1>
 				<p className="text-muted-foreground">
 					Configure your single-server feed settings.
 				</p>
@@ -183,7 +188,7 @@ export default function SetupWizard() {
 							</label>
 							<input
 								id="setup-admin-name"
-						data-testid="setup-admin-name"
+								data-testid="setup-admin-name"
 								name="adminName"
 								required
 								className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -191,12 +196,15 @@ export default function SetupWizard() {
 							/>
 						</div>
 						<div className="space-y-2">
-							<label htmlFor="setup-admin-email" className="text-sm font-medium">
+							<label
+								htmlFor="setup-admin-email"
+								className="text-sm font-medium"
+							>
 								Admin email
 							</label>
 							<input
 								id="setup-admin-email"
-						data-testid="setup-admin-email"
+								data-testid="setup-admin-email"
 								name="adminEmail"
 								type="email"
 								required
@@ -213,7 +221,7 @@ export default function SetupWizard() {
 							</label>
 							<input
 								id="setup-admin-password"
-						data-testid="setup-admin-password"
+								data-testid="setup-admin-password"
 								name="adminPassword"
 								type="password"
 								minLength={8}
@@ -232,7 +240,7 @@ export default function SetupWizard() {
 						</label>
 						<select
 							id="setup-visibility"
-						data-testid="setup-visibility"
+							data-testid="setup-visibility"
 							name="visibilityMode"
 							defaultValue="public"
 							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -248,7 +256,7 @@ export default function SetupWizard() {
 						</label>
 						<select
 							id="setup-approval"
-						data-testid="setup-approval"
+							data-testid="setup-approval"
 							name="approvalMode"
 							defaultValue="automatic"
 							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -263,7 +271,11 @@ export default function SetupWizard() {
 					<h2 className="mb-3 text-base font-semibold">Connect to Hub</h2>
 					<div className="space-y-4">
 						<label className="flex items-center gap-2 text-sm font-medium">
-							<input name="hubEnabled" type="checkbox" data-testid="setup-hub-enabled" />
+							<input
+								name="hubEnabled"
+								type="checkbox"
+								data-testid="setup-hub-enabled"
+							/>
 							Enable Hub connection
 						</label>
 						<p className="text-sm text-muted-foreground">

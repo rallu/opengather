@@ -40,14 +40,18 @@ export function logInfo(params: {
 	event: string;
 	data?: Record<string, unknown>;
 }): void {
-	console.log(toLogLine({ level: "info", event: params.event, data: params.data }));
+	console.log(
+		toLogLine({ level: "info", event: params.event, data: params.data }),
+	);
 }
 
 export function logWarn(params: {
 	event: string;
 	data?: Record<string, unknown>;
 }): void {
-	console.warn(toLogLine({ level: "warn", event: params.event, data: params.data }));
+	console.warn(
+		toLogLine({ level: "warn", event: params.event, data: params.data }),
+	);
 }
 
 export function logError(params: {

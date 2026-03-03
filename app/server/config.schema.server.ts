@@ -56,14 +56,18 @@ function parseNumber(raw: unknown, fallback = 0): number {
 	return typeof raw === "number" && Number.isFinite(raw) ? raw : fallback;
 }
 
-function parseVisibilityMode(raw: unknown): ConfigValueByKey["server_visibility_mode"] {
+function parseVisibilityMode(
+	raw: unknown,
+): ConfigValueByKey["server_visibility_mode"] {
 	if (typeof raw === "string" && visibilityModes.has(raw as never)) {
 		return raw as ConfigValueByKey["server_visibility_mode"];
 	}
 	return "public";
 }
 
-function parseApprovalMode(raw: unknown): ConfigValueByKey["server_approval_mode"] {
+function parseApprovalMode(
+	raw: unknown,
+): ConfigValueByKey["server_approval_mode"] {
 	if (typeof raw === "string" && approvalModes.has(raw as never)) {
 		return raw as ConfigValueByKey["server_approval_mode"];
 	}
@@ -80,12 +84,14 @@ function parseAiSettings(raw: unknown): ConfigValueByKey["ai_settings"] {
 
 	const data = raw as Partial<ConfigValueByKey["ai_settings"]>;
 	return {
-		agentUsageEnabled: typeof data.agentUsageEnabled === "boolean"
-			? data.agentUsageEnabled
-			: false,
-		moderationEnabled: typeof data.moderationEnabled === "boolean"
-			? data.moderationEnabled
-			: true,
+		agentUsageEnabled:
+			typeof data.agentUsageEnabled === "boolean"
+				? data.agentUsageEnabled
+				: false,
+		moderationEnabled:
+			typeof data.moderationEnabled === "boolean"
+				? data.moderationEnabled
+				: true,
 	};
 }
 
@@ -107,7 +113,8 @@ export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
 		parse: (raw) => parseBoolean(raw, false),
 	},
 	hub_oidc_discovery_url: {
-		defaultValue: "http://localhost:9000/api/auth/.well-known/openid-configuration",
+		defaultValue:
+			"http://localhost:9000/api/auth/.well-known/openid-configuration",
 		parse: (raw) =>
 			parseString(
 				raw,

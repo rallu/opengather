@@ -1,5 +1,5 @@
-import { getDb } from "./db.server";
 import { getServerConfig } from "./config.service.server";
+import { getDb } from "./db.server";
 import { getHubEnv } from "./env.server";
 
 export async function createHubAuthorizeUrl(params: {
@@ -92,20 +92,23 @@ export async function pushHubNotification(params: {
 		? new URL(params.targetUrl, config.hubInstanceBaseUrl).toString()
 		: undefined;
 
-	const response = await fetch(`${hubEnv.HUB_BASE_URL}/api/notifications/push`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
+	const response = await fetch(
+		`${hubEnv.HUB_BASE_URL}/api/notifications/push`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				recipientHubUserId: params.recipientHubUserId,
+				type: params.type,
+				title: params.title,
+				body: params.body,
+				targetUrl,
+				instanceBaseUrl: config.hubInstanceBaseUrl,
+			}),
 		},
-		body: JSON.stringify({
-			recipientHubUserId: params.recipientHubUserId,
-			type: params.type,
-			title: params.title,
-			body: params.body,
-			targetUrl,
-			instanceBaseUrl: config.hubInstanceBaseUrl,
-		}),
-	});
+	);
 
 	if (!response.ok) {
 		throw new Error(`Failed to push notification: ${response.status}`);
@@ -122,17 +125,20 @@ export async function registerInstanceWithHub(params: {
 	hubOidcDiscoveryUrl: string;
 }> {
 	const hubEnv = getHubEnv();
-	const response = await fetch(`${hubEnv.HUB_BASE_URL}/api/instances/register`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
+	const response = await fetch(
+		`${hubEnv.HUB_BASE_URL}/api/instances/register`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				instanceName: params.instanceName,
+				instanceBaseUrl: params.instanceBaseUrl,
+				redirectUri: params.redirectUri,
+			}),
 		},
-		body: JSON.stringify({
-			instanceName: params.instanceName,
-			instanceBaseUrl: params.instanceBaseUrl,
-			redirectUri: params.redirectUri,
-		}),
-	});
+	);
 
 	if (!response.ok) {
 		throw new Error(`Hub registration failed: ${response.status}`);
@@ -143,11 +149,7 @@ export async function registerInstanceWithHub(params: {
 		hubClientSecret?: string;
 		hubOidcDiscoveryUrl?: string;
 	};
-	if (
-		!body.hubClientId ||
-		!body.hubClientSecret ||
-		!body.hubOidcDiscoveryUrl
-	) {
+	if (!body.hubClientId || !body.hubClientSecret || !body.hubOidcDiscoveryUrl) {
 		throw new Error("Hub registration returned incomplete credentials");
 	}
 
@@ -162,15 +164,18 @@ export async function unregisterInstanceFromHub(params: {
 	instanceBaseUrl: string;
 }): Promise<void> {
 	const hubEnv = getHubEnv();
-	const response = await fetch(`${hubEnv.HUB_BASE_URL}/api/instances/unregister`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
+	const response = await fetch(
+		`${hubEnv.HUB_BASE_URL}/api/instances/unregister`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				instanceBaseUrl: params.instanceBaseUrl,
+			}),
 		},
-		body: JSON.stringify({
-			instanceBaseUrl: params.instanceBaseUrl,
-		}),
-	});
+	);
 
 	if (!response.ok && response.status !== 404) {
 		throw new Error(`Hub unregister failed: ${response.status}`);

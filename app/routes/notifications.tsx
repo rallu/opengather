@@ -99,16 +99,24 @@ export default function NotificationsPage() {
 			) : (
 				<ul className="space-y-3">
 					{data.notifications.map((notification) => (
-						<li key={notification.id} className="rounded-md border border-border p-4">
+						<li
+							key={notification.id}
+							className="rounded-md border border-border p-4"
+						>
 							<div className="flex items-start justify-between gap-3">
 								<div className="space-y-1">
 									<p className="text-xs uppercase tracking-wide text-muted-foreground">
 										{notification.kind}
 									</p>
 									<p className="font-medium">{notification.title}</p>
-									<p className="text-sm text-muted-foreground">{notification.body}</p>
+									<p className="text-sm text-muted-foreground">
+										{notification.body}
+									</p>
 									{notification.targetUrl ? (
-										<Link className="text-sm underline" to={notification.targetUrl}>
+										<Link
+											className="text-sm underline"
+											to={notification.targetUrl}
+										>
 											Open
 										</Link>
 									) : null}
@@ -125,7 +133,12 @@ export default function NotificationsPage() {
 												name="notificationId"
 												value={notification.id}
 											/>
-											<Button type="submit" size="sm" variant="outline" disabled={loading}>
+											<Button
+												type="submit"
+												size="sm"
+												variant="outline"
+												disabled={loading}
+											>
 												Mark read
 											</Button>
 										</Form>

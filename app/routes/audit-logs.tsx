@@ -140,7 +140,10 @@ export default function AuditLogsPage() {
 								</tr>
 							) : (
 								data.logs.map((row) => (
-									<tr key={row.id} className="border-b border-border/60 align-top">
+									<tr
+										key={row.id}
+										className="border-b border-border/60 align-top"
+									>
 										<td className="px-2 py-2 whitespace-nowrap">
 											{new Date(row.createdAt).toLocaleString()}
 										</td>

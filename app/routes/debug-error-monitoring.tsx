@@ -32,7 +32,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
 	});
 
 	return new Response(
-		JSON.stringify({ ok: true, captured: result.captured, reason: result.reason }),
+		JSON.stringify({
+			ok: true,
+			captured: result.captured,
+			reason: result.reason,
+		}),
 		{
 			status: 200,
 			headers: { "Content-Type": "application/json" },
