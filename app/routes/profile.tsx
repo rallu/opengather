@@ -3,6 +3,7 @@ import { Link, useLoaderData } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
 import { getDb } from "~/server/db.server";
+import { getInstanceViewerRole } from "~/server/permissions.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
 
@@ -27,19 +28,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		}
 
 		const db = getDb();
-		const membership = await db.instanceMembership.findFirst({
-			where: {
-				instanceId: setup.instance.id,
-				principalId: authUser.id,
-				principalType: "user",
-			},
-			select: { role: true, approvalStatus: true },
+		const viewerRole = await getInstanceViewerRole({
+			instanceId: setup.instance.id,
+			userId: authUser.id,
 		});
-
-		const viewerRole =
-			!membership || membership.approvalStatus !== "approved"
-				? "guest"
-				: (membership.role as "member" | "moderator" | "admin");
 
 		const authorIds = [authUser.id, authUser.hubUserId].filter(
 			(value): value is string => Boolean(value),

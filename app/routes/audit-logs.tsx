@@ -6,7 +6,7 @@ import { getDb } from "~/server/db.server";
 import {
 	canAccessAuditLogs,
 	getViewerContext,
-} from "~/server/viewer-role.service.server";
+} from "~/server/permissions.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
 	try {
@@ -20,7 +20,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			};
 		}
 
-		if (!canAccessAuditLogs({ viewerRole: viewer.viewerRole })) {
+		if (!canAccessAuditLogs({ viewerRole: viewer.viewerRole }).allowed) {
 			return {
 				status: "forbidden" as const,
 				authUser: viewer.authUser,

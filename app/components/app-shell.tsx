@@ -19,6 +19,7 @@ type AppShellProps = {
 
 const baseNavItems = [
 	{ to: "/feed", label: "Feed" },
+	{ to: "/groups", label: "Groups" },
 	{ to: "/notifications", label: "Notifications" },
 	{ to: "/profile", label: "Profile" },
 	{ to: "/settings", label: "Settings" },
@@ -26,9 +27,11 @@ const baseNavItems = [
 
 export function AppShell(props: AppShellProps) {
 	const location = useLocation();
-	const navItems = props.showServerSettings
-		? [...baseNavItems, { to: "/server-settings", label: "Server" }]
-		: baseNavItems;
+	const navItems = props.authUser
+		? props.showServerSettings
+			? [...baseNavItems, { to: "/server-settings", label: "Server" }]
+			: baseNavItems
+		: [{ to: "/feed", label: "Feed" }];
 
 	const activeItem = navItems.find((item) =>
 		location.pathname.startsWith(item.to),

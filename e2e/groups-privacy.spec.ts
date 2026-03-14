@@ -1,0 +1,352 @@
+import { randomUUID } from "node:crypto";
+import { expect, test } from "@playwright/test";
+import { Client } from "pg";
+
+test.describe.configure({ mode: "serial" });
+
+const adminUser = {
+	email: "admin@example.com",
+	password: "admin-pass-123",
+};
+
+const memberUser = {
+	name: `Member ${Date.now()}`,
+	email: `member-${Date.now()}@example.com`,
+	password: "member-pass-123",
+};
+
+const publicGroupName = `Public Group ${Date.now()}`;
+const publicPostText = `Public announcement ${Date.now()}`;
+const privateGroupName = `Private Group ${Date.now()}`;
+const privatePostText = `Hidden steering note ${Date.now()}`;
+
+let publicGroupId = "";
+let privateGroupId = "";
+const databaseUrl =
+	process.env.DATABASE_URL ??
+	"postgres://opengather:opengather@127.0.0.1:5433/opengather";
+
+async function isSetupRequired(
+	page: import("@playwright/test").Page,
+): Promise<boolean> {
+	await page.goto("/");
+	return page
+		.getByTestId("home-run-setup-link")
+		.isVisible()
+		.catch(() => false);
+}
+
+async function ensureConfiguredInstance(
+	page: import("@playwright/test").Page,
+): Promise<void> {
+	const setupRequired = await isSetupRequired(page);
+	if (!setupRequired) {
+		return;
+	}
+
+	await page.goto("/setup");
+	await expect(page.getByTestId("setup-name")).toBeVisible();
+	await page.getByTestId("setup-name").fill("OpenGather Local");
+	await page.getByTestId("setup-description").fill("Local test instance");
+	await page.getByTestId("setup-admin-name").fill("Admin User");
+	await page.getByTestId("setup-admin-email").fill(adminUser.email);
+	await page.getByTestId("setup-admin-password").fill(adminUser.password);
+	await page.getByTestId("setup-submit").click();
+	await expect(page).toHaveURL(/\/$|\/feed$/);
+}
+
+async function signInLocal(params: {
+	page: import("@playwright/test").Page;
+	email: string;
+	password: string;
+	expectSuccess?: boolean;
+}): Promise<void> {
+	await params.page.goto("/login");
+	await params.page.getByTestId("login-email").fill(params.email);
+	await params.page.getByTestId("login-password").fill(params.password);
+	await params.page.getByTestId("login-submit").click();
+	await params.page.waitForLoadState("networkidle").catch(() => undefined);
+	if (params.expectSuccess === false) {
+		return;
+	}
+	await expect(params.page.getByTestId("shell-sign-out")).toBeVisible();
+}
+
+async function registerLocal(params: {
+	page: import("@playwright/test").Page;
+	name: string;
+	email: string;
+	password: string;
+}): Promise<void> {
+	await params.page.goto("/register");
+	await params.page.getByTestId("register-name").fill(params.name);
+	await params.page.getByTestId("register-email").fill(params.email);
+	await params.page.getByTestId("register-password").fill(params.password);
+	await params.page.getByTestId("register-submit").click();
+	await expect(params.page.getByTestId("shell-sign-out")).toBeVisible();
+}
+
+async function signOutIfNeeded(
+	page: import("@playwright/test").Page,
+): Promise<void> {
+	await page.context().clearCookies();
+	await page.goto("/feed");
+	await page.evaluate(() => {
+		window.localStorage.clear();
+		window.sessionStorage.clear();
+	});
+	await page.goto("/feed");
+	await expect(page.getByTestId("shell-sign-in-link")).toBeVisible();
+}
+
+async function withDb<T>(callback: (client: Client) => Promise<T>): Promise<T> {
+	const client = new Client({
+		connectionString: databaseUrl,
+	});
+	await client.connect();
+	try {
+		return await callback(client);
+	} finally {
+		await client.end();
+	}
+}
+
+async function hasUser(email: string): Promise<boolean> {
+	return withDb(async (client) => {
+		const result = await client.query<{ id: string }>(
+			'select id from "user" where email = $1 limit 1',
+			[email],
+		);
+		return result.rowCount > 0;
+	});
+}
+
+async function promoteUserToAdmin(email: string): Promise<void> {
+	await withDb(async (client) => {
+		const userResult = await client.query<{ id: string }>(
+			'select id from "user" where email = $1 limit 1',
+			[email],
+		);
+		if (userResult.rowCount === 0) {
+			throw new Error(`User not found for admin promotion: ${email}`);
+		}
+
+		const setupResult = await client.query<{ value: string }>(
+			"select value #>> '{}' as value from config where key = 'setup_instance_id' limit 1",
+		);
+		if (setupResult.rowCount === 0 || !setupResult.rows[0]?.value) {
+			throw new Error("Setup instance id not found");
+		}
+
+		const userId = userResult.rows[0].id;
+		const instanceId = setupResult.rows[0].value;
+		await client.query(
+			`
+				insert into instance_membership (
+					id,
+					instance_id,
+					principal_id,
+					principal_type,
+					role,
+					approval_status,
+					created_at,
+					updated_at
+				)
+				values ($1, $2, $3, 'user', 'admin', 'approved', now(), now())
+				on conflict (instance_id, principal_id, principal_type)
+				do update
+				set role = 'admin',
+					approval_status = 'approved',
+					updated_at = excluded.updated_at
+			`,
+			[randomUUID(), instanceId, userId],
+		);
+	});
+}
+
+async function getInstanceRole(email: string): Promise<string | null> {
+	return withDb(async (client) => {
+		const result = await client.query<{ role: string }>(
+			`
+				select im.role
+				from "user" u
+				join instance_membership im
+					on im.principal_id = u.id
+					and im.principal_type = 'user'
+				where u.email = $1
+					and im.instance_id = 'singleton'
+				limit 1
+			`,
+			[email],
+		);
+		return result.rows[0]?.role ?? null;
+	});
+}
+
+async function ensureAdminAccess(
+	page: import("@playwright/test").Page,
+): Promise<void> {
+	await signInLocal({
+		page,
+		email: adminUser.email,
+		password: adminUser.password,
+		expectSuccess: false,
+	});
+	if ((await page.getByTestId("shell-sign-out").count()) > 0) {
+		return;
+	}
+
+	if (!(await hasUser(adminUser.email))) {
+		await registerLocal({
+			page,
+			name: "Admin User",
+			email: adminUser.email,
+			password: adminUser.password,
+		});
+	}
+
+	await promoteUserToAdmin(adminUser.email);
+	if ((await getInstanceRole(adminUser.email)) !== "admin") {
+		await promoteUserToAdmin(adminUser.email);
+	}
+	if ((await getInstanceRole(adminUser.email)) !== "admin") {
+		throw new Error("Failed to promote admin user for group privacy test");
+	}
+	await signOutIfNeeded(page);
+	await signInLocal({
+		page,
+		email: adminUser.email,
+		password: adminUser.password,
+	});
+}
+
+async function createGroup(params: {
+	page: import("@playwright/test").Page;
+	name: string;
+	description: string;
+	visibility: "public" | "group_members";
+	initialPost: string;
+}): Promise<string> {
+	await params.page.goto("/groups");
+	await expect(params.page.getByTestId("groups-create-form")).toBeVisible();
+	await params.page.getByTestId("groups-create-name").fill(params.name);
+	await params.page
+		.getByTestId("groups-create-description")
+		.fill(params.description);
+	await params.page
+		.getByTestId("groups-create-visibility")
+		.selectOption(params.visibility);
+	await params.page.getByTestId("groups-create-submit").click();
+	await expect(params.page).toHaveURL(/\/groups\/.+$/);
+	const groupId = params.page.url().split("/groups/")[1] ?? "";
+	await expect(params.page.getByTestId("group-post-body")).toBeVisible();
+	await params.page.getByTestId("group-post-body").fill(params.initialPost);
+	await params.page.getByTestId("group-post-submit").click();
+	await expect(params.page.getByText(params.initialPost)).toBeVisible();
+	return groupId;
+}
+
+test.describe("group privacy", () => {
+	test("admin creates public and request-only groups", async ({ page }) => {
+		await ensureConfiguredInstance(page);
+		await ensureAdminAccess(page);
+		await expect(
+			page.getByRole("navigation").getByRole("link", { name: "Groups" }),
+		).toBeVisible();
+
+		publicGroupId = await createGroup({
+			page,
+			name: publicGroupName,
+			description: "Public updates for everyone",
+			visibility: "public",
+			initialPost: publicPostText,
+		});
+
+		privateGroupId = await createGroup({
+			page,
+			name: privateGroupName,
+			description: "Private coordination space",
+			visibility: "group_members",
+			initialPost: privatePostText,
+		});
+
+		await signOutIfNeeded(page);
+	});
+
+	test("guest can only reach public group content", async ({ page }) => {
+		await ensureConfiguredInstance(page);
+
+		await page.goto("/groups");
+		await expect(page.getByText(publicGroupName)).toBeVisible();
+		await expect(page.getByText(privateGroupName)).toHaveCount(0);
+
+		await page.goto("/feed");
+		await expect(page.getByText(publicPostText)).toBeVisible();
+		await expect(page.getByText(privatePostText)).toHaveCount(0);
+
+		await page.goto(`/feed?q=${encodeURIComponent(privatePostText)}`);
+		await expect(page.getByRole("main").getByText(privateGroupName)).toHaveCount(
+			0,
+		);
+		await expect(
+			page.getByRole("main").getByRole("link", { name: privateGroupName }),
+		).toHaveCount(0);
+
+		await page.goto(`/groups/${publicGroupId}`);
+		await expect(page.getByText(publicPostText)).toBeVisible();
+
+		await page.goto(`/groups/${privateGroupId}`);
+		await expect(
+			page.getByText("Sign in to view or request access to this group."),
+		).toBeVisible();
+		await expect(page.getByText(privatePostText)).toHaveCount(0);
+	});
+
+	test("member can request access and approved membership unlocks the group", async ({
+		page,
+	}) => {
+		await ensureConfiguredInstance(page);
+		await registerLocal({
+			page,
+			name: memberUser.name,
+			email: memberUser.email,
+			password: memberUser.password,
+		});
+		await page.goto("/groups");
+		await expect(
+			page.getByRole("navigation").getByRole("link", { name: "Groups" }),
+		).toBeVisible();
+		await expect(page.getByText(privateGroupName)).toBeVisible();
+
+		await page.goto(`/groups/${privateGroupId}`);
+		await expect(page.getByTestId("group-request-access")).toBeVisible();
+		await page.getByTestId("group-request-access").click();
+		await expect(page.getByText("Access request sent.")).toBeVisible();
+		await expect(
+			page.getByText("Your membership request is still pending approval."),
+		).toBeVisible();
+		await signOutIfNeeded(page);
+
+		await signInLocal({
+			page,
+			email: adminUser.email,
+			password: adminUser.password,
+		});
+		await page.goto(`/groups/${privateGroupId}`);
+		await expect(page.getByText(memberUser.email)).toBeVisible();
+		await page.getByRole("button", { name: "Approve" }).click();
+		await expect(page.getByText("Membership approved.")).toBeVisible();
+		await signOutIfNeeded(page);
+
+		await signInLocal({
+			page,
+			email: memberUser.email,
+			password: memberUser.password,
+		});
+		await page.goto(`/groups/${privateGroupId}`);
+		await expect(page.getByText(privatePostText)).toBeVisible();
+		await page.getByTestId("group-post-body").fill("Member-only follow-up");
+		await page.getByTestId("group-post-submit").click();
+		await expect(page.getByText("Member-only follow-up")).toBeVisible();
+	});
+});

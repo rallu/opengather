@@ -12,6 +12,40 @@ async function isSetupRequired(
 		.catch(() => false);
 }
 
+async function ensureConfiguredInstance(
+	page: import("@playwright/test").Page,
+): Promise<void> {
+	const setupRequired = await isSetupRequired(page);
+	if (!setupRequired) {
+		return;
+	}
+
+	await page.goto("/setup");
+	await expect(page.getByTestId("setup-name")).toBeVisible();
+	await page.getByTestId("setup-name").fill("OpenGather Local");
+	await page.getByTestId("setup-description").fill("Local test instance");
+	await page.getByTestId("setup-admin-name").fill("Admin User");
+	await page.getByTestId("setup-admin-email").fill("admin@example.com");
+	await page.getByTestId("setup-admin-password").fill("admin-pass-123");
+	await page.getByTestId("setup-submit").click();
+	await expect(page).toHaveURL(/\/$|\/feed$/);
+}
+
+async function expectGuestShell(
+	page: import("@playwright/test").Page,
+): Promise<void> {
+	const banner = page.getByRole("banner");
+	const nav = page.getByRole("navigation");
+	await expect(nav.getByRole("link", { name: "Feed" })).toBeVisible();
+	await expect(nav.getByRole("link", { name: "Notifications" })).toHaveCount(0);
+	await expect(nav.getByRole("link", { name: "Profile" })).toHaveCount(0);
+	await expect(nav.getByRole("link", { name: "Settings" })).toHaveCount(0);
+	await expect(nav.getByRole("link", { name: "Server" })).toHaveCount(0);
+	await expect(page.getByTestId("shell-search")).toBeVisible();
+	await expect(page.getByTestId("shell-sign-in-link")).toBeVisible();
+	await expect(banner.getByRole("link", { name: "Register" })).toBeVisible();
+}
+
 test.describe("home", () => {
 	test("shows setup-first and hub-login controls", async ({ page }) => {
 		const setupRequired = await isSetupRequired(page);
@@ -24,7 +58,10 @@ test.describe("home", () => {
 		}
 
 		if (page.url().endsWith("/feed")) {
-			await expect(page.getByTestId("feed-composer")).toBeVisible();
+			await expectGuestShell(page);
+			await expect(page.getByTestId("feed-composer")).toHaveCount(0);
+			await expect(page.getByTestId("feed-post-button")).toHaveCount(0);
+			await expect(page.getByPlaceholder("Reply")).toHaveCount(0);
 		} else {
 			await expect(page.getByTestId("home-instance-ready")).toBeVisible();
 			await expect(page.getByTestId("home-sign-in-link")).toBeVisible();
@@ -52,9 +89,30 @@ test.describe("home", () => {
 	});
 
 	test("community page renders MVP controls", async ({ page }) => {
+		await ensureConfiguredInstance(page);
 		await page.goto("/feed");
-		await expect(page.getByTestId("feed-composer")).toBeVisible();
-		await expect(page.getByTestId("feed-post-button")).toBeVisible();
-		await expect(page.getByTestId("shell-search")).toBeVisible();
+		await expectGuestShell(page);
+		await expect(page.getByTestId("feed-composer")).toHaveCount(0);
+		await expect(page.getByTestId("feed-post-button")).toHaveCount(0);
+		await expect(page.getByPlaceholder("Reply")).toHaveCount(0);
+	});
+
+	test("guest shell routes open without exposing member navigation", async ({
+		page,
+	}) => {
+		await ensureConfiguredInstance(page);
+
+		for (const route of [
+			"/feed",
+			"/notifications",
+			"/profile",
+			"/settings",
+			"/server-settings",
+			"/audit-logs",
+		]) {
+			await page.goto(route);
+			await expect(page.locator("body")).toBeVisible();
+			await expectGuestShell(page);
+		}
 	});
 });

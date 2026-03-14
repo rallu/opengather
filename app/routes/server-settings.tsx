@@ -10,14 +10,17 @@ import {
 	registerInstanceWithHub,
 	unregisterInstanceFromHub,
 } from "~/server/hub.service.server";
-import { getViewerContext } from "~/server/viewer-role.service.server";
+import {
+	canManageInstance,
+	getViewerContext as getPermissionsViewerContext,
+} from "~/server/permissions.server";
 
 async function resolveViewerRole(params: { request: Request }): Promise<{
-	authUser: Awaited<ReturnType<typeof getViewerContext>>["authUser"];
-	setup: Awaited<ReturnType<typeof getViewerContext>>["setup"];
+	authUser: Awaited<ReturnType<typeof getPermissionsViewerContext>>["authUser"];
+	setup: Awaited<ReturnType<typeof getPermissionsViewerContext>>["setup"];
 	viewerRole: "guest" | "member" | "moderator" | "admin";
 }> {
-	return getViewerContext({ request: params.request });
+	return getPermissionsViewerContext({ request: params.request });
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -28,7 +31,7 @@ export async function action({ request }: ActionFunctionArgs) {
 		if (!authUser) {
 			return { error: "Sign in required." };
 		}
-		if (viewerRole !== "admin") {
+		if (!canManageInstance({ viewerRole }).allowed) {
 			return { error: "Admin access required." };
 		}
 

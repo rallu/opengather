@@ -163,6 +163,14 @@ Components are added to `app/components/ui/`.
 - **Responsive Design**: Use Tailwind's responsive utilities
 - **State Management**: Use React hooks, consider Zustand/Redux for complex state
 
+## Route Testing Rule
+
+- Any change that can affect a visible route must include route verification before the task is considered complete.
+- Minimum requirement: smoke-test every affected visible route by opening the URL and confirming it renders without client/server errors.
+- If a shared layout, auth guard, loader helper, or permission helper is changed, treat all routes using that shared code as affected routes.
+- For route-specific UI changes, verify the changed route plus any directly linked entry route that is part of the same user flow.
+- Prefer Playwright for smoke coverage. Manual browser verification is acceptable only if Playwright is not practical, and the checked URLs must be stated in the final report.
+
 ## Deployment
 
 Deploy to Cloudflare Workers:

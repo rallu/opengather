@@ -3,9 +3,21 @@ import { Prisma } from "../generated/prisma/client";
 import { getConfig } from "./config.service.server";
 import { getDb } from "./db.server";
 import { cosineSimilarity, toTextVector } from "./embedding.service.server";
+import { getReadableGroupIds } from "./group.service.server";
+import {
+	getGroupMembership,
+	resolveGroupRole,
+} from "./group-membership.service.server";
 import { processNotificationOutbox } from "./jobs.service.server";
 import { extractMentionEmails } from "./mentions.server";
 import { createNotification } from "./notification.service.server";
+import {
+	canManageInstance,
+	canPostToGroup,
+	canPostToInstanceFeed,
+	canViewInstanceFeed,
+	getInstanceViewerRole,
+} from "./permissions.server";
 import { getSetupStatus } from "./setup.service.server";
 
 export type CommunityUser = {
@@ -18,6 +30,10 @@ export type CommunityPost = {
 	id: string;
 	parentPostId?: string;
 	bodyText?: string;
+	group?: {
+		id: string;
+		name: string;
+	};
 	moderationStatus: "pending" | "approved" | "rejected" | "flagged";
 	isHidden: boolean;
 	isDeleted: boolean;
@@ -44,27 +60,7 @@ function toIsoString(params: { value: Date | string }): string {
 		: new Date(params.value).toISOString();
 }
 
-async function membershipRole(params: {
-	instanceId: string;
-	userId: string;
-}): Promise<"guest" | "member" | "moderator" | "admin"> {
-	const db = getDb();
-	const membership = await db.instanceMembership.findFirst({
-		where: {
-			instanceId: params.instanceId,
-			principalId: params.userId,
-			principalType: "user",
-		},
-		select: { role: true, approvalStatus: true },
-	});
-
-	if (!membership || membership.approvalStatus !== "approved") {
-		return "guest";
-	}
-	return membership.role as "member" | "moderator" | "admin";
-}
-
-async function ensureMembershipForUser(params: {
+export async function ensureInstanceMembershipForUser(params: {
 	instanceId: string;
 	approvalMode: "automatic" | "manual";
 	user: CommunityUser | null;
@@ -104,22 +100,26 @@ async function ensureMembershipForUser(params: {
 async function ensureCanRead(params: {
 	instanceId: string;
 	user: CommunityUser | null;
-}): Promise<boolean> {
+}): Promise<{
+	allowed: boolean;
+	viewerRole: "guest" | "member" | "moderator" | "admin";
+}> {
 	const visibilityMode = await getConfig("server_visibility_mode");
-
-	if (visibilityMode === "public") {
-		return true;
-	}
-
-	if (!params.user) {
-		return false;
-	}
-
-	const role = await membershipRole({
-		instanceId: params.instanceId,
-		userId: params.user.id,
+	const viewerRole = params.user
+		? await getInstanceViewerRole({
+				instanceId: params.instanceId,
+				userId: params.user.id,
+			})
+		: "guest";
+	const result = canViewInstanceFeed({
+		visibilityMode,
+		viewerRole,
+		isAuthenticated: Boolean(params.user),
 	});
-	return role !== "guest";
+	return {
+		allowed: result.allowed,
+		viewerRole,
+	};
 }
 
 async function ensureCanPost(params: {
@@ -129,11 +129,11 @@ async function ensureCanPost(params: {
 	if (!params.user) {
 		return false;
 	}
-	const role = await membershipRole({
+	const role = await getInstanceViewerRole({
 		instanceId: params.instanceId,
 		userId: params.user.id,
 	});
-	return role === "member" || role === "moderator" || role === "admin";
+	return canPostToInstanceFeed({ viewerRole: role }).allowed;
 }
 
 async function isAdmin(params: {
@@ -143,11 +143,11 @@ async function isAdmin(params: {
 	if (!params.user) {
 		return false;
 	}
-	const role = await membershipRole({
+	const role = await getInstanceViewerRole({
 		instanceId: params.instanceId,
 		userId: params.user.id,
 	});
-	return role === "admin";
+	return canManageInstance({ viewerRole: role }).allowed;
 }
 
 function mapPost(params: {
@@ -155,16 +155,28 @@ function mapPost(params: {
 		id: string;
 		parentPostId: string | null;
 		bodyText: string | null;
+		groupId?: string | null;
 		moderationStatus: string;
 		hiddenAt: Date | string | null;
 		deletedAt: Date | string | null;
 		createdAt: Date | string;
+		group?: {
+			id: string;
+			name: string;
+		} | null;
 	};
 }): CommunityPost {
 	return {
 		id: params.row.id,
 		parentPostId: params.row.parentPostId ?? undefined,
 		bodyText: params.row.bodyText ?? undefined,
+		group:
+			params.row.groupId && params.row.group
+				? {
+						id: params.row.group.id,
+						name: params.row.group.name,
+					}
+				: undefined,
 		moderationStatus: asModerationStatus({
 			value: params.row.moderationStatus,
 		}),
@@ -188,25 +200,23 @@ export async function loadCommunity(params: {
 		return { status: "not_setup", viewerRole: "guest", posts: [], search: [] };
 	}
 
-	await ensureMembershipForUser({
+	await ensureInstanceMembershipForUser({
 		instanceId: status.instance.id,
 		approvalMode: status.instance.approvalMode,
 		user: params.user,
 	});
 
-	const viewerRole = params.user
-		? await membershipRole({
-				instanceId: status.instance.id,
-				userId: params.user.id,
-			})
-		: "guest";
-
-	const canRead = await ensureCanRead({
+	const readAccess = await ensureCanRead({
 		instanceId: status.instance.id,
 		user: params.user,
 	});
-	if (!canRead) {
-		return { status: "forbidden", viewerRole, posts: [], search: [] };
+	if (!readAccess.allowed) {
+		return {
+			status: "forbidden",
+			viewerRole: readAccess.viewerRole,
+			posts: [],
+			search: [],
+		};
 	}
 
 	const db = getDb();
@@ -214,9 +224,40 @@ export async function loadCommunity(params: {
 		instanceId: status.instance.id,
 		user: params.user,
 	});
+	const readableGroupIds = await getReadableGroupIds({
+		authUser: params.user
+			? {
+					id: params.user.id,
+					hubUserId: params.user.hubUserId,
+				}
+			: null,
+		instanceViewerRole: readAccess.viewerRole,
+	});
 	const rows = await db.post.findMany({
-		where: { instanceId: status.instance.id },
+		where: {
+			instanceId: status.instance.id,
+			OR:
+				readableGroupIds.length > 0
+					? [{ groupId: null }, { groupId: { in: readableGroupIds } }]
+					: [{ groupId: null }],
+		},
 		orderBy: { createdAt: "asc" },
+		select: {
+			id: true,
+			parentPostId: true,
+			bodyText: true,
+			groupId: true,
+			moderationStatus: true,
+			hiddenAt: true,
+			deletedAt: true,
+			createdAt: true,
+			group: {
+				select: {
+					id: true,
+					name: true,
+				},
+			},
+		},
 	});
 
 	const visible = rows.filter((row) => {
@@ -233,7 +274,13 @@ export async function loadCommunity(params: {
 		const embeddings = await db.postEmbedding.findMany({
 			where: {
 				sourceType: "text",
-				post: { instanceId: status.instance.id },
+				post: {
+					instanceId: status.instance.id,
+					OR:
+						readableGroupIds.length > 0
+							? [{ groupId: null }, { groupId: { in: readableGroupIds } }]
+							: [{ groupId: null }],
+				},
 			},
 			select: {
 				postId: true,
@@ -288,7 +335,7 @@ export async function loadCommunity(params: {
 
 	return {
 		status: "ok",
-		viewerRole,
+		viewerRole: readAccess.viewerRole,
 		posts: visible.map((row) => mapPost({ row })),
 		search,
 	};
@@ -298,17 +345,13 @@ export async function createPost(params: {
 	user: CommunityUser | null;
 	text: string;
 	parentPostId?: string;
+	groupId?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
 	const status = await getSetupStatus();
 	if (!status.isSetup || !status.instance) {
 		return { ok: false, error: "Setup not completed" };
 	}
-
-	const canPost = await ensureCanPost({
-		instanceId: status.instance.id,
-		user: params.user,
-	});
-	if (!canPost || !params.user) {
+	if (!params.user) {
 		return { ok: false, error: "Sign in and approved membership required" };
 	}
 
@@ -318,6 +361,18 @@ export async function createPost(params: {
 	}
 
 	const db = getDb();
+	let effectiveGroupId = params.groupId?.trim() || undefined;
+	let targetUrl = "/feed";
+
+	if (!effectiveGroupId) {
+		const canPost = await ensureCanPost({
+			instanceId: status.instance.id,
+			user: params.user,
+		});
+		if (!canPost) {
+			return { ok: false, error: "Sign in and approved membership required" };
+		}
+	}
 
 	if (params.parentPostId) {
 		const parent = await db.post.findUnique({
@@ -325,6 +380,7 @@ export async function createPost(params: {
 			select: {
 				id: true,
 				instanceId: true,
+				groupId: true,
 				deletedAt: true,
 				authorId: true,
 			},
@@ -337,6 +393,39 @@ export async function createPost(params: {
 		) {
 			return { ok: false, error: "Parent post not found" };
 		}
+
+		if (effectiveGroupId && parent.groupId !== effectiveGroupId) {
+			return { ok: false, error: "Replies must stay in the same group" };
+		}
+
+		effectiveGroupId = parent.groupId ?? effectiveGroupId;
+	}
+
+	if (effectiveGroupId) {
+		const group = await db.communityGroup.findFirst({
+			where: {
+				id: effectiveGroupId,
+				instanceId: status.instance.id,
+			},
+			select: {
+				id: true,
+				name: true,
+			},
+		});
+		if (!group) {
+			return { ok: false, error: "Group not found" };
+		}
+
+		const membership = await getGroupMembership({
+			groupId: group.id,
+			userId: params.user.id,
+		});
+		const groupRole = resolveGroupRole(membership);
+		if (!canPostToGroup({ groupRole }).allowed) {
+			return { ok: false, error: "Group membership required" };
+		}
+
+		targetUrl = `/groups/${group.id}`;
 	}
 
 	const now = new Date();
@@ -352,7 +441,7 @@ export async function createPost(params: {
 			instanceId: status.instance.id,
 			authorId: params.user.hubUserId ?? params.user.id,
 			authorType: "user",
-			groupId: null,
+			groupId: effectiveGroupId ?? null,
 			parentPostId: params.parentPostId ?? null,
 			contentType: "text",
 			bodyText: text,
@@ -416,7 +505,7 @@ export async function createPost(params: {
 				kind: "mention",
 				title: "You were mentioned in a post",
 				body: text,
-				targetUrl: `/feed#post-${created.id}`,
+				targetUrl: `${targetUrl}#post-${created.id}`,
 				relatedEntityId: created.id,
 				payload: {
 					actorUserId: params.user.id,
@@ -461,7 +550,7 @@ export async function createPost(params: {
 					kind: "reply_to_post",
 					title: "New reply to your post",
 					body: text,
-					targetUrl: `/feed#post-${created.id}`,
+					targetUrl: `${targetUrl}#post-${created.id}`,
 					relatedEntityId: created.id,
 					payload: {
 						actorUserId: params.user.id,

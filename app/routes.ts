@@ -50,6 +50,14 @@ const routes: RouteConfig = [
 		file: "routes/community.tsx",
 	},
 	{
+		path: "/groups",
+		file: "routes/groups.tsx",
+	},
+	{
+		path: "/groups/:groupId",
+		file: "routes/group-detail.tsx",
+	},
+	{
 		path: "/profile",
 		file: "routes/profile.tsx",
 	},

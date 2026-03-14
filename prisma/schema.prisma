@@ -158,10 +158,27 @@ model CommunityGroup {
   createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
   events         CommunityEvent[]
+  memberships    GroupMembership[]
   posts          Post[]
 
   @@map("community_group")
   @@index([instanceId], map: "idx_group_instance_id")
+}
+
+model GroupMembership {
+  id             String          @id @db.Text
+  groupId        String          @map("group_id") @db.Text
+  principalId    String          @map("principal_id") @db.Text
+  principalType  String          @map("principal_type") @db.Text
+  role           String          @db.Text
+  approvalStatus String          @map("approval_status") @db.Text
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime        @default(now()) @map("updated_at") @db.Timestamptz(6)
+  group          CommunityGroup  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@map("group_membership")
+  @@index([groupId], map: "idx_group_membership_group_id")
+  @@unique([groupId, principalId, principalType])
 }
 
 model CommunityEvent {

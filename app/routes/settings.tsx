@@ -6,8 +6,8 @@ import {
 	getNotificationChannels,
 	setNotificationChannels,
 } from "~/server/notification.service.server";
+import { getViewerContext } from "~/server/permissions.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
-import { getViewerContext } from "~/server/viewer-role.service.server";
 
 export async function action({ request }: ActionFunctionArgs) {
 	const authUser = await getAuthUserFromRequest({ request });

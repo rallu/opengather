@@ -3,7 +3,7 @@ import { captureMonitoredError } from "~/server/error-monitoring.server";
 import {
 	canAccessAuditLogs,
 	getViewerContext,
-} from "~/server/viewer-role.service.server";
+} from "~/server/permissions.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
 	const viewer = await getViewerContext({ request });
@@ -13,7 +13,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			headers: { "Content-Type": "application/json" },
 		});
 	}
-	if (!canAccessAuditLogs({ viewerRole: viewer.viewerRole })) {
+	if (!canAccessAuditLogs({ viewerRole: viewer.viewerRole }).allowed) {
 		return new Response(JSON.stringify({ error: "Forbidden" }), {
 			status: 403,
 			headers: { "Content-Type": "application/json" },

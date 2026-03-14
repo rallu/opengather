@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import {
 	Form,
+	Link,
 	useActionData,
 	useLoaderData,
 	useNavigation,
@@ -254,25 +255,27 @@ export default function CommunityPage() {
 				</div>
 			) : null}
 
-			<div className="rounded-md border border-border p-4">
-				<Form method="post" className="space-y-3">
-					<input type="hidden" name="_action" value="post" />
-					<input type="hidden" name="parentPostId" value={""} />
-					<textarea
-						name="bodyText"
-						data-testid="feed-composer"
-						className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-						placeholder="What's on your mind?"
-					/>
-					<Button
-						type="submit"
-						disabled={loading || !data.authUser || data.status !== "ok"}
-						data-testid="feed-post-button"
-					>
-						{loading ? "Saving..." : "Post"}
-					</Button>
-				</Form>
-			</div>
+			{data.authUser ? (
+				<div className="rounded-md border border-border p-4">
+					<Form method="post" className="space-y-3">
+						<input type="hidden" name="_action" value="post" />
+						<input type="hidden" name="parentPostId" value={""} />
+						<textarea
+							name="bodyText"
+							data-testid="feed-composer"
+							className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+							placeholder="What's on your mind?"
+						/>
+						<Button
+							type="submit"
+							disabled={loading || data.status !== "ok"}
+							data-testid="feed-post-button"
+						>
+							{loading ? "Saving..." : "Post"}
+						</Button>
+					</Form>
+				</div>
+			) : null}
 
 			{data.q ? (
 				<div className="rounded-md border border-border p-4">
@@ -287,6 +290,17 @@ export default function CommunityPage() {
 								className="rounded border border-border p-2 text-sm"
 							>
 								<p>{item.post.bodyText}</p>
+								{item.post.group ? (
+									<p className="mt-1 text-xs text-muted-foreground">
+										Group:{" "}
+										<Link
+											to={`/groups/${item.post.group.id}`}
+											className="hover:underline"
+										>
+											{item.post.group.name}
+										</Link>
+									</p>
+								) : null}
 								<p className="text-xs text-muted-foreground">
 									score: {item.score.toFixed(4)}
 								</p>
@@ -310,6 +324,17 @@ export default function CommunityPage() {
 						className="rounded-md border border-border p-3"
 					>
 						<p className="text-sm">
+							{post.group ? (
+								<>
+									<Link
+										to={`/groups/${post.group.id}`}
+										className="font-medium hover:underline"
+									>
+										{post.group.name}
+									</Link>
+									<span className="text-muted-foreground"> • </span>
+								</>
+							) : null}
 							{post.parentPostId ? (
 								<span className="text-muted-foreground">
 									Reply to {post.parentPostId}:{" "}
@@ -324,22 +349,32 @@ export default function CommunityPage() {
 							{post.isDeleted ? " • deleted" : ""}
 						</p>
 						<div className="mt-2 flex gap-2">
-							<Form method="post" className="inline-flex">
-								<input type="hidden" name="_action" value="post" />
-								<input type="hidden" name="parentPostId" value={post.id} />
-								<input
-									name="bodyText"
-									placeholder="Reply"
-									className="rounded-l-md border border-input bg-background px-3 py-2 text-sm"
-								/>
-								<Button
-									type="submit"
-									className="rounded-l-none"
-									disabled={!data.authUser || data.status !== "ok"}
-								>
-									Reply
+							{data.authUser && !post.group ? (
+								<Form method="post" className="inline-flex">
+									<input type="hidden" name="_action" value="post" />
+									<input type="hidden" name="parentPostId" value={post.id} />
+									<input
+										name="bodyText"
+										placeholder="Reply"
+										className="rounded-l-md border border-input bg-background px-3 py-2 text-sm"
+									/>
+									<Button
+										type="submit"
+										className="rounded-l-none"
+										disabled={data.status !== "ok"}
+									>
+										Reply
+									</Button>
+								</Form>
+							) : null}
+
+							{post.group ? (
+								<Button variant="outline" asChild>
+									<Link to={`/groups/${post.group.id}#post-${post.id}`}>
+										View in group
+									</Link>
 								</Button>
-							</Form>
+							) : null}
 
 							{data.viewerRole === "admin" ? (
 								<>

@@ -88,6 +88,8 @@ This backlog is for `opengather` only. It defines the next implementation steps 
 
 ## Milestone 1: Permission Foundation
 
+Status: Completed on 2026-03-14
+
 ### Outcome
 
 Create one permission service that can answer who can see or act on which resource.
@@ -114,7 +116,36 @@ Create one permission service that can answer who can see or act on which resour
 - route loaders/actions can ask a permission question without duplicating DB logic
 - unit tests cover anonymous, signed-in, pending, approved, moderator, and admin cases
 
+### Completed Work
+
+- added `app/server/permissions.server.ts`
+- added permission APIs for:
+  - instance feed read/write
+  - group read/join/post
+  - event view/participate
+  - profile view
+  - reply permissions
+  - instance admin and audit-log access
+- added `app/server/permissions.server.test.ts`
+- moved current viewer-role and audit-log access logic onto the permission module
+- refactored current routes/services to use the permission layer:
+  - `app/server/community.service.server.ts`
+  - `app/routes/profile.tsx`
+  - `app/routes/settings.tsx`
+  - `app/routes/audit-logs.tsx`
+  - `app/routes/debug-error-monitoring.tsx`
+  - `app/routes/server-settings.tsx`
+- left `app/server/viewer-role.service.server.ts` as a compatibility re-export layer while the rest of the codebase transitions
+
+### Validation
+
+- `npm run test:unit`
+- `npm run lint`
+- `npm run test:e2e`
+
 ## Milestone 2: Schema Upgrade For Group Privacy
+
+Status: Completed on 2026-03-14
 
 ### Outcome
 
@@ -147,7 +178,29 @@ Introduce explicit group membership and usable group visibility semantics.
 - a signed-in user does not automatically become a group member by visiting a page
 - membership status supports approved and pending flows
 
+### Completed Work
+
+- added `GroupMembership` to `prisma/schema.prisma`
+- linked `CommunityGroup` to `GroupMembership`
+- added `app/server/group-membership.service.server.ts`
+- implemented helpers for:
+  - `parseGroupVisibilityMode`
+  - `getGroupVisibility`
+  - `getGroupMembership`
+  - `ensureGroupMembership`
+  - `resolveGroupRole`
+- kept group membership creation explicit and separate from read helpers so group views do not auto-create membership records
+- added `app/server/group-membership.service.server.test.ts`
+
+### Validation
+
+- `npm run prisma:generate`
+- `npm run test:unit`
+- `npm run lint`
+
 ## Milestone 3: Group Read/Write Enforcement
+
+Status: Completed on 2026-03-14
 
 ### Outcome
 
@@ -176,6 +229,52 @@ Make group privacy real for reads and writes.
 - unauthorized users cannot fetch private group content through the UI or direct route access
 - private group posts do not leak into the main feed or search for non-members
 - group posting is impossible without the correct membership
+
+### Completed Work
+
+- added group routes:
+  - `app/routes/groups.tsx`
+  - `app/routes/group-detail.tsx`
+- wired route entries in `app/routes.ts`
+- added `app/server/group.service.server.ts` for:
+  - group discovery lists
+  - readable group resolution for feed/search filtering
+  - group creation
+  - group loading with access-state handling
+  - join/request flow
+  - membership approval and rejection
+- enforced stricter direct-route privacy:
+  - `private_invite_only` groups now return `not_found` for unauthorized viewers
+  - unauthenticated access to non-public groups no longer serializes group metadata
+- updated `app/server/community.service.server.ts` to:
+  - filter main feed posts by readable group IDs
+  - filter semantic search by readable group IDs
+  - include group metadata on readable group posts
+  - support group-scoped post creation and replies
+  - reject replies that cross group boundaries
+  - reject group posting for non-members
+- updated `app/routes/community.tsx` to:
+  - render readable group posts with group links
+  - send users into the group route for group replies
+  - avoid showing the instance-feed reply form on grouped posts
+- updated `app/components/app-shell.tsx` so signed-in members can reach `/groups`
+- added audit logging for:
+  - `group.create`
+  - `group.join`
+  - `group.request_access`
+  - `group.membership.approve`
+  - `group.membership.reject`
+- added Playwright coverage in `e2e/groups-privacy.spec.ts` for:
+  - admin group creation
+  - guest visibility and direct-route enforcement
+  - private-group request/approval flow
+  - member-only posting after approval
+
+### Validation
+
+- `npm run test:unit`
+- `npm run lint`
+- `npx playwright test e2e/groups-privacy.spec.ts e2e/community-studio.spec.ts`
 
 ## Milestone 4: Event Privacy
 
