@@ -6,6 +6,6 @@ export default defineConfig({
 	datasource: {
 		url:
 			process.env.DATABASE_URL ??
-			"postgres://opengather:opengather@localhost:5432/opengather",
+			"postgres://opengather:opengather@127.0.0.1:5433/opengather",
 	},
 });

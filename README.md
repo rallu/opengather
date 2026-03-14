@@ -13,19 +13,30 @@ Use a Prisma 7-compatible Node version:
 nvm use
 ```
 
-1. Ensure env vars are set (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `HUB_BASE_URL`).
-   Default local DB URL: `postgres://opengather:opengather@localhost:5432/opengather`.
-2. Start dev server:
+1. Copy the local env file:
+   ```bash
+   cp .env.example .env
+   ```
+2. Start the local database from the workspace root if you are using Docker for Postgres:
+   ```bash
+   docker compose up -d opengather-db
+   ```
+3. Ensure env vars are set (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `HUB_BASE_URL`).
+   Default Compose DB URL: `postgres://opengather:opengather@127.0.0.1:5433/opengather`.
+   Hub URL: `http://127.0.0.1:9000`.
+4. Start dev server:
    ```bash
    npm run dev
    ```
-3. Open http://localhost:5173
+5. Open http://localhost:5173
 
 ## E2E Tests (Playwright)
 
 ```bash
 npm run test:e2e
 ```
+
+The default test database URL targets the Docker Compose database on `127.0.0.1:5433`.
 
 Test runtime rule:
 - Keep the app test port at `5173`.
