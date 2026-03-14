@@ -8,9 +8,12 @@ import {
 	useNavigation,
 } from "react-router";
 import { AppShell } from "~/components/app-shell";
+import { PostContent } from "~/components/post/post-content";
 import { Button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 import { writeAuditLogSafely } from "~/server/audit-log.service.server";
 import {
+	type CommunityPost,
 	type CommunityUser,
 	createPost,
 	loadCommunity,
@@ -26,6 +29,7 @@ import {
 	logWarn,
 } from "~/server/logger.server";
 import { recordPostMetric } from "~/server/metrics.server";
+import { canReplyAtThreadDepth } from "~/server/post-thread.server";
 import {
 	buildRateLimitHeaders,
 	checkRateLimit,
@@ -44,6 +48,140 @@ function toCommunityUser(params: {
 		hubUserId: params.authUser.hubUserId,
 		role: "member",
 	};
+}
+
+function CommunityThreadItem(params: {
+	post: CommunityPost;
+	canReply: boolean;
+	isAdmin: boolean;
+	loading: boolean;
+}) {
+	const { post, canReply, isAdmin, loading } = params;
+	const replyAllowed =
+		canReply && !post.group && canReplyAtThreadDepth(post.threadDepth);
+
+	return (
+		<div
+			className={cn(
+				"space-y-3",
+				post.threadDepth > 0
+					? "ml-4 border-l border-border/70 pl-4"
+					: undefined,
+			)}
+			data-testid={`feed-post-${post.id}`}
+			data-thread-depth={post.threadDepth}
+		>
+			<article
+				id={`post-${post.id}`}
+				className="rounded-md border border-border p-3"
+			>
+				{post.group ? (
+					<p className="mb-3 text-xs text-muted-foreground">
+						Group:{" "}
+						<Link
+							to={`/groups/${post.group.id}`}
+							className="font-medium text-foreground hover:underline"
+						>
+							{post.group.name}
+						</Link>
+					</p>
+				) : null}
+				<PostContent
+					createdAt={post.createdAt}
+					moderationStatus={post.moderationStatus}
+					isHidden={post.isHidden}
+					isDeleted={post.isDeleted}
+					actions={[{ label: "Comment" }, { label: "Share" }]}
+				>
+					<p>{post.bodyText}</p>
+				</PostContent>
+				<div className="mt-3 flex flex-wrap items-center gap-2">
+					{replyAllowed ? (
+						<Form
+							method="post"
+							className="inline-flex"
+							data-testid="feed-reply-composer"
+						>
+							<input type="hidden" name="_action" value="post" />
+							<input type="hidden" name="parentPostId" value={post.id} />
+							<input
+								name="bodyText"
+								placeholder="Reply"
+								data-testid={`feed-reply-input-${post.id}`}
+								className="rounded-l-md border border-input bg-background px-3 py-2 text-sm"
+							/>
+							<Button
+								type="submit"
+								className="rounded-l-none"
+								disabled={loading}
+								data-testid={`feed-reply-submit-${post.id}`}
+							>
+								Reply
+							</Button>
+						</Form>
+					) : null}
+
+					{canReply && !post.group && !replyAllowed ? (
+						<p
+							className="text-xs text-muted-foreground"
+							data-testid={`feed-reply-limit-${post.id}`}
+						>
+							Reply limit reached
+						</p>
+					) : null}
+
+					{post.group ? (
+						<Button variant="outline" asChild>
+							<Link to={`/groups/${post.group.id}#post-${post.id}`}>
+								View in group
+							</Link>
+						</Button>
+					) : null}
+
+					{isAdmin ? (
+						<>
+							<Form method="post">
+								<input type="hidden" name="_action" value="moderate" />
+								<input type="hidden" name="postId" value={post.id} />
+								<input type="hidden" name="status" value="approved" />
+								<Button type="submit" variant="outline">
+									Approve
+								</Button>
+							</Form>
+							<Form method="post">
+								<input type="hidden" name="_action" value="moderate" />
+								<input type="hidden" name="postId" value={post.id} />
+								<input type="hidden" name="status" value="rejected" />
+								<Button type="submit" variant="outline">
+									Hide
+								</Button>
+							</Form>
+							<Form method="post">
+								<input type="hidden" name="_action" value="delete" />
+								<input type="hidden" name="postId" value={post.id} />
+								<Button type="submit" variant="outline">
+									Delete
+								</Button>
+							</Form>
+						</>
+					) : null}
+				</div>
+			</article>
+			{post.replies.length > 0 ? (
+				<div className="space-y-3">
+					{post.replies.map((reply) => (
+						<CommunityThreadItem
+							key={reply.id}
+							post={reply}
+							canReply={canReply}
+							isAdmin={isAdmin}
+							loading={loading}
+						/>
+					))}
+				</div>
+			) : null}
+		</div>
+	);
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -272,7 +410,10 @@ export default function CommunityPage() {
 			) : null}
 
 			{actionData && "error" in actionData ? (
-				<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+				<div
+					className="rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+					data-testid="feed-action-error"
+				>
 					{actionData.error}
 				</div>
 			) : null}
@@ -343,97 +484,13 @@ export default function CommunityPage() {
 					<p className="text-sm text-muted-foreground">No posts yet.</p>
 				) : null}
 				{data.posts.map((post) => (
-					<div
+					<CommunityThreadItem
 						key={post.id}
-						id={`post-${post.id}`}
-						className="rounded-md border border-border p-3"
-					>
-						<p className="text-sm">
-							{post.group ? (
-								<>
-									<Link
-										to={`/groups/${post.group.id}`}
-										className="font-medium hover:underline"
-									>
-										{post.group.name}
-									</Link>
-									<span className="text-muted-foreground"> • </span>
-								</>
-							) : null}
-							{post.parentPostId ? (
-								<span className="text-muted-foreground">
-									Reply to {post.parentPostId}:{" "}
-								</span>
-							) : null}
-							{post.bodyText}
-						</p>
-						<p className="mt-1 text-xs text-muted-foreground">
-							{post.moderationStatus} •{" "}
-							{new Date(post.createdAt).toLocaleString()}
-							{post.isHidden ? " • hidden" : ""}
-							{post.isDeleted ? " • deleted" : ""}
-						</p>
-						<div className="mt-2 flex gap-2">
-							{data.authUser && data.status === "ok" && !post.group ? (
-								<Form
-									method="post"
-									className="inline-flex"
-									data-testid="feed-reply-composer"
-								>
-									<input type="hidden" name="_action" value="post" />
-									<input type="hidden" name="parentPostId" value={post.id} />
-									<input
-										name="bodyText"
-										placeholder="Reply"
-										className="rounded-l-md border border-input bg-background px-3 py-2 text-sm"
-									/>
-									<Button
-										type="submit"
-										className="rounded-l-none"
-										disabled={data.status !== "ok"}
-									>
-										Reply
-									</Button>
-								</Form>
-							) : null}
-
-							{post.group ? (
-								<Button variant="outline" asChild>
-									<Link to={`/groups/${post.group.id}#post-${post.id}`}>
-										View in group
-									</Link>
-								</Button>
-							) : null}
-
-							{data.viewerRole === "admin" ? (
-								<>
-									<Form method="post">
-										<input type="hidden" name="_action" value="moderate" />
-										<input type="hidden" name="postId" value={post.id} />
-										<input type="hidden" name="status" value="approved" />
-										<Button type="submit" variant="outline">
-											Approve
-										</Button>
-									</Form>
-									<Form method="post">
-										<input type="hidden" name="_action" value="moderate" />
-										<input type="hidden" name="postId" value={post.id} />
-										<input type="hidden" name="status" value="rejected" />
-										<Button type="submit" variant="outline">
-											Hide
-										</Button>
-									</Form>
-									<Form method="post">
-										<input type="hidden" name="_action" value="delete" />
-										<input type="hidden" name="postId" value={post.id} />
-										<Button type="submit" variant="outline">
-											Delete
-										</Button>
-									</Form>
-								</>
-							) : null}
-						</div>
-					</div>
+						post={post}
+						canReply={Boolean(data.authUser && data.status === "ok")}
+						isAdmin={data.viewerRole === "admin"}
+						loading={loading}
+					/>
 				))}
 			</div>
 		</AppShell>

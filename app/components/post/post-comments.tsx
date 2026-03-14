@@ -6,20 +6,14 @@ type PostCommentsProps = {
 	comments: PostCommentData[];
 };
 
-function CommentTree({
-	comments,
-	depth,
-}: {
-	comments: PostCommentData[];
-	depth: number;
-}) {
+function CommentTree({ comments }: { comments: PostCommentData[] }) {
 	return (
 		<div className="space-y-3">
 			{comments.map((comment) => (
 				<div key={comment.id} className="space-y-3">
-					<PostComment comment={comment} depth={depth} />
+					<PostComment comment={comment} />
 					{comment.replies?.length ? (
-						<CommentTree comments={comment.replies} depth={depth + 1} />
+						<CommentTree comments={comment.replies} />
 					) : null}
 				</div>
 			))}
@@ -36,5 +30,5 @@ export function PostComments({ comments }: PostCommentsProps) {
 		);
 	}
 
-	return <CommentTree comments={comments} depth={0} />;
+	return <CommentTree comments={comments} />;
 }

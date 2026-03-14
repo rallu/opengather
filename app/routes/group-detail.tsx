@@ -7,7 +7,9 @@ import {
 	useNavigation,
 } from "react-router";
 import { AppShell } from "~/components/app-shell";
+import { PostContent } from "~/components/post/post-content";
 import { Button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 import { writeAuditLogSafely } from "~/server/audit-log.service.server";
 import {
 	type CommunityUser,
@@ -15,6 +17,7 @@ import {
 	ensureInstanceMembershipForUser,
 } from "~/server/community.service.server";
 import {
+	type GroupPost,
 	loadGroup,
 	removeGroupMember,
 	requestGroupAccess,
@@ -24,6 +27,7 @@ import {
 } from "~/server/group.service.server";
 import { parseGroupVisibilityMode } from "~/server/group-membership.service.server";
 import { getInstanceViewerRole } from "~/server/permissions.server";
+import { canReplyAtThreadDepth } from "~/server/post-thread.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
 
@@ -38,6 +42,86 @@ function toCommunityUser(params: {
 		hubUserId: params.authUser.hubUserId,
 		role: "member",
 	};
+}
+
+function GroupThreadItem(params: {
+	post: GroupPost;
+	canReply: boolean;
+	loading: boolean;
+}) {
+	const { post, canReply, loading } = params;
+	const replyAllowed = canReply && canReplyAtThreadDepth(post.threadDepth);
+
+	return (
+		<div
+			className={cn(
+				"space-y-3",
+				post.threadDepth > 0
+					? "ml-4 border-l border-border/70 pl-4"
+					: undefined,
+			)}
+			data-testid={`group-post-${post.id}`}
+			data-thread-depth={post.threadDepth}
+		>
+			<article
+				id={`post-${post.id}`}
+				className="rounded-lg border border-border p-4"
+			>
+				<PostContent
+					createdAt={post.createdAt}
+					moderationStatus={post.moderationStatus}
+					isHidden={post.isHidden}
+					isDeleted={post.isDeleted}
+					actions={[{ label: "Comment" }, { label: "Share" }]}
+				>
+					<p>{post.bodyText}</p>
+				</PostContent>
+				<div className="mt-4 flex flex-wrap items-center gap-2">
+					{replyAllowed ? (
+						<Form method="post" className="w-full space-y-2">
+							<input type="hidden" name="_action" value="post" />
+							<input type="hidden" name="parentPostId" value={post.id} />
+							<input
+								name="bodyText"
+								placeholder="Reply"
+								data-testid={`group-reply-input-${post.id}`}
+								className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+							/>
+							<Button
+								type="submit"
+								size="sm"
+								disabled={loading}
+								data-testid={`group-reply-submit-${post.id}`}
+							>
+								Reply
+							</Button>
+						</Form>
+					) : null}
+
+					{canReply && !replyAllowed ? (
+						<p
+							className="text-xs text-muted-foreground"
+							data-testid={`group-reply-limit-${post.id}`}
+						>
+							Reply limit reached
+						</p>
+					) : null}
+				</div>
+			</article>
+			{post.replies.length > 0 ? (
+				<div className="space-y-3">
+					{post.replies.map((reply) => (
+						<GroupThreadItem
+							key={reply.id}
+							post={reply}
+							canReply={canReply}
+							loading={loading}
+						/>
+					))}
+				</div>
+			) : null}
+		</div>
+	);
 }
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -323,7 +407,10 @@ export default function GroupDetailPage() {
 			showServerSettings={data.viewerRole === "admin"}
 		>
 			{actionData && "error" in actionData ? (
-				<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+				<div
+					className="rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+					data-testid="group-action-error"
+				>
 					{actionData.error}
 				</div>
 			) : null}
@@ -638,42 +725,12 @@ export default function GroupDetailPage() {
 							</div>
 						) : (
 							data.posts.map((post) => (
-								<article
+								<GroupThreadItem
 									key={post.id}
-									id={`post-${post.id}`}
-									className="rounded-lg border border-border p-4"
-									data-testid={`group-post-${post.id}`}
-								>
-									<div className="flex items-center justify-between gap-3">
-										<p className="text-xs uppercase tracking-wide text-muted-foreground">
-											{new Date(post.createdAt).toLocaleString()}
-										</p>
-										<p className="text-xs uppercase tracking-wide text-muted-foreground">
-											{post.moderationStatus}
-										</p>
-									</div>
-									<p className="mt-3 whitespace-pre-wrap text-sm">
-										{post.bodyText ?? "(no text)"}
-									</p>
-									{data.canPost ? (
-										<Form method="post" className="mt-4 space-y-2">
-											<input type="hidden" name="_action" value="post" />
-											<input
-												type="hidden"
-												name="parentPostId"
-												value={post.id}
-											/>
-											<input
-												name="bodyText"
-												placeholder="Reply"
-												className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-											/>
-											<Button type="submit" size="sm" disabled={loading}>
-												Reply
-											</Button>
-										</Form>
-									) : null}
-								</article>
+									post={post}
+									canReply={data.canPost}
+									loading={loading}
+								/>
 							))
 						)}
 					</section>

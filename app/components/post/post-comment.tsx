@@ -5,6 +5,7 @@ import {
 	ChatBubbleContent,
 	ChatBubbleFooter,
 	ChatBubbleHeader,
+	ChatBubbleHeading,
 	ChatBubbleMedia,
 	ChatBubbleMeta,
 	ChatBubbleTitle,
@@ -16,9 +17,11 @@ import {
 	PostActions,
 } from "./post-actions";
 import { PostContent } from "./post-content";
+import { PostLabels } from "./post-labels";
 
 export type PostCommentData = {
 	id: string;
+	threadDepth: number;
 	author: string;
 	body: string;
 	createdAt: string;
@@ -33,42 +36,50 @@ export type PostCommentData = {
 
 type PostCommentProps = {
 	comment: PostCommentData;
-	depth?: number;
 };
 
-export function PostComment({ comment, depth = 0 }: PostCommentProps) {
+export function PostComment({ comment }: PostCommentProps) {
 	return (
 		<div
 			data-testid={`post-comment-${comment.id}`}
 			style={{
-				marginLeft: depth > 0 ? `${Math.min(depth, 3) * 1.25}rem` : undefined,
+				marginLeft:
+					comment.threadDepth > 0
+						? `${Math.min(comment.threadDepth, 3) * 1.25}rem`
+						: undefined,
 			}}
 		>
 			<ChatBubble>
-				<ChatBubbleMedia>
-					<ProfileImage
-						src={comment.imageSrc}
-						alt={comment.author}
-						fallback={
-							comment.fallback ?? comment.author.slice(0, 2).toUpperCase()
-						}
-						size="sm"
-					/>
-				</ChatBubbleMedia>
 				<ChatBubbleContent>
 					<ChatBubbleHeader>
-						<ChatBubbleTitle>{comment.author}</ChatBubbleTitle>
-						<ChatBubbleMeta>
-							{new Date(comment.createdAt).toLocaleString()}
-						</ChatBubbleMeta>
+						<ChatBubbleMedia>
+							<ProfileImage
+								src={comment.imageSrc}
+								alt={comment.author}
+								fallback={
+									comment.fallback ?? comment.author.slice(0, 2).toUpperCase()
+								}
+								size="sm"
+							/>
+						</ChatBubbleMedia>
+						<ChatBubbleHeading>
+							<ChatBubbleTitle className="flex flex-wrap items-center gap-2">
+								<span>{comment.author}</span>
+								<PostLabels
+									moderationStatus={comment.moderationStatus}
+									isHidden={comment.isHidden}
+									isDeleted={comment.isDeleted}
+								/>
+							</ChatBubbleTitle>
+							<ChatBubbleMeta>
+								{new Date(comment.createdAt).toLocaleString()}
+							</ChatBubbleMeta>
+						</ChatBubbleHeading>
 					</ChatBubbleHeader>
 					<ChatBubbleBody>
-						<PostContent
-							body={comment.body}
-							moderationStatus={comment.moderationStatus}
-							isHidden={comment.isHidden}
-							isDeleted={comment.isDeleted}
-						/>
+						<PostContent>
+							<p>{comment.body}</p>
+						</PostContent>
 					</ChatBubbleBody>
 					{comment.actions?.length ? (
 						<ChatBubbleFooter>

@@ -6,15 +6,14 @@ import {
 import {
 	PostComposer,
 	PostComposerBody,
-	PostComposerDescription,
 	PostComposerField,
 	PostComposerFooter,
-	PostComposerHeader,
 	PostComposerMedia,
-	PostComposerTitle,
+	PostComposerSurface,
 } from "~/components/post/post-composer";
 import { PostContent } from "~/components/post/post-content";
 import { PostHeading } from "~/components/post/post-heading";
+import { PostLabels } from "~/components/post/post-labels";
 import { ProfileCard } from "~/components/profile/profile-card";
 import { ProfileIdentity } from "~/components/profile/profile-identity";
 import { ProfileImage } from "~/components/profile/profile-image";
@@ -28,6 +27,7 @@ import {
 	BreadcrumbSeparator,
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
+import { ButtonGroup, ButtonGroupItem } from "~/components/ui/button-group";
 import {
 	Card,
 	CardContent,
@@ -36,6 +36,17 @@ import {
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
+import {
+	Dialog,
+	DialogBody,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "~/components/ui/dialog";
 import {
 	Dropdown,
 	DropdownContent,
@@ -46,13 +57,43 @@ import {
 } from "~/components/ui/dropdown";
 import { HeroImage } from "~/components/ui/hero-image";
 import { Icon } from "~/components/ui/icon";
+import { IconButton } from "~/components/ui/icon-button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import {
+	CenteredLayout,
+	LayoutMain,
+	LayoutSidebar,
+	RightSidebarLayout,
+} from "~/components/ui/layouts";
 import { Navigation, SubNavigation } from "~/components/ui/navigation";
 import { NavigationList } from "~/components/ui/navigation-list";
+import {
+	Popover,
+	PopoverClose,
+	PopoverContent,
+	PopoverDescription,
+	PopoverTitle,
+	PopoverTrigger,
+} from "~/components/ui/popover";
+import { RichTextContent } from "~/components/ui/rich-text-content";
+import {
+	Selector,
+	SelectorAnchor,
+	SelectorContent,
+	SelectorItem,
+	SelectorItemContent,
+	SelectorItemDescription,
+	SelectorItemMedia,
+	SelectorItemMeta,
+	SelectorItemTitle,
+	SelectorLabel,
+	SelectorList,
+} from "~/components/ui/selector";
 import { Spinner } from "~/components/ui/spinner";
 import { Textarea } from "~/components/ui/textarea";
 import { Toast } from "~/components/ui/toast";
+import { RICH_TEXT_VERSION, type RichTextDocument } from "~/lib/rich-text";
 
 function createProfileArt(params: {
 	backgroundStart: string;
@@ -135,6 +176,7 @@ const saraImage = createProfileArt({
 const sampleComments: PostCommentData[] = [
 	{
 		id: "comment-1",
+		threadDepth: 0,
 		author: "Aino Moderator",
 		imageSrc: ainoImage,
 		fallback: "AM",
@@ -144,6 +186,7 @@ const sampleComments: PostCommentData[] = [
 		replies: [
 			{
 				id: "comment-1-1",
+				threadDepth: 1,
 				author: "Mika Member",
 				imageSrc: mikaImage,
 				fallback: "MM",
@@ -153,6 +196,7 @@ const sampleComments: PostCommentData[] = [
 				replies: [
 					{
 						id: "comment-1-1-1",
+						threadDepth: 2,
 						author: "Sara Admin",
 						imageSrc: saraImage,
 						fallback: "SA",
@@ -166,6 +210,7 @@ const sampleComments: PostCommentData[] = [
 	},
 	{
 		id: "comment-2",
+		threadDepth: 0,
 		author: "Ville Member",
 		fallback: "VM",
 		body: "We also need to show state badges cleanly when moderation changes the comment later.",
@@ -249,6 +294,64 @@ const navigationListSections = [
 	},
 ];
 
+const richTextExample: RichTextDocument = {
+	version: RICH_TEXT_VERSION,
+	blocks: [
+		{
+			type: "paragraph",
+			children: [
+				{
+					type: "text",
+					text: "This content format stores plain text and typed links in one document. You can link to ",
+				},
+				{
+					type: "link",
+					text: "a profile",
+					target: {
+						type: "profile",
+						profileId: "aino-moderator",
+						to: "/profile",
+					},
+				},
+				{
+					type: "text",
+					text: ", jump to ",
+				},
+				{
+					type: "link",
+					text: "a feed post",
+					target: { type: "post", postId: "post-42" },
+				},
+				{
+					type: "text",
+					text: ", or open ",
+				},
+				{
+					type: "link",
+					text: "an external reference",
+					target: {
+						type: "external",
+						href: "https://developer.mozilla.org/en-US/docs/Web/API/Popover_API",
+					},
+				},
+				{
+					type: "text",
+					text: ".",
+				},
+			],
+		},
+		{
+			type: "paragraph",
+			children: [
+				{
+					type: "text",
+					text: "The stored format stays structural, so the renderer never has to guess whether a link is internal or external.",
+				},
+			],
+		},
+	],
+};
+
 function SectionHeader({
 	title,
 	description,
@@ -310,7 +413,9 @@ const styleGuideGroups = [
 			"Base primitives and system rules that other components build on.",
 		items: [
 			{ id: "style-guide-button", title: "Button" },
+			{ id: "style-guide-button-group", title: "Button Group" },
 			{ id: "style-guide-icon", title: "Icon" },
+			{ id: "style-guide-icon-button", title: "Icon Button" },
 			{ id: "style-guide-badge", title: "Badge" },
 			{ id: "style-guide-card", title: "Card" },
 			{ id: "style-guide-elevation", title: "Elevation" },
@@ -324,6 +429,9 @@ const styleGuideGroups = [
 			{ id: "style-guide-label", title: "Label" },
 			{ id: "style-guide-input", title: "Input" },
 			{ id: "style-guide-textarea", title: "Textarea" },
+			{ id: "style-guide-selector", title: "Selector" },
+			{ id: "style-guide-dialog", title: "Dialog" },
+			{ id: "style-guide-popover", title: "Popover" },
 			{ id: "style-guide-dropdown", title: "Dropdown" },
 			{ id: "style-guide-spinner", title: "Spinner" },
 			{ id: "style-guide-toast", title: "Toast" },
@@ -351,6 +459,18 @@ const styleGuideGroups = [
 		],
 	},
 	{
+		title: "Layouts",
+		description:
+			"Page and surface arrangements that define how content and side regions share space.",
+		items: [
+			{ id: "style-guide-layout-centered", title: "Centered Feed Layout" },
+			{
+				id: "style-guide-layout-right-sidebar",
+				title: "Right Sidebar Layout",
+			},
+		],
+	},
+	{
 		title: "Posts And Conversation",
 		description:
 			"Content structures for posts, replies, and lightweight conversational UI.",
@@ -358,6 +478,7 @@ const styleGuideGroups = [
 			{ id: "style-guide-post-heading", title: "Post Heading" },
 			{ id: "style-guide-post-composer", title: "Post Composer" },
 			{ id: "style-guide-post-content", title: "Post Content" },
+			{ id: "style-guide-rich-text-content", title: "Rich Text Content" },
 			{ id: "style-guide-chat-bubble", title: "Chat Bubble" },
 			{ id: "style-guide-post-comments", title: "Post Comments" },
 		],
@@ -703,6 +824,29 @@ export default function StyleGuidePage() {
 								</Card>
 							</section>
 
+							<section
+								className="space-y-4"
+								data-testid="style-guide-button-group"
+							>
+								<SectionHeader
+									title="Button Group"
+									description="Grouped related actions into a single compact control. Use it when actions belong together and should read as one set instead of separate loose buttons."
+								/>
+								<Card>
+									<CardContent className="flex flex-wrap items-center gap-3 pt-6">
+										<ButtonGroup>
+											<ButtonGroupItem>Comment</ButtonGroupItem>
+											<ButtonGroupItem>Share</ButtonGroupItem>
+										</ButtonGroup>
+										<ButtonGroup>
+											<ButtonGroupItem>Day</ButtonGroupItem>
+											<ButtonGroupItem>Week</ButtonGroupItem>
+											<ButtonGroupItem>Month</ButtonGroupItem>
+										</ButtonGroup>
+									</CardContent>
+								</Card>
+							</section>
+
 							<section className="space-y-4" data-testid="style-guide-icon">
 								<SectionHeader
 									title="Icon"
@@ -726,6 +870,29 @@ export default function StyleGuidePage() {
 											<Icon name="grid2x2" />
 											<span className="text-sm">Layout</span>
 										</div>
+									</CardContent>
+								</Card>
+							</section>
+
+							<section
+								className="space-y-4"
+								data-testid="style-guide-icon-button"
+							>
+								<SectionHeader
+									title="Icon Button"
+									description="Compact action control for icon-only affordances. Use it when the icon is clear, the action is small, and an accessible label is supplied."
+								/>
+								<Card>
+									<CardContent className="flex flex-wrap items-center gap-3 pt-6">
+										<IconButton label="Add image" variant="ghost">
+											<Icon name="imagePlus" size={16} />
+										</IconButton>
+										<IconButton label="Attach file" variant="outline">
+											<Icon name="paperclip" size={16} />
+										</IconButton>
+										<IconButton label="Send reply">
+											<Icon name="sendHorizontal" size={16} />
+										</IconButton>
 									</CardContent>
 								</Card>
 							</section>
@@ -946,6 +1113,155 @@ export default function StyleGuidePage() {
 												disabled
 											/>
 										</div>
+									</CardContent>
+								</Card>
+							</section>
+
+							<section className="space-y-4" data-testid="style-guide-selector">
+								<SectionHeader
+									title="Selector"
+									description="Anchored suggestion surface for rich-text linking and mention-style flows. Use it when typing in a text field should open a focused list of profiles, posts, groups, or other structured targets."
+								/>
+								<Card>
+									<CardContent className="pt-6">
+										<Selector open>
+											<SelectorAnchor>
+												<Textarea
+													defaultValue="Let’s mention @ain and link the Saturday route update in this post."
+													className="min-h-32"
+													aria-label="Selector example input"
+												/>
+											</SelectorAnchor>
+											<SelectorContent className="max-w-xl">
+												<SelectorLabel>Suggestions for “ain”</SelectorLabel>
+												<SelectorList>
+													<SelectorItem active>
+														<SelectorItemMedia>
+															<ProfileImage
+																src={ainoImage}
+																alt="Aino Moderator"
+																fallback="AM"
+																size="sm"
+															/>
+														</SelectorItemMedia>
+														<SelectorItemContent>
+															<SelectorItemTitle>
+																Aino Moderator
+															</SelectorItemTitle>
+															<SelectorItemDescription>
+																Profile link
+															</SelectorItemDescription>
+														</SelectorItemContent>
+														<SelectorItemMeta>@profile</SelectorItemMeta>
+													</SelectorItem>
+													<SelectorItem>
+														<SelectorItemMedia>
+															<div className="rounded-md bg-primary/10 p-2 text-primary">
+																<Icon name="messageSquare" size={16} />
+															</div>
+														</SelectorItemMedia>
+														<SelectorItemContent>
+															<SelectorItemTitle>
+																Saturday route update
+															</SelectorItemTitle>
+															<SelectorItemDescription>
+																Post in the main feed
+															</SelectorItemDescription>
+														</SelectorItemContent>
+														<SelectorItemMeta>#post</SelectorItemMeta>
+													</SelectorItem>
+													<SelectorItem>
+														<SelectorItemMedia>
+															<div className="rounded-md bg-muted p-2 text-muted-foreground">
+																<Icon name="users" size={16} />
+															</div>
+														</SelectorItemMedia>
+														<SelectorItemContent>
+															<SelectorItemTitle>
+																Neighborhood Organizers
+															</SelectorItemTitle>
+															<SelectorItemDescription>
+																Group link
+															</SelectorItemDescription>
+														</SelectorItemContent>
+														<SelectorItemMeta>/group</SelectorItemMeta>
+													</SelectorItem>
+												</SelectorList>
+											</SelectorContent>
+										</Selector>
+									</CardContent>
+								</Card>
+							</section>
+
+							<section className="space-y-4" data-testid="style-guide-dialog">
+								<SectionHeader
+									title="Dialog"
+									description="Modal surface built on the native HTML dialog element. Use it for blocking flows that need full attention and an explicit close path."
+								/>
+								<Card>
+									<CardContent className="pt-6">
+										<Dialog>
+											<DialogTrigger>Open dialog</DialogTrigger>
+											<DialogContent>
+												<DialogHeader>
+													<DialogTitle>Invite members</DialogTitle>
+													<DialogDescription>
+														Use dialog when the task should temporarily take
+														over the interface, such as inviting people or
+														confirming a destructive action.
+													</DialogDescription>
+												</DialogHeader>
+												<DialogBody>
+													<Input
+														defaultValue="neighborhood@opengather.test"
+														aria-label="Invite email"
+													/>
+													<Textarea
+														defaultValue="We are opening the next planning thread today. Join when you can."
+														aria-label="Invite message"
+													/>
+												</DialogBody>
+												<DialogFooter>
+													<DialogClose>Close</DialogClose>
+													<Button>Send invite</Button>
+												</DialogFooter>
+											</DialogContent>
+										</Dialog>
+									</CardContent>
+								</Card>
+							</section>
+
+							<section className="space-y-4" data-testid="style-guide-popover">
+								<SectionHeader
+									title="Popover"
+									description="Lightweight overlay built on native HTML popover behavior. Use it for secondary context like quick actions, previews, and small helper panels."
+								/>
+								<Card>
+									<CardContent className="pt-6">
+										<Popover>
+											<PopoverTrigger>Open popover</PopoverTrigger>
+											<PopoverContent>
+												<PopoverTitle>Quick reactions</PopoverTitle>
+												<PopoverDescription>
+													This pattern stays lighter than dialog and should not
+													carry full workflows.
+												</PopoverDescription>
+												<div className="mt-4 flex flex-wrap items-center gap-2">
+													<IconButton label="Celebrate" variant="outline">
+														<Icon name="checkCircle2" size={16} />
+													</IconButton>
+													<IconButton label="Alert" variant="outline">
+														<Icon name="triangleAlert" size={16} />
+													</IconButton>
+													<IconButton label="Notify" variant="outline">
+														<Icon name="bell" size={16} />
+													</IconButton>
+												</div>
+												<div className="mt-4 flex justify-end">
+													<PopoverClose>Close</PopoverClose>
+												</div>
+											</PopoverContent>
+										</Popover>
 									</CardContent>
 								</Card>
 							</section>
@@ -1252,6 +1568,95 @@ export default function StyleGuidePage() {
 						</GuideGroup>
 
 						<GuideGroup
+							id="style-guide-group-layouts"
+							title="Layouts"
+							description="Core page arrangements for centered feeds and media-plus-sidebar surfaces."
+						>
+							<section
+								className="space-y-4"
+								data-testid="style-guide-layout-centered"
+							>
+								<SectionHeader
+									title="Centered Feed Layout"
+									description="Default feed layout with a single centered content column. Use it for posts and other linear reading flows where sidebars would add noise."
+								/>
+								<Card>
+									<CardContent className="pt-6">
+										<CenteredLayout className="space-y-4">
+											<Card>
+												<CardContent className="space-y-3 pt-6">
+													<PostHeading
+														media={
+															<ProfileImage
+																src={ainoImage}
+																alt="Aino Moderator"
+																fallback="AM"
+																size="sm"
+															/>
+														}
+														title="Aino Moderator"
+														subtitle="Centered feed example"
+													/>
+													<PostContent
+														actions={[{ label: "Comment" }, { label: "Share" }]}
+													>
+														<p>
+															A centered layout keeps the reading column stable
+															and lets the content carry the page without extra
+															side structure.
+														</p>
+													</PostContent>
+												</CardContent>
+											</Card>
+											<Card>
+												<CardContent className="pt-6">
+													<p className="text-sm leading-7 text-muted-foreground">
+														Additional feed cards stack in the same width,
+														keeping the rhythm consistent down the page.
+													</p>
+												</CardContent>
+											</Card>
+										</CenteredLayout>
+									</CardContent>
+								</Card>
+							</section>
+
+							<section
+								className="space-y-4"
+								data-testid="style-guide-layout-right-sidebar"
+							>
+								<SectionHeader
+									title="Right Sidebar Layout"
+									description="Wide content area with a narrower sidebar on the right. Use it for modal-like detail views such as large media on the left and comments on the right."
+								/>
+								<Card>
+									<CardContent className="pt-6">
+										<RightSidebarLayout>
+											<LayoutMain>
+												<div className="overflow-hidden rounded-lg border border-border bg-muted">
+													<img
+														src={heroImage}
+														alt="Expanded media example"
+														className="aspect-[4/3] w-full object-cover"
+													/>
+												</div>
+											</LayoutMain>
+											<LayoutSidebar className="space-y-3">
+												<Card>
+													<CardContent className="pt-6">
+														<PostComments
+															comments={sampleComments.slice(0, 2)}
+														/>
+													</CardContent>
+												</Card>
+											</LayoutSidebar>
+										</RightSidebarLayout>
+									</CardContent>
+								</Card>
+							</section>
+						</GuideGroup>
+
+						<GuideGroup
 							id="style-guide-group-posts-and-conversation"
 							title="Posts And Conversation"
 							description="Higher-level content patterns for posts, comments, and conversational feedback."
@@ -1276,7 +1681,12 @@ export default function StyleGuidePage() {
 														size="md"
 													/>
 												}
-												title="Aino Moderator"
+												title={
+													<span className="flex flex-wrap items-center gap-2">
+														<span>Aino Moderator</span>
+														<PostLabels moderationStatus="approved" />
+													</span>
+												}
 												subtitle={new Date(
 													"2026-03-14T08:30:00.000Z",
 												).toLocaleString()}
@@ -1293,7 +1703,12 @@ export default function StyleGuidePage() {
 														className="rounded-md"
 													/>
 												}
-												title="Neighborhood Organizers"
+												title={
+													<span className="flex flex-wrap items-center gap-2">
+														<span>Neighborhood Organizers</span>
+														<PostLabels moderationStatus="flagged" isHidden />
+													</span>
+												}
 												subtitle={`Posted by Sara Admin • ${new Date("2026-03-14T11:15:00.000Z").toLocaleString()}`}
 											/>
 										</div>
@@ -1321,34 +1736,21 @@ export default function StyleGuidePage() {
 												/>
 											</PostComposerMedia>
 											<PostComposerBody>
-												<PostComposerHeader>
-													<PostComposerTitle>
-														Start a new post
-													</PostComposerTitle>
-													<PostComposerDescription>
-														Use the larger composer when someone is publishing a
-														new update, question, or announcement to a space.
-													</PostComposerDescription>
-												</PostComposerHeader>
-												<PostComposerField defaultValue="We have enough volunteers for setup. What we still need is one person to document the route changes before Saturday." />
-												<PostComposerFooter>
-													<div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-														<Button variant="outline" size="sm">
-															<Icon name="grid2x2" size={16} />
-															Add image
-														</Button>
-														<Button variant="outline" size="sm">
-															<Icon name="settings" size={16} />
-															Add location
-														</Button>
-													</div>
-													<div className="flex flex-wrap items-center gap-2">
-														<Button variant="ghost" size="sm">
-															Save draft
-														</Button>
-														<Button size="sm">Publish post</Button>
-													</div>
-												</PostComposerFooter>
+												<PostComposerSurface>
+													<PostComposerField defaultValue="We have enough volunteers for setup. What we still need is one person to document the route changes before Saturday." />
+													<PostComposerFooter>
+														<div className="flex flex-wrap items-center gap-1">
+															<IconButton label="Add image" variant="ghost">
+																<Icon name="imagePlus" size={16} />
+															</IconButton>
+														</div>
+														<div className="flex flex-wrap items-center gap-1">
+															<IconButton label="Publish post">
+																<Icon name="sendHorizontal" size={16} />
+															</IconButton>
+														</div>
+													</PostComposerFooter>
+												</PostComposerSurface>
 											</PostComposerBody>
 										</PostComposer>
 
@@ -1362,25 +1764,21 @@ export default function StyleGuidePage() {
 												/>
 											</PostComposerMedia>
 											<PostComposerBody>
-												<PostComposerHeader>
-													<PostComposerTitle>Write a reply</PostComposerTitle>
-													<PostComposerDescription>
-														The reply variant is tighter and should stay fast to
-														scan inside a conversation.
-													</PostComposerDescription>
-												</PostComposerHeader>
-												<PostComposerField placeholder="Add a reply to the thread" />
-												<PostComposerFooter>
-													<div className="text-sm text-muted-foreground">
-														Supports the same content rules as posts.
-													</div>
-													<div className="flex items-center gap-2">
-														<Button variant="ghost" size="sm">
-															Cancel
-														</Button>
-														<Button size="sm">Reply</Button>
-													</div>
-												</PostComposerFooter>
+												<PostComposerSurface>
+													<PostComposerField placeholder="Add a reply to the thread" />
+													<PostComposerFooter>
+														<div className="flex items-center gap-1">
+															<IconButton label="Add image" variant="ghost">
+																<Icon name="imagePlus" size={16} />
+															</IconButton>
+														</div>
+														<div className="flex items-center gap-1">
+															<IconButton label="Reply">
+																<Icon name="sendHorizontal" size={16} />
+															</IconButton>
+														</div>
+													</PostComposerFooter>
+												</PostComposerSurface>
 											</PostComposerBody>
 										</PostComposer>
 									</CardContent>
@@ -1407,16 +1805,26 @@ export default function StyleGuidePage() {
 														size="md"
 													/>
 												}
-												title="Aino Moderator"
+												title={
+													<span className="flex flex-wrap items-center gap-2">
+														<span>Aino Moderator</span>
+														<PostLabels moderationStatus="approved" />
+													</span>
+												}
 												subtitle={new Date(
 													"2026-03-14T08:30:00.000Z",
 												).toLocaleString()}
 											/>
 											<PostContent
-												contextLabel="General feed"
-												body="This component should stay useful whether the post lives in the main feed, a group, or a future profile timeline."
 												className="mt-4"
-											/>
+												actions={[{ label: "Comment" }, { label: "Share" }]}
+											>
+												<p>
+													This component should stay useful whether the post
+													lives in the main feed, a group, or a future profile
+													timeline.
+												</p>
+											</PostContent>
 										</div>
 										<div className="rounded-lg border border-border p-4">
 											<PostHeading
@@ -1429,16 +1837,51 @@ export default function StyleGuidePage() {
 														className="rounded-md"
 													/>
 												}
-												title="Neighborhood Organizers"
+												title={
+													<span className="flex flex-wrap items-center gap-2">
+														<span>Neighborhood Organizers</span>
+														<PostLabels moderationStatus="flagged" isHidden />
+													</span>
+												}
 												subtitle={`Posted by Sara Admin • ${new Date("2026-03-14T08:42:00.000Z").toLocaleString()}`}
 											/>
 											<PostContent
-												contextLabel="Reply in Neighborhood group"
-												body="Moderation and visibility markers should be readable without taking over the content."
-												moderationStatus="flagged"
-												isHidden
 												className="mt-4"
-											/>
+												actions={[{ label: "Comment" }, { label: "Share" }]}
+											>
+												<p>
+													Moderation and visibility markers should be readable
+													without taking over the content.
+												</p>
+											</PostContent>
+										</div>
+									</CardContent>
+								</Card>
+							</section>
+
+							<section
+								className="space-y-4"
+								data-testid="style-guide-rich-text-content"
+							>
+								<SectionHeader
+									title="Rich Text Content"
+									description="Structured rich text format intended for storage. It keeps content explicit as blocks and inline nodes, so internal and external links stay typed instead of being stored as raw HTML."
+								/>
+								<Card>
+									<CardContent className="grid gap-4 pt-6 lg:grid-cols-2">
+										<div className="space-y-3 rounded-lg border border-border p-4">
+											<h3 className="text-base font-semibold tracking-tight">
+												Document model
+											</h3>
+											<pre className="overflow-x-auto rounded-md bg-muted/60 p-4 text-xs leading-6 text-muted-foreground">
+												<code>{JSON.stringify(richTextExample, null, 2)}</code>
+											</pre>
+										</div>
+										<div className="space-y-3 rounded-lg border border-border p-4">
+											<h3 className="text-base font-semibold tracking-tight">
+												Rendered output
+											</h3>
+											<RichTextContent document={richTextExample} />
 										</div>
 									</CardContent>
 								</Card>
@@ -1470,11 +1913,12 @@ export default function StyleGuidePage() {
 								<Card>
 									<CardContent className="space-y-5 pt-6">
 										<div className="rounded-lg border border-border p-4">
-											<PostContent
-												contextLabel="Original post"
-												body="What should a reliable comment thread feel like when a real community starts using it daily?"
-												createdAt="2026-03-14T09:30:00.000Z"
-											/>
+											<PostContent createdAt="2026-03-14T09:30:00.000Z">
+												<p>
+													What should a reliable comment thread feel like when a
+													real community starts using it daily?
+												</p>
+											</PostContent>
 										</div>
 										<PostComments comments={sampleComments} />
 									</CardContent>

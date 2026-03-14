@@ -8,8 +8,8 @@ import {
 
 type PostHeadingProps = {
 	media: React.ReactNode;
-	title: string;
-	subtitle: string;
+	title: React.ReactNode;
+	subtitle: React.ReactNode;
 };
 
 export function PostHeading({ media, title, subtitle }: PostHeadingProps) {

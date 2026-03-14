@@ -6,14 +6,14 @@ export function ChatBubble({
 	className,
 	...props
 }: HTMLAttributes<HTMLDivElement>) {
-	return <div className={cn("flex items-start gap-3", className)} {...props} />;
+	return <div className={cn("min-w-0", className)} {...props} />;
 }
 
 export function ChatBubbleMedia({
 	className,
 	...props
 }: HTMLAttributes<HTMLDivElement>) {
-	return <div className={cn("shrink-0 pt-1", className)} {...props} />;
+	return <div className={cn("shrink-0", className)} {...props} />;
 }
 
 export function ChatBubbleContent({
@@ -36,14 +36,15 @@ export function ChatBubbleHeader({
 	...props
 }: HTMLAttributes<HTMLDivElement>) {
 	return (
-		<div
-			className={cn(
-				"mb-2 flex flex-wrap items-center gap-x-2 gap-y-1",
-				className,
-			)}
-			{...props}
-		/>
+		<div className={cn("mb-2 flex items-start gap-3", className)} {...props} />
 	);
+}
+
+export function ChatBubbleHeading({
+	className,
+	...props
+}: HTMLAttributes<HTMLDivElement>) {
+	return <div className={cn("min-w-0 space-y-1", className)} {...props} />;
 }
 
 export function ChatBubbleTitle({

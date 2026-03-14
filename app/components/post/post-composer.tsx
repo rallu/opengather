@@ -44,61 +44,26 @@ const PostComposerBody = React.forwardRef<
 	HTMLDivElement,
 	React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => {
-	const variant = usePostComposerVariant();
-
 	return (
-		<div
-			ref={ref}
-			className={cn(
-				"min-w-0 flex-1",
-				variant === "post" ? "space-y-4" : "space-y-3",
-				className,
-			)}
-			{...props}
-		/>
+		<div ref={ref} className={cn("min-w-0 flex-1", className)} {...props} />
 	);
 });
 PostComposerBody.displayName = "PostComposerBody";
 
-const PostComposerHeader = React.forwardRef<
+const PostComposerSurface = React.forwardRef<
 	HTMLDivElement,
 	React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-	<div ref={ref} className={cn("space-y-1", className)} {...props} />
-));
-PostComposerHeader.displayName = "PostComposerHeader";
-
-const PostComposerTitle = React.forwardRef<
-	HTMLHeadingElement,
-	React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => {
-	const variant = usePostComposerVariant();
-
-	return (
-		<h3
-			ref={ref}
-			className={cn(
-				"font-semibold tracking-tight text-foreground",
-				variant === "post" ? "text-lg" : "text-base",
-				className,
-			)}
-			{...props}
-		/>
-	);
-});
-PostComposerTitle.displayName = "PostComposerTitle";
-
-const PostComposerDescription = React.forwardRef<
-	HTMLParagraphElement,
-	React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
-	<p
+	<div
 		ref={ref}
-		className={cn("text-sm leading-6 text-muted-foreground", className)}
+		className={cn(
+			"overflow-hidden rounded-md border border-input bg-background",
+			className,
+		)}
 		{...props}
 	/>
 ));
-PostComposerDescription.displayName = "PostComposerDescription";
+PostComposerSurface.displayName = "PostComposerSurface";
 
 const PostComposerField = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 	({ className, placeholder, ...props }, ref) => {
@@ -114,8 +79,8 @@ const PostComposerField = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 						: "Write a reply")
 				}
 				className={cn(
-					"resize-none border-border bg-background",
-					variant === "post" ? "min-h-36" : "min-h-24",
+					"resize-none border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
+					variant === "post" ? "min-h-40 px-4 py-4" : "min-h-28 px-4 py-4",
 					className,
 				)}
 				{...props}
@@ -135,8 +100,8 @@ const PostComposerFooter = React.forwardRef<
 		<div
 			ref={ref}
 			className={cn(
-				"flex flex-wrap items-center justify-between gap-3",
-				variant === "reply" ? "pt-1" : undefined,
+				"flex flex-wrap items-center justify-between gap-2 border-t border-border/70 bg-background px-3 py-2",
+				variant === "reply" ? "min-h-12" : "min-h-13",
 				className,
 			)}
 			{...props}
@@ -148,10 +113,8 @@ PostComposerFooter.displayName = "PostComposerFooter";
 export {
 	PostComposer,
 	PostComposerBody,
-	PostComposerDescription,
 	PostComposerField,
 	PostComposerFooter,
-	PostComposerHeader,
 	PostComposerMedia,
-	PostComposerTitle,
+	PostComposerSurface,
 };

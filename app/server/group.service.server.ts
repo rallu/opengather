@@ -15,6 +15,7 @@ import {
 	type GroupVisibilityMode,
 	type ViewerRole,
 } from "./permissions.server";
+import { buildThreadTree, normalizeThreadDepths } from "./post-thread.server";
 import { getSetupStatus } from "./setup.service.server";
 
 type AuthUser = {
@@ -43,11 +44,13 @@ export type GroupSummary = {
 export type GroupPost = {
 	id: string;
 	parentPostId?: string;
+	threadDepth: number;
 	bodyText?: string;
 	moderationStatus: "pending" | "approved" | "rejected" | "flagged";
 	isHidden: boolean;
 	isDeleted: boolean;
 	createdAt: string;
+	replies: GroupPost[];
 };
 
 export type GroupMemberSummary = {
@@ -149,6 +152,7 @@ function mapGroupPost(params: {
 	row: {
 		id: string;
 		parentPostId: string | null;
+		threadDepth?: number;
 		bodyText: string | null;
 		moderationStatus: string;
 		hiddenAt: Date | string | null;
@@ -159,6 +163,7 @@ function mapGroupPost(params: {
 	return {
 		id: params.row.id,
 		parentPostId: params.row.parentPostId ?? undefined,
+		threadDepth: params.row.threadDepth ?? 0,
 		bodyText: params.row.bodyText ?? undefined,
 		moderationStatus: asModerationStatus({
 			value: params.row.moderationStatus,
@@ -166,6 +171,7 @@ function mapGroupPost(params: {
 		isHidden: Boolean(params.row.hiddenAt),
 		isDeleted: Boolean(params.row.deletedAt),
 		createdAt: toIsoString({ value: params.row.createdAt }),
+		replies: [],
 	};
 }
 
@@ -490,6 +496,12 @@ export async function loadGroup(params: {
 		);
 	});
 
+	const threadedPosts = buildThreadTree({
+		rows: normalizeThreadDepths({ rows: posts }).map((row) =>
+			mapGroupPost({ row }),
+		),
+	});
+
 	const pendingRequests = canManageGroup({ groupRole }).allowed
 		? await db.groupMembership.findMany({
 				where: {
@@ -569,7 +581,7 @@ export async function loadGroup(params: {
 		joinState,
 		canPost: canPostToGroup({ groupRole }).allowed,
 		canManage: canManageGroup({ groupRole }).allowed,
-		posts: posts.map((row) => mapGroupPost({ row })),
+		posts: threadedPosts,
 		pendingRequests: pendingRequests.map((request) => ({
 			userId: request.principalId,
 			label: pendingUserById.get(request.principalId) ?? request.principalId,

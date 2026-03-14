@@ -1,64 +1,41 @@
-import { Badge } from "~/components/ui/badge";
+import type { ReactNode } from "react";
+
+import { ButtonGroup, ButtonGroupItem } from "~/components/ui/button-group";
 import { cn } from "~/lib/utils";
+import type { PostActionData } from "./post-actions";
+import { PostLabels } from "./post-labels";
 
 type PostContentProps = {
-	body?: string;
+	children?: ReactNode;
 	createdAt?: string;
 	moderationStatus?: "pending" | "approved" | "rejected" | "flagged";
 	isHidden?: boolean;
 	isDeleted?: boolean;
-	contextLabel?: string;
+	actions?: PostActionData[];
 	className?: string;
 };
 
-function getStatusTone(
-	status: NonNullable<PostContentProps["moderationStatus"]>,
-): "success" | "warning" | "danger" | "default" {
-	switch (status) {
-		case "approved":
-			return "success";
-		case "rejected":
-			return "danger";
-		case "flagged":
-			return "warning";
-		default:
-			return "default";
-	}
-}
-
 export function PostContent({
-	body,
+	children,
 	createdAt,
 	moderationStatus,
 	isHidden = false,
 	isDeleted = false,
-	contextLabel,
+	actions,
 	className,
 }: PostContentProps) {
 	const hasMeta =
-		Boolean(contextLabel) ||
-		Boolean(moderationStatus) ||
-		isHidden ||
-		isDeleted ||
-		Boolean(createdAt);
+		Boolean(moderationStatus) || isHidden || isDeleted || Boolean(createdAt);
 
 	return (
 		<div className={cn("space-y-3", className)}>
 			{hasMeta ? (
 				<div className="flex flex-wrap items-center gap-2 text-xs">
-					{contextLabel ? (
-						<span className="font-medium text-foreground">{contextLabel}</span>
-					) : null}
-					{moderationStatus ? (
-						<Badge
-							variant={getStatusTone(moderationStatus)}
-							className="capitalize"
-						>
-							{moderationStatus}
-						</Badge>
-					) : null}
-					{isHidden ? <Badge variant="default">hidden</Badge> : null}
-					{isDeleted ? <Badge variant="default">deleted</Badge> : null}
+					<PostLabels
+						moderationStatus={moderationStatus}
+						isHidden={isHidden}
+						isDeleted={isDeleted}
+					/>
 					{createdAt ? (
 						<span className="text-muted-foreground">
 							{new Date(createdAt).toLocaleString()}
@@ -66,9 +43,20 @@ export function PostContent({
 					) : null}
 				</div>
 			) : null}
-			<p className="whitespace-pre-wrap text-sm leading-7 text-foreground">
-				{body ?? "(no text)"}
-			</p>
+			<div className="text-sm leading-7 text-foreground [&_p]:whitespace-pre-wrap">
+				{children ?? <p>(no text)</p>}
+			</div>
+			{actions?.length ? (
+				<div className="border-t border-border pt-3">
+					<ButtonGroup>
+						{actions.map((action) => (
+							<ButtonGroupItem key={action.label} disabled={action.disabled}>
+								{action.label}
+							</ButtonGroupItem>
+						))}
+					</ButtonGroup>
+				</div>
+			) : null}
 		</div>
 	);
 }

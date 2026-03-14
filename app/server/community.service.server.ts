@@ -12,6 +12,11 @@ import { processNotificationOutbox } from "./jobs.service.server";
 import { extractMentionEmails } from "./mentions.server";
 import { createNotification } from "./notification.service.server";
 import {
+	buildThreadTree,
+	MAX_THREAD_DEPTH,
+	normalizeThreadDepths,
+} from "./post-thread.server";
+import {
 	canManageInstance,
 	canPostToGroup,
 	canPostToInstanceFeed,
@@ -31,6 +36,7 @@ export type CommunityUser = {
 export type CommunityPost = {
 	id: string;
 	parentPostId?: string;
+	threadDepth: number;
 	bodyText?: string;
 	group?: {
 		id: string;
@@ -40,6 +46,7 @@ export type CommunityPost = {
 	isHidden: boolean;
 	isDeleted: boolean;
 	createdAt: string;
+	replies: CommunityPost[];
 };
 
 function asModerationStatus(params: {
@@ -197,6 +204,7 @@ function mapPost(params: {
 	row: {
 		id: string;
 		parentPostId: string | null;
+		threadDepth?: number;
 		bodyText: string | null;
 		groupId?: string | null;
 		moderationStatus: string;
@@ -212,6 +220,7 @@ function mapPost(params: {
 	return {
 		id: params.row.id,
 		parentPostId: params.row.parentPostId ?? undefined,
+		threadDepth: params.row.threadDepth ?? 0,
 		bodyText: params.row.bodyText ?? undefined,
 		group:
 			params.row.groupId && params.row.group
@@ -226,6 +235,62 @@ function mapPost(params: {
 		isHidden: Boolean(params.row.hiddenAt),
 		isDeleted: Boolean(params.row.deletedAt),
 		createdAt: toIsoString({ value: params.row.createdAt }),
+		replies: [],
+	};
+}
+
+async function resolveParentPostContext(params: {
+	instanceId: string;
+	parentPostId: string;
+}) {
+	const db = getDb();
+	const parent = await db.post.findUnique({
+		where: { id: params.parentPostId },
+		select: {
+			id: true,
+			instanceId: true,
+			groupId: true,
+			parentPostId: true,
+			deletedAt: true,
+			authorId: true,
+		},
+	});
+
+	if (!parent || parent.instanceId !== params.instanceId || parent.deletedAt) {
+		return { ok: false as const, error: "Parent post not found" };
+	}
+
+	let threadDepth = 0;
+	let currentParentId = parent.parentPostId;
+	const visitedIds = new Set([parent.id]);
+
+	while (currentParentId) {
+		if (visitedIds.has(currentParentId)) {
+			return { ok: false as const, error: "Parent post not found" };
+		}
+		visitedIds.add(currentParentId);
+
+		const ancestor = await db.post.findUnique({
+			where: { id: currentParentId },
+			select: {
+				id: true,
+				instanceId: true,
+				parentPostId: true,
+			},
+		});
+
+		if (!ancestor || ancestor.instanceId !== params.instanceId) {
+			return { ok: false as const, error: "Parent post not found" };
+		}
+
+		threadDepth += 1;
+		currentParentId = ancestor.parentPostId;
+	}
+
+	return {
+		ok: true as const,
+		parent,
+		replyDepth: threadDepth + 1,
 	};
 }
 
@@ -322,6 +387,11 @@ export async function loadCommunity(params: {
 		);
 	});
 
+	const normalizedVisibleRows = normalizeThreadDepths({ rows: visible });
+	const threadedPosts = buildThreadTree({
+		rows: normalizedVisibleRows.map((row) => mapPost({ row })),
+	});
+
 	let search: Array<{ post: CommunityPost; score: number }> = [];
 	if (params.query && params.query.trim().length > 0) {
 		const embeddings = await db.postEmbedding.findMany({
@@ -367,17 +437,19 @@ export async function loadCommunity(params: {
 			}
 		}
 
-		const postById = new Map(visible.map((row) => [row.id, row]));
+		const postById = new Map(
+			normalizedVisibleRows.map((row) => [row.id, mapPost({ row })]),
+		);
 		search = [...scoreById.entries()]
 			.sort((a, b) => b[1] - a[1])
 			.slice(0, 10)
 			.map(([postId, score]) => {
-				const row = postById.get(postId);
-				if (!row) {
+				const post = postById.get(postId);
+				if (!post) {
 					return null;
 				}
 				return {
-					post: mapPost({ row }),
+					post,
 					score: Number(score.toFixed(6)),
 				};
 			})
@@ -389,7 +461,7 @@ export async function loadCommunity(params: {
 	return {
 		status: "ok",
 		viewerRole: readAccess.viewerRole,
-		posts: visible.map((row) => mapPost({ row })),
+		posts: threadedPosts,
 		search,
 	};
 }
@@ -428,27 +500,24 @@ export async function createPost(params: {
 	}
 
 	if (params.parentPostId) {
-		const parent = await db.post.findUnique({
-			where: { id: params.parentPostId },
-			select: {
-				id: true,
-				instanceId: true,
-				groupId: true,
-				deletedAt: true,
-				authorId: true,
-			},
+		const parentContext = await resolveParentPostContext({
+			instanceId: status.instance.id,
+			parentPostId: params.parentPostId,
 		});
-
-		if (
-			!parent ||
-			parent.instanceId !== status.instance.id ||
-			parent.deletedAt
-		) {
-			return { ok: false, error: "Parent post not found" };
+		if (!parentContext.ok) {
+			return parentContext;
 		}
+		const parent = parentContext.parent;
 
 		if (effectiveGroupId && parent.groupId !== effectiveGroupId) {
 			return { ok: false, error: "Replies must stay in the same group" };
+		}
+
+		if (parentContext.replyDepth > MAX_THREAD_DEPTH) {
+			return {
+				ok: false,
+				error: `Replies can only nest ${MAX_THREAD_DEPTH} levels deep`,
+			};
 		}
 
 		effectiveGroupId = parent.groupId ?? effectiveGroupId;
