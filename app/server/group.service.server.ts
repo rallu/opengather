@@ -50,6 +50,21 @@ export type GroupPost = {
 	createdAt: string;
 };
 
+export type GroupMemberSummary = {
+	userId: string;
+	label: string;
+	role: GroupRole;
+};
+
+function parseManagedGroupRole(
+	raw: string | null | undefined,
+): Exclude<GroupRole, "guest" | "owner"> | null {
+	if (raw === "member" || raw === "moderator" || raw === "admin") {
+		return raw;
+	}
+	return null;
+}
+
 function asModerationStatus(params: {
 	value: string;
 }): "pending" | "approved" | "rejected" | "flagged" {
@@ -354,6 +369,7 @@ export async function loadGroup(params: {
 			membershipStatus: GroupMembershipStatus;
 			joinState: GroupSummary["joinState"];
 			canPost: boolean;
+			canManage: boolean;
 			posts: GroupPost[];
 			pendingRequests: Array<{
 				userId: string;
@@ -361,6 +377,7 @@ export async function loadGroup(params: {
 				role: string;
 				approvalStatus: string;
 			}>;
+			members: GroupMemberSummary[];
 	  }
 > {
 	const setup = await getSetupStatus();
@@ -439,8 +456,10 @@ export async function loadGroup(params: {
 			membershipStatus,
 			joinState,
 			canPost: false,
+			canManage: false,
 			posts: [],
 			pendingRequests: [],
+			members: [],
 		};
 	}
 
@@ -504,6 +523,38 @@ export async function loadGroup(params: {
 	const pendingUserById = new Map(
 		pendingUsers.map((user) => [user.id, user.email || user.name || user.id]),
 	);
+	const currentMembers = canManageGroup({ groupRole }).allowed
+		? await db.groupMembership.findMany({
+				where: {
+					groupId: group.id,
+					approvalStatus: "approved",
+					principalType: "user",
+				},
+				orderBy: { createdAt: "asc" },
+				select: {
+					principalId: true,
+					role: true,
+				},
+			})
+		: [];
+	const currentUsers =
+		currentMembers.length > 0
+			? await db.user.findMany({
+					where: {
+						id: {
+							in: currentMembers.map((member) => member.principalId),
+						},
+					},
+					select: {
+						id: true,
+						email: true,
+						name: true,
+					},
+				})
+			: [];
+	const currentUserById = new Map(
+		currentUsers.map((user) => [user.id, user.email || user.name || user.id]),
+	);
 
 	return {
 		status: "ok",
@@ -517,12 +568,21 @@ export async function loadGroup(params: {
 		membershipStatus,
 		joinState,
 		canPost: canPostToGroup({ groupRole }).allowed,
+		canManage: canManageGroup({ groupRole }).allowed,
 		posts: posts.map((row) => mapGroupPost({ row })),
 		pendingRequests: pendingRequests.map((request) => ({
 			userId: request.principalId,
 			label: pendingUserById.get(request.principalId) ?? request.principalId,
 			role: request.role,
 			approvalStatus: request.approvalStatus,
+		})),
+		members: currentMembers.map((member) => ({
+			userId: member.principalId,
+			label: currentUserById.get(member.principalId) ?? member.principalId,
+			role: resolveGroupRole({
+				role: member.role,
+				approvalStatus: "approved",
+			}),
 		})),
 	};
 }
@@ -631,6 +691,170 @@ export async function updateGroupMembershipApproval(params: {
 
 	if (updated.count === 0) {
 		return { ok: false, error: "Membership request not found" };
+	}
+
+	return { ok: true };
+}
+
+export async function updateGroupVisibility(params: {
+	groupId: string;
+	managerUserId: string;
+	visibilityMode: GroupVisibilityMode;
+}): Promise<
+	| { ok: true; previousVisibilityMode: GroupVisibilityMode }
+	| { ok: false; error: string }
+> {
+	const setup = await getSetupStatus();
+	if (!setup.isSetup || !setup.instance) {
+		return { ok: false, error: "Setup not completed" };
+	}
+
+	const managerMembership = await getGroupMembership({
+		groupId: params.groupId,
+		userId: params.managerUserId,
+	});
+	const managerRole = resolveGroupRole(managerMembership);
+	if (!canManageGroup({ groupRole: managerRole }).allowed) {
+		return { ok: false, error: "Group manager access required" };
+	}
+
+	const existing = await getDb().communityGroup.findFirst({
+		where: {
+			id: params.groupId,
+			instanceId: setup.instance.id,
+		},
+		select: { visibilityMode: true },
+	});
+	if (!existing) {
+		return { ok: false, error: "Group not found" };
+	}
+
+	const previousVisibilityMode = parseGroupVisibilityMode(
+		existing.visibilityMode,
+	);
+	await getDb().communityGroup.update({
+		where: { id: params.groupId },
+		data: {
+			visibilityMode: params.visibilityMode,
+			updatedAt: new Date(),
+		},
+	});
+
+	return { ok: true, previousVisibilityMode };
+}
+
+export async function updateGroupMemberRole(params: {
+	groupId: string;
+	managerUserId: string;
+	targetUserId: string;
+	role: string;
+}): Promise<
+	| {
+			ok: true;
+			role: Exclude<GroupRole, "guest" | "owner">;
+	  }
+	| { ok: false; error: string }
+> {
+	const setup = await getSetupStatus();
+	if (!setup.isSetup || !setup.instance) {
+		return { ok: false, error: "Setup not completed" };
+	}
+
+	const nextRole = parseManagedGroupRole(params.role);
+	if (!nextRole) {
+		return { ok: false, error: "Unsupported group role" };
+	}
+
+	const managerMembership = await getGroupMembership({
+		groupId: params.groupId,
+		userId: params.managerUserId,
+	});
+	const managerRole = resolveGroupRole(managerMembership);
+	if (!canManageGroup({ groupRole: managerRole }).allowed) {
+		return { ok: false, error: "Group manager access required" };
+	}
+
+	const targetMembership = await getDb().groupMembership.findFirst({
+		where: {
+			groupId: params.groupId,
+			principalId: params.targetUserId,
+			principalType: "user",
+			approvalStatus: "approved",
+		},
+		select: {
+			role: true,
+			approvalStatus: true,
+		},
+	});
+	if (!targetMembership) {
+		return { ok: false, error: "Member not found" };
+	}
+	if (resolveGroupRole(targetMembership) === "owner") {
+		return { ok: false, error: "Owner role cannot be reassigned" };
+	}
+
+	await getDb().groupMembership.updateMany({
+		where: {
+			groupId: params.groupId,
+			principalId: params.targetUserId,
+			principalType: "user",
+			approvalStatus: "approved",
+		},
+		data: {
+			role: nextRole,
+			updatedAt: new Date(),
+		},
+	});
+
+	return { ok: true, role: nextRole };
+}
+
+export async function removeGroupMember(params: {
+	groupId: string;
+	managerUserId: string;
+	targetUserId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+	const setup = await getSetupStatus();
+	if (!setup.isSetup || !setup.instance) {
+		return { ok: false, error: "Setup not completed" };
+	}
+
+	const managerMembership = await getGroupMembership({
+		groupId: params.groupId,
+		userId: params.managerUserId,
+	});
+	const managerRole = resolveGroupRole(managerMembership);
+	if (!canManageGroup({ groupRole: managerRole }).allowed) {
+		return { ok: false, error: "Group manager access required" };
+	}
+
+	const targetMembership = await getDb().groupMembership.findFirst({
+		where: {
+			groupId: params.groupId,
+			principalId: params.targetUserId,
+			principalType: "user",
+		},
+		select: {
+			role: true,
+			approvalStatus: true,
+		},
+	});
+	if (!targetMembership) {
+		return { ok: false, error: "Member not found" };
+	}
+	if (resolveGroupRole(targetMembership) === "owner") {
+		return { ok: false, error: "Owner cannot be removed" };
+	}
+
+	const removed = await getDb().groupMembership.deleteMany({
+		where: {
+			groupId: params.groupId,
+			principalId: params.targetUserId,
+			principalType: "user",
+		},
+	});
+	if (removed.count === 0) {
+		return { ok: false, error: "Member not found" };
 	}
 
 	return { ok: true };

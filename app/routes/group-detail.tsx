@@ -16,9 +16,13 @@ import {
 } from "~/server/community.service.server";
 import {
 	loadGroup,
+	removeGroupMember,
 	requestGroupAccess,
+	updateGroupMemberRole,
 	updateGroupMembershipApproval,
+	updateGroupVisibility,
 } from "~/server/group.service.server";
+import { parseGroupVisibilityMode } from "~/server/group-membership.service.server";
 import { getInstanceViewerRole } from "~/server/permissions.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
@@ -197,6 +201,105 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		};
 	}
 
+	if (actionType === "update-visibility") {
+		const visibilityMode = parseGroupVisibilityMode(
+			String(formData.get("visibilityMode") ?? "public"),
+		);
+		const result = await updateGroupVisibility({
+			groupId,
+			managerUserId: authUser.id,
+			visibilityMode,
+		});
+		if (!result.ok) {
+			return { error: result.error };
+		}
+
+		await writeAuditLogSafely({
+			action: "group.visibility.update",
+			actor: {
+				type: "user",
+				id: authUser.id,
+			},
+			resourceType: "group",
+			resourceId: groupId,
+			request,
+			payload: {
+				previousVisibilityMode: result.previousVisibilityMode,
+				visibilityMode,
+			},
+		});
+
+		return {
+			ok: true,
+			message: "Group visibility updated.",
+		};
+	}
+
+	if (actionType === "update-member-role") {
+		const targetUserId = String(formData.get("targetUserId") ?? "");
+		const role = String(formData.get("role") ?? "");
+		const result = await updateGroupMemberRole({
+			groupId,
+			managerUserId: authUser.id,
+			targetUserId,
+			role,
+		});
+		if (!result.ok) {
+			return { error: result.error };
+		}
+
+		await writeAuditLogSafely({
+			action: "group.member.role_update",
+			actor: {
+				type: "user",
+				id: authUser.id,
+			},
+			resourceType: "group",
+			resourceId: groupId,
+			request,
+			payload: {
+				targetUserId,
+				role: result.role,
+			},
+		});
+
+		return {
+			ok: true,
+			message: "Member role updated.",
+		};
+	}
+
+	if (actionType === "remove-member") {
+		const targetUserId = String(formData.get("targetUserId") ?? "");
+		const result = await removeGroupMember({
+			groupId,
+			managerUserId: authUser.id,
+			targetUserId,
+		});
+		if (!result.ok) {
+			return { error: result.error };
+		}
+
+		await writeAuditLogSafely({
+			action: "group.member.remove",
+			actor: {
+				type: "user",
+				id: authUser.id,
+			},
+			resourceType: "group",
+			resourceId: groupId,
+			request,
+			payload: {
+				targetUserId,
+			},
+		});
+
+		return {
+			ok: true,
+			message: "Member removed from group.",
+		};
+	}
+
 	return { error: "Unsupported action" };
 }
 
@@ -301,6 +404,57 @@ export default function GroupDetailPage() {
 
 			{data.status === "ok" ? (
 				<>
+					{!data.canPost &&
+					(data.joinState === "join" || data.joinState === "request") ? (
+						<section className="rounded-lg border border-border p-4">
+							<h2 className="text-lg font-semibold">Membership</h2>
+							<p className="mt-2 text-sm text-muted-foreground">
+								Join this group to post and participate in member-only
+								discussions.
+							</p>
+							<Form method="post" className="mt-4">
+								<input type="hidden" name="_action" value="request-access" />
+								<Button
+									type="submit"
+									disabled={loading}
+									data-testid="group-join-visible"
+								>
+									{data.joinState === "join" ? "Join group" : "Request access"}
+								</Button>
+							</Form>
+						</section>
+					) : null}
+
+					{data.canManage ? (
+						<section className="rounded-lg border border-border p-4">
+							<h2 className="text-lg font-semibold">Group settings</h2>
+							<Form method="post" className="mt-4 flex flex-wrap gap-3">
+								<input type="hidden" name="_action" value="update-visibility" />
+								<select
+									name="visibilityMode"
+									defaultValue={data.group.visibilityMode}
+									data-testid="group-settings-visibility"
+									className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+								>
+									<option value="public">Public</option>
+									<option value="instance_members">Instance members</option>
+									<option value="group_members">Group members</option>
+									<option value="private_invite_only">
+										Private invite only
+									</option>
+								</select>
+								<Button
+									type="submit"
+									variant="outline"
+									disabled={loading}
+									data-testid="group-settings-save"
+								>
+									Save visibility
+								</Button>
+							</Form>
+						</section>
+					) : null}
+
 					{data.canPost ? (
 						<section className="rounded-lg border border-border p-4">
 							<h2 className="text-lg font-semibold">Post to group</h2>
@@ -376,6 +530,77 @@ export default function GroupDetailPage() {
 												</Button>
 											</Form>
 										</div>
+									</div>
+								))}
+							</div>
+						</section>
+					) : null}
+
+					{data.canManage ? (
+						<section className="rounded-lg border border-border p-4">
+							<h2 className="text-lg font-semibold">Members</h2>
+							<div className="mt-4 space-y-3" data-testid="group-member-list">
+								{data.members.map((member) => (
+									<div
+										key={member.userId}
+										className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border p-3"
+									>
+										<div className="text-sm">
+											<p className="font-medium">{member.label}</p>
+											<p className="text-muted-foreground">{member.role}</p>
+										</div>
+										{member.role === "owner" ? (
+											<p className="text-xs uppercase tracking-wide text-muted-foreground">
+												Owner
+											</p>
+										) : (
+											<div className="flex flex-wrap items-center gap-2">
+												<Form method="post" className="flex gap-2">
+													<input
+														type="hidden"
+														name="_action"
+														value="update-member-role"
+													/>
+													<input
+														type="hidden"
+														name="targetUserId"
+														value={member.userId}
+													/>
+													<select
+														name="role"
+														defaultValue={member.role}
+														className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+													>
+														<option value="member">Member</option>
+														<option value="moderator">Moderator</option>
+														<option value="admin">Admin</option>
+													</select>
+													<Button type="submit" size="sm" disabled={loading}>
+														Update role
+													</Button>
+												</Form>
+												<Form method="post">
+													<input
+														type="hidden"
+														name="_action"
+														value="remove-member"
+													/>
+													<input
+														type="hidden"
+														name="targetUserId"
+														value={member.userId}
+													/>
+													<Button
+														type="submit"
+														size="sm"
+														variant="outline"
+														disabled={loading}
+													>
+														Remove
+													</Button>
+												</Form>
+											</div>
+										)}
 									</div>
 								))}
 							</div>
