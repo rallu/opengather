@@ -4,7 +4,17 @@ import { Link, redirect, useLoaderData, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { signIn } from "~/lib/auth-client";
 import { getServerConfig } from "~/server/config.service.server";
-import { isSetupCompleteForRequest } from "~/server/setup.service.server";
+import {
+	getSetupStatus,
+	isSetupCompleteForRequest,
+} from "~/server/setup.service.server";
+
+function normalizeNextPath(raw: string | null): string {
+	if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
+		return "/";
+	}
+	return raw;
+}
 
 export async function loader({ request }: LoaderFunctionArgs) {
 	const isSetup = await isSetupCompleteForRequest({ request });
@@ -12,7 +22,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		return redirect("/setup");
 	}
 
+	const url = new URL(request.url);
 	const config = await getServerConfig();
+	const setup = await getSetupStatus();
 	return {
 		hubAuthEnabled: Boolean(
 			config.hubEnabled && config.hubClientId && config.hubClientSecret,
@@ -20,11 +32,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		googleAuthEnabled: Boolean(
 			config.googleClientId && config.googleClientSecret,
 		),
+		nextPath: normalizeNextPath(url.searchParams.get("next")),
+		reason: url.searchParams.get("reason") ?? "",
+		serverName: setup.instance?.name ?? "OpenGather",
 	};
 }
 
 export default function Login() {
-	const { googleAuthEnabled, hubAuthEnabled } = useLoaderData<typeof loader>();
+	const { googleAuthEnabled, hubAuthEnabled, nextPath, reason, serverName } =
+		useLoaderData<typeof loader>();
 	const navigate = useNavigate();
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -48,7 +64,7 @@ export default function Login() {
 			if (result.error) {
 				setError(result.error.message || "Failed to sign in");
 			} else {
-				navigate("/");
+				navigate(nextPath);
 			}
 		} catch (_err) {
 			setError("An unexpected error occurred");
@@ -66,7 +82,7 @@ export default function Login() {
 		try {
 			const result = await signIn.oauth2({
 				providerId: "hub",
-				callbackURL: `${window.location.origin}/`,
+				callbackURL: `${window.location.origin}${nextPath}`,
 			});
 
 			if (result.error) {
@@ -99,7 +115,7 @@ export default function Login() {
 		try {
 			const result = await signIn.social({
 				provider: "google",
-				callbackURL: `${window.location.origin}/`,
+				callbackURL: `${window.location.origin}${nextPath}`,
 			});
 
 			if (result.error) {
@@ -132,9 +148,21 @@ export default function Login() {
 						Sign In
 					</h1>
 					<p className="mt-2 text-muted-foreground">
-						Welcome back to opengather
+						{reason === "members-only"
+							? `Sign in to continue to ${serverName}`
+							: "Welcome back to opengather"}
 					</p>
 				</div>
+
+				{reason === "members-only" ? (
+					<section
+						className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground"
+						data-testid="login-context"
+					>
+						This community requires a registered account before you can access
+						the feed.
+					</section>
+				) : null}
 
 				{error && (
 					<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -230,7 +258,13 @@ export default function Login() {
 
 				<p className="text-center text-sm text-muted-foreground">
 					Don't have an account?{" "}
-					<Link to="/register" className="text-primary hover:underline">
+					<Link
+						to={`/register?${new URLSearchParams({
+							next: nextPath,
+							reason,
+						}).toString()}`}
+						className="text-primary hover:underline"
+					>
 						Sign up
 					</Link>
 				</p>

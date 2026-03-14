@@ -285,9 +285,9 @@ test.describe("group privacy", () => {
 		await expect(page.getByText(privatePostText)).toHaveCount(0);
 
 		await page.goto(`/feed?q=${encodeURIComponent(privatePostText)}`);
-		await expect(page.getByRole("main").getByText(privateGroupName)).toHaveCount(
-			0,
-		);
+		await expect(
+			page.getByRole("main").getByText(privateGroupName),
+		).toHaveCount(0);
 		await expect(
 			page.getByRole("main").getByRole("link", { name: privateGroupName }),
 		).toHaveCount(0);

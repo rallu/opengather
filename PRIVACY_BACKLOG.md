@@ -278,6 +278,8 @@ Make group privacy real for reads and writes.
 
 ## Milestone 4: Event Privacy
 
+Status: Deferred
+
 ### Outcome
 
 Make events privacy-aware and capable of inheriting privacy from groups.
@@ -309,6 +311,8 @@ Make events privacy-aware and capable of inheriting privacy from groups.
 
 ## Milestone 5: Public Visitor vs Member Views
 
+Status: Completed on 2026-03-14
+
 ### Outcome
 
 Separate visitor UX from member UX throughout the app.
@@ -328,7 +332,42 @@ Separate visitor UX from member UX throughout the app.
 - restricted resources route users to the correct join/register path
 - pending users see clear next-step messaging
 
+### Completed Work
+
+- completed the public-instance visitor feed as a read-only surface
+- removed guest posting and reply controls from the feed UI in `app/routes/community.tsx`
+- kept signed-out shell navigation limited to guest-safe routes in `app/components/app-shell.tsx`
+- updated `app/server/community.service.server.ts` to return explicit feed access states:
+  - `ok`
+  - `requires_registration`
+  - `pending_membership`
+  - `forbidden`
+- updated `app/routes/community.tsx` loader to redirect signed-out users from restricted feeds to:
+  - `/register?next=...&reason=members-only`
+- added a clear pending-membership state in `app/routes/community.tsx`
+- updated `app/routes/register.tsx` to:
+  - show community-aware join copy for members-only redirects
+  - show instance name and description on the register screen
+  - preserve `next` after local signup and social/Hub auth
+  - preserve the redirect context when linking to sign-in
+- updated `app/routes/login.tsx` to:
+  - show members-only context when arriving from a restricted feed
+  - preserve `next` after local sign-in and social/Hub auth
+  - preserve the redirect context when linking back to register
+- kept group visitor/pending states as part of the live privacy flow from Milestone 3
+- added Playwright coverage in `e2e/community-access.spec.ts` for:
+  - guest redirect from restricted feed to contextual register/login pages
+  - pending-membership messaging for signed-in users on approval-gated feeds
+
+### Validation
+
+- `npm run test:unit`
+- `npm run lint`
+- `npx playwright test e2e/community-access.spec.ts e2e/community-studio.spec.ts e2e/groups-privacy.spec.ts`
+
 ## Milestone 6: Profile Privacy
+
+Status: Completed on 2026-03-14
 
 ### Outcome
 
@@ -345,6 +384,38 @@ Support profile-level privacy independently from instance or group visibility.
 
 - profiles can be public, members-only, or private
 - private profile activity does not leak through direct routes or notifications
+
+### Completed Work
+
+- added `ProfilePreference` to `prisma/schema.prisma`
+- added `app/server/profile.service.server.ts`
+- implemented profile privacy helpers for:
+  - `parseProfileVisibilityMode`
+  - `getProfileVisibility`
+  - `setProfileVisibility`
+  - own-profile loading
+  - viewer-facing profile loading
+- updated `app/routes/settings.tsx` with a profile privacy section
+- updated `app/routes/profile.tsx` so the self profile now shows:
+  - current profile visibility
+  - link to the viewer-facing profile route
+  - privacy-aware activity links
+- added `app/routes/profile-detail.tsx` for `/profiles/:userId`
+- enforced profile visibility through `canViewProfile`
+- restricted viewer-facing profile activity to posts the viewer can actually read
+  - grouped posts respect group privacy before appearing in a profile activity feed
+- added Playwright coverage in `e2e/profile-privacy.spec.ts` for:
+  - public profiles
+  - private profiles
+  - members-only profiles
+  - settings-driven visibility changes
+
+### Validation
+
+- `npm run prisma:generate`
+- `npm run test:unit`
+- `npm run lint`
+- `npx playwright test e2e/community-access.spec.ts e2e/community-studio.spec.ts e2e/groups-privacy.spec.ts e2e/profile-privacy.spec.ts`
 
 ## Milestone 7: Admin And Moderation Controls
 
@@ -416,8 +487,9 @@ Give admins and moderators tools to operate the new privacy model.
 2. Milestone 2: Schema Upgrade For Group Privacy
 3. Milestone 3: Group Read/Write Enforcement
 4. Milestone 5: Public Visitor vs Member Views
-5. Milestone 4: Event Privacy
+5. Milestone 4: Event Privacy (Deferred)
 6. Milestone 6: Profile Privacy
+7. Milestone 7: Admin And Moderation Controls
 7. Milestone 7: Admin And Moderation Controls
 
 ## Immediate Next Sprint

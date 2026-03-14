@@ -2,6 +2,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import {
 	Form,
 	Link,
+	redirect,
 	useActionData,
 	useLoaderData,
 	useNavigation,
@@ -53,6 +54,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		const authUser = await getAuthUserFromRequest({ request });
 		const user = toCommunityUser({ authUser });
 		const data = await loadCommunity({ user, query: q });
+		if (data.status === "requires_registration") {
+			const nextPath = `${url.pathname}${url.search}`;
+			const params = new URLSearchParams({
+				next: nextPath,
+				reason: "members-only",
+			});
+			return redirect(`/register?${params.toString()}`);
+		}
 
 		return {
 			...data,
@@ -249,13 +258,26 @@ export default function CommunityPage() {
 				</div>
 			) : null}
 
+			{data.status === "pending_membership" ? (
+				<div
+					className="rounded-md border border-border bg-muted/40 p-4 text-sm"
+					data-testid="feed-pending-state"
+				>
+					<p className="font-medium">Membership approval pending</p>
+					<p className="mt-1 text-muted-foreground">
+						Your account is waiting for approval before you can access this
+						community feed.
+					</p>
+				</div>
+			) : null}
+
 			{actionData && "error" in actionData ? (
 				<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
 					{actionData.error}
 				</div>
 			) : null}
 
-			{data.authUser ? (
+			{data.authUser && data.status === "ok" ? (
 				<div className="rounded-md border border-border p-4">
 					<Form method="post" className="space-y-3">
 						<input type="hidden" name="_action" value="post" />
@@ -349,7 +371,7 @@ export default function CommunityPage() {
 							{post.isDeleted ? " • deleted" : ""}
 						</p>
 						<div className="mt-2 flex gap-2">
-							{data.authUser && !post.group ? (
+							{data.authUser && data.status === "ok" && !post.group ? (
 								<Form method="post" className="inline-flex">
 									<input type="hidden" name="_action" value="post" />
 									<input type="hidden" name="parentPostId" value={post.id} />

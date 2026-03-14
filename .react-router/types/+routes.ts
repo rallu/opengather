@@ -60,6 +60,11 @@ type Pages = {
   "/profile": {
     params: {};
   };
+  "/profiles/:userId": {
+    params: {
+      "userId": string;
+    };
+  };
   "/notifications": {
     params: {};
   };
@@ -77,7 +82,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/metrics" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/feed" | "/community" | "/groups" | "/groups/:groupId" | "/profile" | "/notifications" | "/settings" | "/server-settings" | "/audit-logs";
+    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/metrics" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/feed" | "/community" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles/:userId" | "/notifications" | "/settings" | "/server-settings" | "/audit-logs";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -139,6 +144,10 @@ type RouteFiles = {
     id: "routes/profile";
     page: "/profile";
   };
+  "routes/profile-detail.tsx": {
+    id: "routes/profile-detail";
+    page: "/profiles/:userId";
+  };
   "routes/notifications.tsx": {
     id: "routes/notifications";
     page: "/notifications";
@@ -174,6 +183,7 @@ type RouteModules = {
   "routes/groups": typeof import("./app/routes/groups.tsx");
   "routes/group-detail": typeof import("./app/routes/group-detail.tsx");
   "routes/profile": typeof import("./app/routes/profile.tsx");
+  "routes/profile-detail": typeof import("./app/routes/profile-detail.tsx");
   "routes/notifications": typeof import("./app/routes/notifications.tsx");
   "routes/settings": typeof import("./app/routes/settings.tsx");
   "routes/server-settings": typeof import("./app/routes/server-settings.tsx");

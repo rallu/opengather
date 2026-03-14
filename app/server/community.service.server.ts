@@ -17,6 +17,8 @@ import {
 	canPostToInstanceFeed,
 	canViewInstanceFeed,
 	getInstanceViewerRole,
+	type InstanceVisibilityMode,
+	resolveViewerRoleFromMembership,
 } from "./permissions.server";
 import { getSetupStatus } from "./setup.service.server";
 
@@ -103,22 +105,63 @@ async function ensureCanRead(params: {
 }): Promise<{
 	allowed: boolean;
 	viewerRole: "guest" | "member" | "moderator" | "admin";
+	reason:
+		| "allowed"
+		| "requires_registration"
+		| "membership_required"
+		| "pending_membership";
+	visibilityMode: InstanceVisibilityMode;
 }> {
 	const visibilityMode = await getConfig("server_visibility_mode");
-	const viewerRole = params.user
-		? await getInstanceViewerRole({
-				instanceId: params.instanceId,
-				userId: params.user.id,
+	const membership = params.user
+		? await getDb().instanceMembership.findFirst({
+				where: {
+					instanceId: params.instanceId,
+					principalId: params.user.id,
+					principalType: "user",
+				},
+				select: {
+					role: true,
+					approvalStatus: true,
+				},
 			})
-		: "guest";
+		: null;
+	const viewerRole = resolveViewerRoleFromMembership(membership);
 	const result = canViewInstanceFeed({
 		visibilityMode,
 		viewerRole,
 		isAuthenticated: Boolean(params.user),
 	});
+
+	if (!result.allowed) {
+		if (result.reason === "requires_authentication") {
+			return {
+				allowed: false,
+				viewerRole,
+				reason: "requires_registration",
+				visibilityMode,
+			};
+		}
+
+		if (membership?.approvalStatus === "pending") {
+			return {
+				allowed: false,
+				viewerRole,
+				reason: "pending_membership",
+				visibilityMode,
+			};
+		}
+	}
+
 	return {
 		allowed: result.allowed,
 		viewerRole,
+		reason: result.allowed
+			? "allowed"
+			: result.reason === "requires_authentication"
+				? "requires_registration"
+				: result.reason,
+		visibilityMode,
 	};
 }
 
@@ -190,7 +233,12 @@ export async function loadCommunity(params: {
 	user: CommunityUser | null;
 	query?: string;
 }): Promise<{
-	status: "ok" | "not_setup" | "forbidden";
+	status:
+		| "ok"
+		| "not_setup"
+		| "requires_registration"
+		| "pending_membership"
+		| "forbidden";
 	viewerRole: "guest" | "member" | "moderator" | "admin";
 	posts: CommunityPost[];
 	search: Array<{ post: CommunityPost; score: number }>;
@@ -212,7 +260,12 @@ export async function loadCommunity(params: {
 	});
 	if (!readAccess.allowed) {
 		return {
-			status: "forbidden",
+			status:
+				readAccess.reason === "requires_registration"
+					? "requires_registration"
+					: readAccess.reason === "pending_membership"
+						? "pending_membership"
+						: "forbidden",
 			viewerRole: readAccess.viewerRole,
 			posts: [],
 			search: [],

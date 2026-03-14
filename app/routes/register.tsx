@@ -4,7 +4,17 @@ import { Link, redirect, useLoaderData, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { signIn, signUp } from "~/lib/auth-client";
 import { getServerConfig } from "~/server/config.service.server";
-import { isSetupCompleteForRequest } from "~/server/setup.service.server";
+import {
+	getSetupStatus,
+	isSetupCompleteForRequest,
+} from "~/server/setup.service.server";
+
+function normalizeNextPath(raw: string | null): string {
+	if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
+		return "/";
+	}
+	return raw;
+}
 
 export async function loader({ request }: LoaderFunctionArgs) {
 	const isSetup = await isSetupCompleteForRequest({ request });
@@ -12,7 +22,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		return redirect("/setup");
 	}
 
+	const url = new URL(request.url);
 	const config = await getServerConfig();
+	const setup = await getSetupStatus();
 	return {
 		hubAuthEnabled: Boolean(
 			config.hubEnabled && config.hubClientId && config.hubClientSecret,
@@ -20,11 +32,22 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		googleAuthEnabled: Boolean(
 			config.googleClientId && config.googleClientSecret,
 		),
+		nextPath: normalizeNextPath(url.searchParams.get("next")),
+		reason: url.searchParams.get("reason") ?? "",
+		serverName: setup.instance?.name ?? "OpenGather",
+		serverDescription: setup.instance?.description ?? "",
 	};
 }
 
 export default function Register() {
-	const { googleAuthEnabled, hubAuthEnabled } = useLoaderData<typeof loader>();
+	const {
+		googleAuthEnabled,
+		hubAuthEnabled,
+		nextPath,
+		reason,
+		serverName,
+		serverDescription,
+	} = useLoaderData<typeof loader>();
 	const navigate = useNavigate();
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
@@ -50,7 +73,7 @@ export default function Register() {
 			if (result.error) {
 				setError(result.error.message || "Failed to sign up");
 			} else {
-				navigate("/");
+				navigate(nextPath);
 			}
 		} catch (_err) {
 			setError("An unexpected error occurred");
@@ -68,7 +91,7 @@ export default function Register() {
 		try {
 			const result = await signIn.oauth2({
 				providerId: "hub",
-				callbackURL: `${window.location.origin}/`,
+				callbackURL: `${window.location.origin}${nextPath}`,
 			});
 
 			if (result.error) {
@@ -101,7 +124,7 @@ export default function Register() {
 		try {
 			const result = await signIn.social({
 				provider: "google",
-				callbackURL: `${window.location.origin}/`,
+				callbackURL: `${window.location.origin}${nextPath}`,
 			});
 
 			if (result.error) {
@@ -131,12 +154,35 @@ export default function Register() {
 			<div className="w-full max-w-md space-y-8">
 				<div className="text-center">
 					<h1 className="text-3xl font-bold" data-testid="register-title">
-						Create Account
+						{reason === "members-only"
+							? `Join ${serverName}`
+							: "Create Account"}
 					</h1>
 					<p className="mt-2 text-muted-foreground">
-						Get started with opengather
+						{reason === "members-only"
+							? "This community is only available to registered members."
+							: "Get started with opengather"}
 					</p>
 				</div>
+
+				{reason === "members-only" ? (
+					<section
+						className="rounded-lg border bg-muted/40 p-4"
+						data-testid="register-context"
+					>
+						<p
+							className="text-sm font-semibold"
+							data-testid="register-context-title"
+						>
+							{serverName}
+						</p>
+						{serverDescription ? (
+							<p className="mt-1 text-sm text-muted-foreground">
+								{serverDescription}
+							</p>
+						) : null}
+					</section>
+				) : null}
 
 				{error && (
 					<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -249,7 +295,13 @@ export default function Register() {
 
 				<p className="text-center text-sm text-muted-foreground">
 					Already have an account?{" "}
-					<Link to="/login" className="text-primary hover:underline">
+					<Link
+						to={`/login?${new URLSearchParams({
+							next: nextPath,
+							reason,
+						}).toString()}`}
+						className="text-primary hover:underline"
+					>
 						Sign in
 					</Link>
 				</p>

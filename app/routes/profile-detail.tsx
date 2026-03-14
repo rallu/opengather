@@ -2,77 +2,38 @@ import type { LoaderFunctionArgs } from "react-router";
 import { Link, useLoaderData } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
-import { getInstanceViewerRole } from "~/server/permissions.server";
-import { loadOwnProfile } from "~/server/profile.service.server";
+import { loadVisibleProfile } from "~/server/profile.service.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
 
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function loader({ request, params }: LoaderFunctionArgs) {
 	try {
 		const authUser = await getAuthUserFromRequest({ request });
-		if (!authUser) {
-			return { status: "unauthenticated" as const };
-		}
-
 		const setup = await getSetupStatus();
 		if (!setup.isSetup || !setup.instance) {
 			return { status: "not_setup" as const, authUser };
 		}
 
-		const viewerRole = await getInstanceViewerRole({
+		const result = await loadVisibleProfile({
+			profileUserId: params.userId ?? "",
+			viewer: authUser,
 			instanceId: setup.instance.id,
-			userId: authUser.id,
 		});
-		const profile = await loadOwnProfile({
-			userId: authUser.id,
-			hubUserId: authUser.hubUserId,
-			instanceId: setup.instance.id,
-			instanceName: setup.instance.name,
-			viewerRole,
-			name: authUser.name,
-		});
-		if (profile.status !== "ok") {
-			return { status: "error" as const };
-		}
-		const { status: _profileStatus, ...profileData } = profile;
-
 		return {
-			status: "ok" as const,
+			...result,
 			authUser,
-			...profileData,
 		};
 	} catch {
-		return { status: "error" as const };
+		return { status: "error" as const, authUser: null };
 	}
 }
 
-export default function ProfilePage() {
+export default function ProfileDetailPage() {
 	const data = useLoaderData<typeof loader>();
-
-	if (data.status === "unauthenticated") {
-		return (
-			<AppShell authUser={null} title="Profile">
-				<div className="rounded-lg border border-border p-5">
-					<div className="mt-4 flex gap-3">
-						<Button asChild>
-							<Link to="/login">Sign In</Link>
-						</Button>
-						<Button variant="outline" asChild>
-							<Link to="/register">Register</Link>
-						</Button>
-					</div>
-				</div>
-			</AppShell>
-		);
-	}
 
 	if (data.status === "not_setup") {
 		return (
-			<AppShell
-				authUser={data.authUser}
-				title="Profile"
-				showServerSettings={false}
-			>
+			<AppShell authUser={data.authUser} title="Profile">
 				<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
 					Server setup is not completed yet.
 				</div>
@@ -90,32 +51,59 @@ export default function ProfilePage() {
 		);
 	}
 
+	if (data.status === "not_found") {
+		return (
+			<AppShell authUser={data.authUser} title="Profile">
+				<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+					Profile not found.
+				</div>
+			</AppShell>
+		);
+	}
+
+	if (data.status === "requires_authentication") {
+		return (
+			<AppShell authUser={null} title="Profile">
+				<div className="rounded-lg border border-border p-5">
+					<p className="text-sm text-muted-foreground">
+						Sign in to view this profile.
+					</p>
+					<div className="mt-4 flex gap-3">
+						<Button asChild>
+							<Link to="/login">Sign In</Link>
+						</Button>
+						<Button variant="outline" asChild>
+							<Link to="/register">Register</Link>
+						</Button>
+					</div>
+				</div>
+			</AppShell>
+		);
+	}
+
+	if (data.status === "forbidden") {
+		return (
+			<AppShell authUser={data.authUser} title="Profile">
+				<div
+					className="rounded-lg border border-border p-5 text-sm text-muted-foreground"
+					data-testid="profile-forbidden-state"
+				>
+					This profile is not visible to your account.
+				</div>
+			</AppShell>
+		);
+	}
+
 	return (
-		<AppShell
-			authUser={data.authUser}
-			showServerSettings={data.viewerRole === "admin"}
-		>
+		<AppShell authUser={data.authUser} title={data.name}>
 			<div className="rounded-md border border-border p-4 text-sm">
-				<span className="font-medium">{data.name}</span>
-				<span className="text-muted-foreground">
-					{" "}
-					• {data.viewerRole} • {data.instanceName}
-				</span>
+				<p className="font-medium">{data.name}</p>
 				<p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">
 					Profile visibility: {data.profileVisibility}
 				</p>
 			</div>
 
-			<div className="flex gap-3">
-				<Button variant="outline" asChild>
-					<Link to={data.publicProfilePath}>Open Public Profile</Link>
-				</Button>
-				<Button variant="outline" asChild>
-					<Link to="/settings">Edit Privacy</Link>
-				</Button>
-			</div>
-
-			<div className="grid gap-4 sm:grid-cols-4">
+			<div className="grid gap-4 sm:grid-cols-3">
 				<div className="rounded-md border border-border p-4">
 					<p className="text-xs uppercase tracking-wide text-muted-foreground">
 						Posts
@@ -136,20 +124,12 @@ export default function ProfilePage() {
 					</p>
 					<p className="mt-2 text-2xl font-semibold">{data.stats.replies}</p>
 				</div>
-				<div className="rounded-md border border-border p-4">
-					<p className="text-xs uppercase tracking-wide text-muted-foreground">
-						Actions
-					</p>
-					<p className="mt-2 text-2xl font-semibold">
-						{data.stats.moderationActions}
-					</p>
-				</div>
 			</div>
 
-			<section className="space-y-3">
+			<section className="space-y-3" data-testid="profile-activity-list">
 				{data.activities.length === 0 ? (
 					<p className="text-sm text-muted-foreground">
-						No activity yet. Write your first post in the feed.
+						No visible activity yet.
 					</p>
 				) : (
 					data.activities.map((activity) => (
