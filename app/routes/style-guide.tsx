@@ -13,7 +13,12 @@ import {
 } from "~/components/post/post-composer";
 import { PostContent } from "~/components/post/post-content";
 import { PostHeading } from "~/components/post/post-heading";
+import { PostImageContent } from "~/components/post/post-image-content";
+import { PostImageGalleryContent } from "~/components/post/post-image-gallery-content";
 import { PostLabels } from "~/components/post/post-labels";
+import { PostLinkContent } from "~/components/post/post-link-content";
+import { PostRichTextContent } from "~/components/post/post-rich-text-content";
+import { PostVideoContent } from "~/components/post/post-video-content";
 import { ProfileCard } from "~/components/profile/profile-card";
 import { ProfileIdentity } from "~/components/profile/profile-identity";
 import { ProfileImage } from "~/components/profile/profile-image";
@@ -153,6 +158,41 @@ function createHeroArt() {
 	return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
+function createPostMediaArt(params: {
+	accent: string;
+	backgroundEnd: string;
+	backgroundStart: string;
+	label: string;
+}) {
+	const svg = `
+		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1080">
+			<defs>
+				<linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+					<stop offset="0%" stop-color="${params.backgroundStart}" />
+					<stop offset="100%" stop-color="${params.backgroundEnd}" />
+				</linearGradient>
+			</defs>
+			<rect width="1440" height="1080" fill="url(#bg)" />
+			<circle cx="1180" cy="220" r="160" fill="${params.accent}" opacity="0.22" />
+			<circle cx="300" cy="260" r="220" fill="white" opacity="0.08" />
+			<rect x="160" y="580" width="420" height="220" rx="28" fill="${params.accent}" opacity="0.28" />
+			<rect x="680" y="450" width="520" height="300" rx="32" fill="white" opacity="0.1" />
+			<path d="M0 850C190 780 360 730 540 752C740 776 860 914 1090 908C1230 904 1330 850 1440 788V1080H0Z" fill="#0f172a" opacity="0.52" />
+			<text
+				x="120"
+				y="980"
+				font-family="Arial, sans-serif"
+				font-size="56"
+				font-weight="700"
+				fill="white"
+				letter-spacing="4"
+			>${params.label}</text>
+		</svg>
+	`;
+
+	return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
 const heroImage = createHeroArt();
 const ainoImage = createProfileArt({
 	backgroundStart: "#1d4ed8",
@@ -171,6 +211,42 @@ const saraImage = createProfileArt({
 	backgroundEnd: "#134e4a",
 	accent: "#99f6e4",
 	label: "SARA",
+});
+const marketImage = createPostMediaArt({
+	backgroundStart: "#234B47",
+	backgroundEnd: "#0f172a",
+	accent: "#8ed1c7",
+	label: "SATURDAY MARKET",
+});
+const gardenImage = createPostMediaArt({
+	backgroundStart: "#365314",
+	backgroundEnd: "#1f2937",
+	accent: "#bef264",
+	label: "COMMUNITY GARDEN",
+});
+const routeImage = createPostMediaArt({
+	backgroundStart: "#1d4ed8",
+	backgroundEnd: "#172554",
+	accent: "#93c5fd",
+	label: "ROUTE UPDATE",
+});
+const kitchenImage = createPostMediaArt({
+	backgroundStart: "#7c2d12",
+	backgroundEnd: "#1f2937",
+	accent: "#fdba74",
+	label: "OPEN KITCHEN",
+});
+const workshopImage = createPostMediaArt({
+	backgroundStart: "#7c3aed",
+	backgroundEnd: "#312e81",
+	accent: "#c4b5fd",
+	label: "REPAIR WORKSHOP",
+});
+const archiveImage = createPostMediaArt({
+	backgroundStart: "#334155",
+	backgroundEnd: "#0f172a",
+	accent: "#cbd5e1",
+	label: "ARCHIVE NOTES",
 });
 
 const sampleComments: PostCommentData[] = [
@@ -479,6 +555,13 @@ const styleGuideGroups = [
 			{ id: "style-guide-post-composer", title: "Post Composer" },
 			{ id: "style-guide-post-content", title: "Post Content" },
 			{ id: "style-guide-rich-text-content", title: "Rich Text Content" },
+			{ id: "style-guide-post-image-content", title: "Single Image Content" },
+			{
+				id: "style-guide-post-image-gallery-content",
+				title: "Image Gallery Content",
+			},
+			{ id: "style-guide-post-video-content", title: "Video Content" },
+			{ id: "style-guide-post-link-content", title: "Link Content" },
 			{ id: "style-guide-chat-bubble", title: "Chat Bubble" },
 			{ id: "style-guide-post-comments", title: "Post Comments" },
 		],
@@ -1819,11 +1902,7 @@ export default function StyleGuidePage() {
 												className="mt-4"
 												actions={[{ label: "Comment" }, { label: "Share" }]}
 											>
-												<p>
-													This component should stay useful whether the post
-													lives in the main feed, a group, or a future profile
-													timeline.
-												</p>
+												<PostRichTextContent document={richTextExample} />
 											</PostContent>
 										</div>
 										<div className="rounded-lg border border-border p-4">
@@ -1849,10 +1928,7 @@ export default function StyleGuidePage() {
 												className="mt-4"
 												actions={[{ label: "Comment" }, { label: "Share" }]}
 											>
-												<p>
-													Moderation and visibility markers should be readable
-													without taking over the content.
-												</p>
+												<PostRichTextContent document={richTextExample} />
 											</PostContent>
 										</div>
 									</CardContent>
@@ -1883,6 +1959,104 @@ export default function StyleGuidePage() {
 											</h3>
 											<RichTextContent document={richTextExample} />
 										</div>
+									</CardContent>
+								</Card>
+							</section>
+
+							<section
+								className="space-y-4"
+								data-testid="style-guide-post-image-content"
+							>
+								<SectionHeader
+									title="Single Image Content"
+									description="Single-image post content for one strong visual. Use it when the image itself is the focus rather than part of a larger gallery."
+								/>
+								<Card>
+									<CardContent className="pt-6">
+										<PostImageContent
+											src={marketImage}
+											alt="Saturday market setup"
+											caption="A single-image post should stay simple and calm, with the image carrying most of the meaning."
+										/>
+									</CardContent>
+								</Card>
+							</section>
+
+							<section
+								className="space-y-4"
+								data-testid="style-guide-post-image-gallery-content"
+							>
+								<SectionHeader
+									title="Image Gallery Content"
+									description="Two-to-five image grid for post galleries. If there are more than five images, the last tile becomes a dimmed overflow action for the fuller gallery view."
+								/>
+								<Card>
+									<CardContent className="space-y-6 pt-6">
+										<PostImageGalleryContent
+											images={[
+												{ src: marketImage, alt: "Saturday market" },
+												{ src: gardenImage, alt: "Garden workday" },
+												{ src: routeImage, alt: "Route update board" },
+											]}
+										/>
+										<PostImageGalleryContent
+											images={[
+												{ src: marketImage, alt: "Saturday market" },
+												{ src: gardenImage, alt: "Garden workday" },
+												{ src: routeImage, alt: "Route update board" },
+												{ src: kitchenImage, alt: "Open kitchen" },
+												{ src: workshopImage, alt: "Repair workshop" },
+												{ src: archiveImage, alt: "Archive notes" },
+											]}
+										/>
+									</CardContent>
+								</Card>
+							</section>
+
+							<section
+								className="space-y-4"
+								data-testid="style-guide-post-video-content"
+							>
+								<SectionHeader
+									title="Video Content"
+									description="Video post block for recorded updates, walkthroughs, and event clips. It can render a playable video when a source exists or a poster-based preview when only metadata is available."
+								/>
+								<Card>
+									<CardContent className="pt-6">
+										<PostVideoContent
+											posterSrc={routeImage}
+											title="Street access update walkthrough"
+											duration="02:48"
+										/>
+									</CardContent>
+								</Card>
+							</section>
+
+							<section
+								className="space-y-4"
+								data-testid="style-guide-post-link-content"
+							>
+								<SectionHeader
+									title="Link Content"
+									description="Link preview block for internal or external references. Use it when the link itself is the object being shared rather than a small inline reference in rich text."
+								/>
+								<Card>
+									<CardContent className="grid gap-4 pt-6 lg:grid-cols-2">
+										<PostLinkContent
+											target={{ type: "post", postId: "post-42" }}
+											title="Saturday route update"
+											description="Internal post preview that can jump directly into the feed thread."
+											imageSrc={routeImage}
+										/>
+										<PostLinkContent
+											target={{
+												type: "external",
+												href: "https://developer.mozilla.org/en-US/docs/Web/API/Popover_API",
+											}}
+											title="MDN Popover API"
+											description="External reference preview with a clear destination and supporting image."
+											imageSrc={archiveImage}
+										/>
 									</CardContent>
 								</Card>
 							</section>

@@ -61,6 +61,16 @@ test("style guide renders shared component sections without setup", async ({
 	await expect(page.getByTestId("style-guide-post-composer")).toBeVisible();
 	await expect(page.getByTestId("style-guide-post-content")).toBeVisible();
 	await expect(page.getByTestId("style-guide-rich-text-content")).toBeVisible();
+	await expect(
+		page.getByTestId("style-guide-post-image-content"),
+	).toBeVisible();
+	await expect(
+		page.getByTestId("style-guide-post-image-gallery-content"),
+	).toBeVisible();
+	await expect(
+		page.getByTestId("style-guide-post-video-content"),
+	).toBeVisible();
+	await expect(page.getByTestId("style-guide-post-link-content")).toBeVisible();
 	await expect(page.getByTestId("style-guide-chat-bubble")).toBeVisible();
 	await expect(page.getByTestId("style-guide-post-comments")).toBeVisible();
 	await expect(page.getByTestId("style-guide-toast")).toBeVisible();
