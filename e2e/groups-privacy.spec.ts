@@ -121,6 +121,19 @@ async function hasUser(email: string): Promise<boolean> {
 	});
 }
 
+async function getUserIdByEmail(email: string): Promise<string> {
+	return withDb(async (client) => {
+		const result = await client.query<{ id: string }>(
+			'select id from "user" where email = $1 limit 1',
+			[email],
+		);
+		if (result.rowCount === 0 || !result.rows[0]?.id) {
+			throw new Error(`User not found for ${email}`);
+		}
+		return result.rows[0].id;
+	});
+}
+
 async function promoteUserToAdmin(email: string): Promise<void> {
 	await withDb(async (client) => {
 		const userResult = await client.query<{ id: string }>(
@@ -242,7 +255,9 @@ async function createGroup(params: {
 	await expect(params.page.getByTestId("group-post-body")).toBeVisible();
 	await params.page.getByTestId("group-post-body").fill(params.initialPost);
 	await params.page.getByTestId("group-post-submit").click();
-	await expect(params.page.getByText(params.initialPost)).toBeVisible();
+	await expect(params.page.getByTestId("group-post-list")).toContainText(
+		params.initialPost,
+	);
 	return groupId;
 }
 
@@ -250,9 +265,7 @@ test.describe("group privacy", () => {
 	test("admin creates public and request-only groups", async ({ page }) => {
 		await ensureConfiguredInstance(page);
 		await ensureAdminAccess(page);
-		await expect(
-			page.getByRole("navigation").getByRole("link", { name: "Groups" }),
-		).toBeVisible();
+		await expect(page.getByTestId("shell-nav-groups")).toBeVisible();
 
 		publicGroupId = await createGroup({
 			page,
@@ -277,29 +290,34 @@ test.describe("group privacy", () => {
 		await ensureConfiguredInstance(page);
 
 		await page.goto("/groups");
-		await expect(page.getByText(publicGroupName)).toBeVisible();
-		await expect(page.getByText(privateGroupName)).toHaveCount(0);
+		await expect(page.getByTestId(`group-card-${publicGroupId}`)).toBeVisible();
+		await expect(page.getByTestId(`group-card-${privateGroupId}`)).toHaveCount(
+			0,
+		);
 
 		await page.goto("/feed");
-		await expect(page.getByText(publicPostText)).toBeVisible();
-		await expect(page.getByText(privatePostText)).toHaveCount(0);
+		await expect(page.getByTestId("feed-post-list")).toContainText(
+			publicPostText,
+		);
+		await expect(page.getByTestId("feed-post-list")).not.toContainText(
+			privatePostText,
+		);
 
 		await page.goto(`/feed?q=${encodeURIComponent(privatePostText)}`);
-		await expect(
-			page.getByRole("main").getByText(privateGroupName),
-		).toHaveCount(0);
-		await expect(
-			page.getByRole("main").getByRole("link", { name: privateGroupName }),
-		).toHaveCount(0);
+		await expect(page.getByTestId("feed-search-results")).not.toContainText(
+			privateGroupName,
+		);
 
 		await page.goto(`/groups/${publicGroupId}`);
-		await expect(page.getByText(publicPostText)).toBeVisible();
+		await expect(page.getByTestId("group-post-list")).toContainText(
+			publicPostText,
+		);
 
 		await page.goto(`/groups/${privateGroupId}`);
-		await expect(
-			page.getByText("Sign in to view or request access to this group."),
-		).toBeVisible();
-		await expect(page.getByText(privatePostText)).toHaveCount(0);
+		await expect(page.getByTestId("group-requires-auth-state")).toContainText(
+			"Sign in to view or request access to this group.",
+		);
+		await expect(page.getByTestId("group-post-list")).toHaveCount(0);
 	});
 
 	test("member can request access and approved membership unlocks the group", async ({
@@ -313,18 +331,20 @@ test.describe("group privacy", () => {
 			password: memberUser.password,
 		});
 		await page.goto("/groups");
+		await expect(page.getByTestId("shell-nav-groups")).toBeVisible();
 		await expect(
-			page.getByRole("navigation").getByRole("link", { name: "Groups" }),
+			page.getByTestId(`group-card-${privateGroupId}`),
 		).toBeVisible();
-		await expect(page.getByText(privateGroupName)).toBeVisible();
 
 		await page.goto(`/groups/${privateGroupId}`);
 		await expect(page.getByTestId("group-request-access")).toBeVisible();
 		await page.getByTestId("group-request-access").click();
-		await expect(page.getByText("Access request sent.")).toBeVisible();
-		await expect(
-			page.getByText("Your membership request is still pending approval."),
-		).toBeVisible();
+		await expect(page.getByTestId("group-action-message")).toContainText(
+			"Access request sent.",
+		);
+		await expect(page.getByTestId("group-membership-state")).toContainText(
+			"Your membership request is still pending approval.",
+		);
 		await signOutIfNeeded(page);
 
 		await signInLocal({
@@ -333,9 +353,14 @@ test.describe("group privacy", () => {
 			password: adminUser.password,
 		});
 		await page.goto(`/groups/${privateGroupId}`);
-		await expect(page.getByText(memberUser.email)).toBeVisible();
-		await page.getByRole("button", { name: "Approve" }).click();
-		await expect(page.getByText("Membership approved.")).toBeVisible();
+		const memberUserId = await getUserIdByEmail(memberUser.email);
+		await expect(
+			page.getByTestId(`group-pending-request-${memberUserId}`),
+		).toContainText(memberUser.email);
+		await page.getByTestId(`group-pending-approve-${memberUserId}`).click();
+		await expect(page.getByTestId("group-action-message")).toContainText(
+			"Membership approved.",
+		);
 		await signOutIfNeeded(page);
 
 		await signInLocal({
@@ -344,9 +369,13 @@ test.describe("group privacy", () => {
 			password: memberUser.password,
 		});
 		await page.goto(`/groups/${privateGroupId}`);
-		await expect(page.getByText(privatePostText)).toBeVisible();
+		await expect(page.getByTestId("group-post-list")).toContainText(
+			privatePostText,
+		);
 		await page.getByTestId("group-post-body").fill("Member-only follow-up");
 		await page.getByTestId("group-post-submit").click();
-		await expect(page.getByText("Member-only follow-up")).toBeVisible();
+		await expect(page.getByTestId("group-post-list")).toContainText(
+			"Member-only follow-up",
+		);
 	});
 });

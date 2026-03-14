@@ -105,6 +105,19 @@ async function hasUser(email: string): Promise<boolean> {
 	});
 }
 
+async function getUserIdByEmail(email: string): Promise<string> {
+	return withDb(async (client) => {
+		const result = await client.query<{ id: string }>(
+			'select id from "user" where email = $1 limit 1',
+			[email],
+		);
+		if (result.rowCount === 0 || !result.rows[0]?.id) {
+			throw new Error(`User not found for ${email}`);
+		}
+		return result.rows[0].id;
+	});
+}
+
 async function promoteUserToAdmin(email: string): Promise<void> {
 	await withDb(async (client) => {
 		const userResult = await client.query<{ id: string }>(
@@ -191,6 +204,7 @@ test.describe("group management", () => {
 		await page.getByTestId("groups-create-submit").click();
 		await expect(page).toHaveURL(/\/groups\/.+$/);
 		const groupUrl = page.url();
+		const groupId = groupUrl.split("/groups/")[1] ?? "";
 
 		await signOut(page);
 		await registerLocal({
@@ -200,8 +214,11 @@ test.describe("group management", () => {
 		await page.goto(groupUrl);
 		await expect(page.getByTestId("group-join-visible")).toBeVisible();
 		await page.getByTestId("group-join-visible").click();
-		await expect(page.getByText("You joined the group.")).toBeVisible();
+		await expect(page.getByTestId("group-action-message")).toContainText(
+			"You joined the group.",
+		);
 		await expect(page.getByTestId("group-post-body")).toBeVisible();
+		const memberUserId = await getUserIdByEmail(member.email);
 
 		await signOut(page);
 		await signInLocal({
@@ -210,41 +227,34 @@ test.describe("group management", () => {
 			password: adminUser.password,
 		});
 		await page.goto(groupUrl);
-		await expect(page.getByTestId("group-member-list")).toContainText(
-			member.email,
-		);
-
-		const memberCard = page
-			.getByTestId("group-member-list")
-			.getByText(member.email);
-		await expect(memberCard).toBeVisible();
+		await expect(
+			page.getByTestId(`group-member-${memberUserId}`),
+		).toContainText(member.email);
 		await page
-			.getByTestId("group-member-list")
-			.locator("select[name='role']")
-			.nth(0)
+			.getByTestId(`group-member-role-${memberUserId}`)
 			.selectOption("moderator");
-		await page
-			.getByTestId("group-member-list")
-			.getByRole("button", { name: "Update role" })
-			.nth(0)
-			.click();
-		await expect(page.getByText("Member role updated.")).toBeVisible();
-		await expect(page.getByTestId("group-member-list")).toContainText(
-			"moderator",
+		await page.getByTestId(`group-member-role-submit-${memberUserId}`).click();
+		await expect(page.getByTestId("group-action-message")).toContainText(
+			"Member role updated.",
 		);
+		await expect(
+			page.getByTestId(`group-member-${memberUserId}`),
+		).toContainText("moderator");
 
 		await page
 			.getByTestId("group-settings-visibility")
 			.selectOption("group_members");
 		await page.getByTestId("group-settings-save").click();
-		await expect(page.getByText("Group visibility updated.")).toBeVisible();
+		await expect(page.getByTestId("group-action-message")).toContainText(
+			"Group visibility updated.",
+		);
 		await expect(page.getByTestId("group-visibility-mode")).toContainText(
 			"group_members",
 		);
 
 		await signOut(page);
 		await page.goto("/groups");
-		await expect(page.getByText(groupName)).toHaveCount(0);
+		await expect(page.getByTestId(`group-card-${groupId}`)).toHaveCount(0);
 
 		await signInLocal({
 			page,
@@ -252,12 +262,10 @@ test.describe("group management", () => {
 			password: adminUser.password,
 		});
 		await page.goto(groupUrl);
-		await page
-			.getByTestId("group-member-list")
-			.getByRole("button", { name: "Remove" })
-			.nth(0)
-			.click();
-		await expect(page.getByText("Member removed from group.")).toBeVisible();
+		await page.getByTestId(`group-member-remove-${memberUserId}`).click();
+		await expect(page.getByTestId("group-action-message")).toContainText(
+			"Member removed from group.",
+		);
 
 		await signOut(page);
 		await signInLocal({
@@ -266,9 +274,9 @@ test.describe("group management", () => {
 			password: member.password,
 		});
 		await page.goto(groupUrl);
-		await expect(
-			page.getByText("You do not have access to this group yet."),
-		).toBeVisible();
+		await expect(page.getByTestId("group-membership-state")).toContainText(
+			"You do not have access to this group yet.",
+		);
 		await expect(page.getByTestId("group-request-access")).toBeVisible();
 	});
 });

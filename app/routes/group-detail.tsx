@@ -329,7 +329,10 @@ export default function GroupDetailPage() {
 			) : null}
 
 			{actionData && "message" in actionData ? (
-				<div className="rounded-md border border-border bg-muted/40 p-3 text-sm">
+				<div
+					className="rounded-md border border-border bg-muted/40 p-3 text-sm"
+					data-testid="group-action-message"
+				>
 					{actionData.message}
 				</div>
 			) : null}
@@ -365,7 +368,10 @@ export default function GroupDetailPage() {
 			) : null}
 
 			{data.status === "requires_authentication" ? (
-				<div className="rounded-lg border border-border p-5">
+				<div
+					className="rounded-lg border border-border p-5"
+					data-testid="group-requires-auth-state"
+				>
 					<p className="text-sm text-muted-foreground">
 						Sign in to view or request access to this group.
 					</p>
@@ -381,7 +387,10 @@ export default function GroupDetailPage() {
 			) : null}
 
 			{data.status === "forbidden" || data.status === "pending_membership" ? (
-				<div className="rounded-lg border border-border p-5">
+				<div
+					className="rounded-lg border border-border p-5"
+					data-testid="group-membership-state"
+				>
 					<p className="text-sm text-muted-foreground">
 						{data.status === "pending_membership"
 							? "Your membership request is still pending approval."
@@ -481,11 +490,12 @@ export default function GroupDetailPage() {
 					{data.pendingRequests.length > 0 ? (
 						<section className="rounded-lg border border-border p-4">
 							<h2 className="text-lg font-semibold">Pending requests</h2>
-							<div className="mt-4 space-y-3">
+							<div className="mt-4 space-y-3" data-testid="group-pending-list">
 								{data.pendingRequests.map((request) => (
 									<div
 										key={request.userId}
 										className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border p-3"
+										data-testid={`group-pending-request-${request.userId}`}
 									>
 										<div className="text-sm">
 											<p className="font-medium">{request.label}</p>
@@ -505,7 +515,12 @@ export default function GroupDetailPage() {
 													name="targetUserId"
 													value={request.userId}
 												/>
-												<Button type="submit" size="sm" disabled={loading}>
+												<Button
+													type="submit"
+													size="sm"
+													disabled={loading}
+													data-testid={`group-pending-approve-${request.userId}`}
+												>
 													Approve
 												</Button>
 											</Form>
@@ -525,6 +540,7 @@ export default function GroupDetailPage() {
 													size="sm"
 													variant="outline"
 													disabled={loading}
+													data-testid={`group-pending-reject-${request.userId}`}
 												>
 													Reject
 												</Button>
@@ -544,6 +560,7 @@ export default function GroupDetailPage() {
 									<div
 										key={member.userId}
 										className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border p-3"
+										data-testid={`group-member-${member.userId}`}
 									>
 										<div className="text-sm">
 											<p className="font-medium">{member.label}</p>
@@ -569,13 +586,19 @@ export default function GroupDetailPage() {
 													<select
 														name="role"
 														defaultValue={member.role}
+														data-testid={`group-member-role-${member.userId}`}
 														className="rounded-md border border-input bg-background px-3 py-2 text-sm"
 													>
 														<option value="member">Member</option>
 														<option value="moderator">Moderator</option>
 														<option value="admin">Admin</option>
 													</select>
-													<Button type="submit" size="sm" disabled={loading}>
+													<Button
+														type="submit"
+														size="sm"
+														disabled={loading}
+														data-testid={`group-member-role-submit-${member.userId}`}
+													>
 														Update role
 													</Button>
 												</Form>
@@ -595,6 +618,7 @@ export default function GroupDetailPage() {
 														size="sm"
 														variant="outline"
 														disabled={loading}
+														data-testid={`group-member-remove-${member.userId}`}
 													>
 														Remove
 													</Button>

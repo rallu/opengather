@@ -43,6 +43,9 @@ type Pages = {
   "/database-required": {
     params: {};
   };
+  "/style-guide": {
+    params: {};
+  };
   "/feed": {
     params: {};
   };
@@ -82,7 +85,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/metrics" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/feed" | "/community" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles/:userId" | "/notifications" | "/settings" | "/server-settings" | "/audit-logs";
+    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/metrics" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles/:userId" | "/notifications" | "/settings" | "/server-settings" | "/audit-logs";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -123,6 +126,10 @@ type RouteFiles = {
   "routes/database-required.tsx": {
     id: "routes/database-required";
     page: "/database-required";
+  };
+  "routes/style-guide.tsx": {
+    id: "routes/style-guide";
+    page: "/style-guide";
   };
   "routes/feed.tsx": {
     id: "routes/feed";
@@ -178,6 +185,7 @@ type RouteModules = {
   "routes/debug-error-monitoring": typeof import("./app/routes/debug-error-monitoring.tsx");
   "routes/setup": typeof import("./app/routes/setup.tsx");
   "routes/database-required": typeof import("./app/routes/database-required.tsx");
+  "routes/style-guide": typeof import("./app/routes/style-guide.tsx");
   "routes/feed": typeof import("./app/routes/feed.tsx");
   "routes/community": typeof import("./app/routes/community.tsx");
   "routes/groups": typeof import("./app/routes/groups.tsx");

@@ -18,20 +18,43 @@ type AppShellProps = {
 };
 
 const baseNavItems = [
-	{ to: "/feed", label: "Feed" },
-	{ to: "/groups", label: "Groups" },
-	{ to: "/notifications", label: "Notifications" },
-	{ to: "/profile", label: "Profile" },
-	{ to: "/settings", label: "Settings" },
+	{ to: "/feed", label: "Feed", testId: "shell-nav-feed" },
+	{ to: "/groups", label: "Groups", testId: "shell-nav-groups" },
+	{
+		to: "/notifications",
+		label: "Notifications",
+		testId: "shell-nav-notifications",
+	},
+	{ to: "/profile", label: "Profile", testId: "shell-nav-profile" },
+	{ to: "/settings", label: "Settings", testId: "shell-nav-settings" },
+	{
+		to: "/style-guide",
+		label: "Style Guide",
+		testId: "shell-nav-style-guide",
+	},
 ];
 
 export function AppShell(props: AppShellProps) {
 	const location = useLocation();
 	const navItems = props.authUser
 		? props.showServerSettings
-			? [...baseNavItems, { to: "/server-settings", label: "Server" }]
+			? [
+					...baseNavItems,
+					{
+						to: "/server-settings",
+						label: "Server",
+						testId: "shell-nav-server",
+					},
+				]
 			: baseNavItems
-		: [{ to: "/feed", label: "Feed" }];
+		: [
+				{ to: "/feed", label: "Feed", testId: "shell-nav-feed" },
+				{
+					to: "/style-guide",
+					label: "Style Guide",
+					testId: "shell-nav-style-guide",
+				},
+			];
 
 	const activeItem = navItems.find((item) =>
 		location.pathname.startsWith(item.to),
@@ -52,6 +75,7 @@ export function AppShell(props: AppShellProps) {
 								<Link
 									key={item.to}
 									to={item.to}
+									data-testid={item.testId}
 									className={cn(
 										"rounded-md px-3 py-2 text-sm transition-colors",
 										activeItem === item.to
@@ -96,7 +120,9 @@ export function AppShell(props: AppShellProps) {
 									</Link>
 								</Button>
 								<Button size="sm" asChild>
-									<Link to="/register">Register</Link>
+									<Link to="/register" data-testid="shell-register-link">
+										Register
+									</Link>
 								</Button>
 							</>
 						)}
@@ -104,7 +130,10 @@ export function AppShell(props: AppShellProps) {
 				</div>
 			</header>
 
-			<main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
+			<main
+				className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6"
+				data-testid="shell-main"
+			>
 				{props.title ? (
 					<div className="space-y-1">
 						<h1 className="text-2xl font-semibold tracking-tight">

@@ -42,6 +42,10 @@ const routes: RouteConfig = [
 		file: "routes/database-required.tsx",
 	},
 	{
+		path: "/style-guide",
+		file: "routes/style-guide.tsx",
+	},
+	{
 		path: "/feed",
 		file: "routes/feed.tsx",
 	},

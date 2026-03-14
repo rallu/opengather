@@ -127,7 +127,12 @@ export default function SettingsPage() {
 					<section className="space-y-3 rounded-md border border-border p-4">
 						<h2 className="text-base font-semibold">Profile privacy</h2>
 						{actionData && actionData.section === "profile" ? (
-							<p className="text-sm text-emerald-700">Saved.</p>
+							<p
+								className="text-sm text-emerald-700"
+								data-testid="settings-profile-saved"
+							>
+								Saved.
+							</p>
 						) : null}
 						<Form method="post" className="space-y-3">
 							<input
@@ -154,7 +159,11 @@ export default function SettingsPage() {
 									<option value="private">Private</option>
 								</select>
 							</div>
-							<Button type="submit" variant="outline">
+							<Button
+								type="submit"
+								variant="outline"
+								data-testid="settings-profile-save"
+							>
 								Save profile privacy
 							</Button>
 						</Form>

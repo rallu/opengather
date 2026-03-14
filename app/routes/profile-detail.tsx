@@ -64,7 +64,10 @@ export default function ProfileDetailPage() {
 	if (data.status === "requires_authentication") {
 		return (
 			<AppShell authUser={null} title="Profile">
-				<div className="rounded-lg border border-border p-5">
+				<div
+					className="rounded-lg border border-border p-5"
+					data-testid="profile-requires-auth-state"
+				>
 					<p className="text-sm text-muted-foreground">
 						Sign in to view this profile.
 					</p>

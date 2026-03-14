@@ -171,6 +171,12 @@ Components are added to `app/components/ui/`.
 - For route-specific UI changes, verify the changed route plus any directly linked entry route that is part of the same user flow.
 - Prefer Playwright for smoke coverage. Manual browser verification is acceptable only if Playwright is not practical, and the checked URLs must be stated in the final report.
 
+## E2E Locator Rule
+
+- In `opengather/e2e`, prefer `data-testid` locators for interactive elements, assertions, and repeated UI structures instead of text, role, placeholder, or CSS selectors.
+- If a stable locator does not exist yet, add a `data-testid` in the app code as part of the same change rather than falling back to brittle selectors.
+- Use text-based assertions only as a secondary content check after locating the relevant container with `getByTestId`.
+
 ## Deployment
 
 Deploy to Cloudflare Workers:

@@ -300,7 +300,10 @@ export default function CommunityPage() {
 			) : null}
 
 			{data.q ? (
-				<div className="rounded-md border border-border p-4">
+				<div
+					className="rounded-md border border-border p-4"
+					data-testid="feed-search-results"
+				>
 					<p className="mb-3 text-sm text-muted-foreground">
 						Results for{" "}
 						<span className="font-medium text-foreground">{data.q}</span>
@@ -335,7 +338,7 @@ export default function CommunityPage() {
 				</div>
 			) : null}
 
-			<div className="space-y-2">
+			<div className="space-y-2" data-testid="feed-post-list">
 				{data.posts.length === 0 ? (
 					<p className="text-sm text-muted-foreground">No posts yet.</p>
 				) : null}
@@ -372,7 +375,11 @@ export default function CommunityPage() {
 						</p>
 						<div className="mt-2 flex gap-2">
 							{data.authUser && data.status === "ok" && !post.group ? (
-								<Form method="post" className="inline-flex">
+								<Form
+									method="post"
+									className="inline-flex"
+									data-testid="feed-reply-composer"
+								>
 									<input type="hidden" name="_action" value="post" />
 									<input type="hidden" name="parentPostId" value={post.id} />
 									<input

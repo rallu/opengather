@@ -166,14 +166,16 @@ test.describe("profile privacy", () => {
 		await page.goto("/feed");
 		await page.getByTestId("feed-composer").fill(profilePost);
 		await page.getByTestId("feed-post-button").click();
-		await expect(page.getByText(profilePost)).toBeVisible();
+		await expect(page.getByTestId("feed-post-list")).toContainText(profilePost);
 
 		const ownerUserId = await getUserIdByEmail(owner.email);
 
 		await signOut(page);
 		await page.goto(`/profiles/${ownerUserId}`);
 		await expect(page.getByTestId("profile-activity-list")).toBeVisible();
-		await expect(page.getByText(profilePost)).toBeVisible();
+		await expect(page.getByTestId("profile-activity-list")).toContainText(
+			profilePost,
+		);
 
 		await signInUser({
 			page,
@@ -184,13 +186,15 @@ test.describe("profile privacy", () => {
 		await page
 			.getByTestId("settings-profile-visibility")
 			.selectOption("private");
-		await page.getByRole("button", { name: "Save profile privacy" }).click();
-		await expect(page.getByText("Saved.")).toBeVisible();
+		await page.getByTestId("settings-profile-save").click();
+		await expect(page.getByTestId("settings-profile-saved")).toBeVisible();
 
 		await signOut(page);
 		await page.goto(`/profiles/${ownerUserId}`);
-		await expect(page.getByText("Sign in to view this profile.")).toBeVisible();
-		await expect(page.getByText(profilePost)).toHaveCount(0);
+		await expect(page.getByTestId("profile-requires-auth-state")).toContainText(
+			"Sign in to view this profile.",
+		);
+		await expect(page.getByTestId("profile-activity-list")).toHaveCount(0);
 
 		await registerUser({
 			page,
@@ -198,7 +202,9 @@ test.describe("profile privacy", () => {
 		});
 		await page.goto(`/profiles/${ownerUserId}`);
 		await expect(page.getByTestId("profile-forbidden-state")).toBeVisible();
-		await expect(page.getByText(profilePost)).toHaveCount(0);
+		await expect(page.getByTestId("profile-forbidden-state")).not.toContainText(
+			profilePost,
+		);
 
 		await signOut(page);
 		await signInUser({
@@ -210,8 +216,8 @@ test.describe("profile privacy", () => {
 		await page
 			.getByTestId("settings-profile-visibility")
 			.selectOption("instance_members");
-		await page.getByRole("button", { name: "Save profile privacy" }).click();
-		await expect(page.getByText("Saved.")).toBeVisible();
+		await page.getByTestId("settings-profile-save").click();
+		await expect(page.getByTestId("settings-profile-saved")).toBeVisible();
 
 		await signOut(page);
 		await signInUser({
@@ -222,6 +228,8 @@ test.describe("profile privacy", () => {
 		await page.goto("/feed");
 		await page.goto(`/profiles/${ownerUserId}`);
 		await expect(page.getByTestId("profile-activity-list")).toBeVisible();
-		await expect(page.getByText(profilePost)).toBeVisible();
+		await expect(page.getByTestId("profile-activity-list")).toContainText(
+			profilePost,
+		);
 	});
 });

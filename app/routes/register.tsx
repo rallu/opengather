@@ -158,7 +158,14 @@ export default function Register() {
 							? `Join ${serverName}`
 							: "Create Account"}
 					</h1>
-					<p className="mt-2 text-muted-foreground">
+					<p
+						className="mt-2 text-muted-foreground"
+						data-testid={
+							reason === "members-only"
+								? "register-reason-members-only"
+								: "register-reason-default"
+						}
+					>
 						{reason === "members-only"
 							? "This community is only available to registered members."
 							: "Get started with opengather"}
@@ -301,6 +308,7 @@ export default function Register() {
 							reason,
 						}).toString()}`}
 						className="text-primary hover:underline"
+						data-testid="register-sign-in-link"
 					>
 						Sign in
 					</Link>

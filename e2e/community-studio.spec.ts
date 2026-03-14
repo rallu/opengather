@@ -34,16 +34,15 @@ async function ensureConfiguredInstance(
 async function expectGuestShell(
 	page: import("@playwright/test").Page,
 ): Promise<void> {
-	const banner = page.getByRole("banner");
-	const nav = page.getByRole("navigation");
-	await expect(nav.getByRole("link", { name: "Feed" })).toBeVisible();
-	await expect(nav.getByRole("link", { name: "Notifications" })).toHaveCount(0);
-	await expect(nav.getByRole("link", { name: "Profile" })).toHaveCount(0);
-	await expect(nav.getByRole("link", { name: "Settings" })).toHaveCount(0);
-	await expect(nav.getByRole("link", { name: "Server" })).toHaveCount(0);
+	await expect(page.getByTestId("shell-nav-feed")).toBeVisible();
+	await expect(page.getByTestId("shell-nav-style-guide")).toBeVisible();
+	await expect(page.getByTestId("shell-nav-notifications")).toHaveCount(0);
+	await expect(page.getByTestId("shell-nav-profile")).toHaveCount(0);
+	await expect(page.getByTestId("shell-nav-settings")).toHaveCount(0);
+	await expect(page.getByTestId("shell-nav-server")).toHaveCount(0);
 	await expect(page.getByTestId("shell-search")).toBeVisible();
 	await expect(page.getByTestId("shell-sign-in-link")).toBeVisible();
-	await expect(banner.getByRole("link", { name: "Register" })).toBeVisible();
+	await expect(page.getByTestId("shell-register-link")).toBeVisible();
 }
 
 test.describe("home", () => {
@@ -61,7 +60,7 @@ test.describe("home", () => {
 			await expectGuestShell(page);
 			await expect(page.getByTestId("feed-composer")).toHaveCount(0);
 			await expect(page.getByTestId("feed-post-button")).toHaveCount(0);
-			await expect(page.getByPlaceholder("Reply")).toHaveCount(0);
+			await expect(page.getByTestId("feed-reply-composer")).toHaveCount(0);
 		} else {
 			await expect(page.getByTestId("home-instance-ready")).toBeVisible();
 			await expect(page.getByTestId("home-sign-in-link")).toBeVisible();
@@ -94,7 +93,7 @@ test.describe("home", () => {
 		await expectGuestShell(page);
 		await expect(page.getByTestId("feed-composer")).toHaveCount(0);
 		await expect(page.getByTestId("feed-post-button")).toHaveCount(0);
-		await expect(page.getByPlaceholder("Reply")).toHaveCount(0);
+		await expect(page.getByTestId("feed-reply-composer")).toHaveCount(0);
 	});
 
 	test("guest shell routes open without exposing member navigation", async ({
@@ -111,7 +110,7 @@ test.describe("home", () => {
 			"/audit-logs",
 		]) {
 			await page.goto(route);
-			await expect(page.locator("body")).toBeVisible();
+			await expect(page.getByTestId("shell-main")).toBeVisible();
 			await expectGuestShell(page);
 		}
 	});

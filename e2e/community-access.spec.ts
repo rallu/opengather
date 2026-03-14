@@ -103,10 +103,10 @@ test.describe("community access flow", () => {
 		await expect(page.getByTestId("register-context")).toBeVisible();
 		await expect(page.getByTestId("register-context-title")).not.toHaveText("");
 		await expect(
-			page.getByText("This community is only available to registered members."),
+			page.getByTestId("register-reason-members-only"),
 		).toBeVisible();
 
-		await page.getByRole("link", { name: "Sign in" }).click();
+		await page.getByTestId("register-sign-in-link").click();
 		await expect(page).toHaveURL(/\/login\?/);
 		await expect(page.getByTestId("login-title")).toBeVisible();
 		await expect(page.getByTestId("login-context")).toBeVisible();
@@ -129,6 +129,6 @@ test.describe("community access flow", () => {
 		await expect(page).toHaveURL(/\/feed$/);
 		await expect(page.getByTestId("feed-pending-state")).toBeVisible();
 		await expect(page.getByTestId("feed-composer")).toHaveCount(0);
-		await expect(page.getByPlaceholder("Reply")).toHaveCount(0);
+		await expect(page.getByTestId("feed-reply-composer")).toHaveCount(0);
 	});
 });
