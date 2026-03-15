@@ -49,11 +49,39 @@ export function PostContent({
 			{actions?.length ? (
 				<div className="border-t border-border pt-3">
 					<ButtonGroup>
-						{actions.map((action) => (
-							<ButtonGroupItem key={action.label} disabled={action.disabled}>
-								{action.label}
-							</ButtonGroupItem>
-						))}
+						{actions.map((action) =>
+							action.to ? (
+								<ButtonGroupItem
+									key={action.label}
+									asChild
+									className={cn(
+										action.isActive
+											? "bg-accent text-foreground hover:bg-accent"
+											: undefined,
+									)}
+								>
+									<a href={action.to} data-testid={action.testId}>
+										{action.label}
+									</a>
+								</ButtonGroupItem>
+							) : (
+								<ButtonGroupItem
+									key={action.label}
+									type="button"
+									disabled={action.disabled}
+									onClick={action.onClick}
+									aria-pressed={action.isActive}
+									data-testid={action.testId}
+									className={cn(
+										action.isActive
+											? "bg-accent text-foreground hover:bg-accent"
+											: undefined,
+									)}
+								>
+									{action.label}
+								</ButtonGroupItem>
+							),
+						)}
 					</ButtonGroup>
 				</div>
 			) : null}

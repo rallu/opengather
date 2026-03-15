@@ -8,9 +8,20 @@ import {
 	useNavigation,
 } from "react-router";
 import { AppShell } from "~/components/app-shell";
+import {
+	PostComposer,
+	PostComposerBody,
+	PostComposerField,
+	PostComposerFooter,
+	PostComposerMedia,
+	PostComposerSurface,
+} from "~/components/post/post-composer";
 import { PostContent } from "~/components/post/post-content";
+import { ProfileImage } from "~/components/profile/profile-image";
 import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
+import { FeedContainer } from "~/components/ui/feed-container";
+import { Icon } from "~/components/ui/icon";
+import { IconButton } from "~/components/ui/icon-button";
 import { writeAuditLogSafely } from "~/server/audit-log.service.server";
 import {
 	type CommunityPost,
@@ -29,7 +40,6 @@ import {
 	logWarn,
 } from "~/server/logger.server";
 import { recordPostMetric } from "~/server/metrics.server";
-import { canReplyAtThreadDepth } from "~/server/post-thread.server";
 import {
 	buildRateLimitHeaders,
 	checkRateLimit,
@@ -50,24 +60,30 @@ function toCommunityUser(params: {
 	};
 }
 
-function CommunityThreadItem(params: {
-	post: CommunityPost;
-	canReply: boolean;
-	isAdmin: boolean;
-	loading: boolean;
-}) {
-	const { post, canReply, isAdmin, loading } = params;
-	const replyAllowed =
-		canReply && !post.group && canReplyAtThreadDepth(post.threadDepth);
+function getInitials(name: string) {
+	return name
+		.split(/\s+/)
+		.filter(Boolean)
+		.slice(0, 2)
+		.map((part) => part[0]?.toUpperCase() ?? "")
+		.join("");
+}
+
+function countReplies(post: CommunityPost): number {
+	return post.replies.reduce(
+		(total, reply) => total + 1 + countReplies(reply),
+		0,
+	);
+}
+
+function CommunityFeedItem(params: { post: CommunityPost; isAdmin: boolean }) {
+	const { post, isAdmin } = params;
+	const replyCount = countReplies(post);
+	const postRoute = `/posts/${post.id}`;
 
 	return (
 		<div
-			className={cn(
-				"space-y-3",
-				post.threadDepth > 0
-					? "ml-4 border-l border-border/70 pl-4"
-					: undefined,
-			)}
+			className="space-y-3"
 			data-testid={`feed-post-${post.id}`}
 			data-thread-depth={post.threadDepth}
 		>
@@ -91,50 +107,25 @@ function CommunityThreadItem(params: {
 					moderationStatus={post.moderationStatus}
 					isHidden={post.isHidden}
 					isDeleted={post.isDeleted}
-					actions={[{ label: "Comment" }, { label: "Share" }]}
+					actions={[
+						{
+							label: `Comments (${replyCount})`,
+							to: postRoute,
+							testId: `feed-comment-action-${post.id}`,
+						},
+						{
+							label: "Reply",
+							to: postRoute,
+							testId: `feed-reply-action-${post.id}`,
+						},
+					]}
 				>
 					<p>{post.bodyText}</p>
 				</PostContent>
 				<div className="mt-3 flex flex-wrap items-center gap-2">
-					{replyAllowed ? (
-						<Form
-							method="post"
-							className="inline-flex"
-							data-testid="feed-reply-composer"
-						>
-							<input type="hidden" name="_action" value="post" />
-							<input type="hidden" name="parentPostId" value={post.id} />
-							<input
-								name="bodyText"
-								placeholder="Reply"
-								data-testid={`feed-reply-input-${post.id}`}
-								className="rounded-l-md border border-input bg-background px-3 py-2 text-sm"
-							/>
-							<Button
-								type="submit"
-								className="rounded-l-none"
-								disabled={loading}
-								data-testid={`feed-reply-submit-${post.id}`}
-							>
-								Reply
-							</Button>
-						</Form>
-					) : null}
-
-					{canReply && !post.group && !replyAllowed ? (
-						<p
-							className="text-xs text-muted-foreground"
-							data-testid={`feed-reply-limit-${post.id}`}
-						>
-							Reply limit reached
-						</p>
-					) : null}
-
 					{post.group ? (
 						<Button variant="outline" asChild>
-							<Link to={`/groups/${post.group.id}#post-${post.id}`}>
-								View in group
-							</Link>
+							<Link to={postRoute}>Open thread</Link>
 						</Button>
 					) : null}
 
@@ -167,19 +158,6 @@ function CommunityThreadItem(params: {
 					) : null}
 				</div>
 			</article>
-			{post.replies.length > 0 ? (
-				<div className="space-y-3">
-					{post.replies.map((reply) => (
-						<CommunityThreadItem
-							key={reply.id}
-							post={reply}
-							canReply={canReply}
-							isAdmin={isAdmin}
-							loading={loading}
-						/>
-					))}
-				</div>
-			) : null}
 		</div>
 	);
 }
@@ -418,81 +396,118 @@ export default function CommunityPage() {
 				</div>
 			) : null}
 
-			{data.authUser && data.status === "ok" ? (
-				<div className="rounded-md border border-border p-4">
-					<Form method="post" className="space-y-3">
-						<input type="hidden" name="_action" value="post" />
-						<input type="hidden" name="parentPostId" value={""} />
-						<textarea
-							name="bodyText"
-							data-testid="feed-composer"
-							className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-							placeholder="What's on your mind?"
-						/>
-						<Button
-							type="submit"
-							disabled={loading || data.status !== "ok"}
-							data-testid="feed-post-button"
-						>
-							{loading ? "Saving..." : "Post"}
-						</Button>
-					</Form>
-				</div>
-			) : null}
-
-			{data.q ? (
-				<div
-					className="rounded-md border border-border p-4"
-					data-testid="feed-search-results"
-				>
-					<p className="mb-3 text-sm text-muted-foreground">
-						Results for{" "}
-						<span className="font-medium text-foreground">{data.q}</span>
-					</p>
-					<div className="space-y-2">
-						{data.search.map((item) => (
-							<div
-								key={item.post.id}
-								className="rounded border border-border p-2 text-sm"
-							>
-								<p>{item.post.bodyText}</p>
-								{item.post.group ? (
-									<p className="mt-1 text-xs text-muted-foreground">
-										Group:{" "}
-										<Link
-											to={`/groups/${item.post.group.id}`}
-											className="hover:underline"
-										>
-											{item.post.group.name}
-										</Link>
-									</p>
-								) : null}
-								<p className="text-xs text-muted-foreground">
-									score: {item.score.toFixed(4)}
-								</p>
-							</div>
-						))}
-						{data.search.length === 0 ? (
-							<p className="text-sm text-muted-foreground">No matches.</p>
-						) : null}
+			<FeedContainer className="space-y-4">
+				{data.authUser && data.status === "ok" ? (
+					<div>
+						<Form method="post">
+							<input type="hidden" name="_action" value="post" />
+							<input type="hidden" name="parentPostId" value={""} />
+							<PostComposer className="items-start">
+								<PostComposerMedia>
+									<ProfileImage
+										alt={data.authUser.name}
+										fallback={getInitials(data.authUser.name)}
+										size="sm"
+									/>
+								</PostComposerMedia>
+								<PostComposerBody>
+									<PostComposerSurface>
+										<PostComposerField
+											name="bodyText"
+											data-testid="feed-composer"
+											placeholder="What's on your mind?"
+										/>
+										<PostComposerFooter className="gap-1 px-2 py-1.5">
+											<div className="flex items-center gap-1">
+												<IconButton
+													type="button"
+													variant="ghost"
+													label="Add image"
+													disabled
+												>
+													<Icon name="imagePlus" />
+												</IconButton>
+												<IconButton
+													type="button"
+													variant="ghost"
+													label="Attach file"
+													disabled
+												>
+													<Icon name="paperclip" />
+												</IconButton>
+											</div>
+											<IconButton
+												type="submit"
+												label={loading ? "Posting" : "Post"}
+												disabled={loading || data.status !== "ok"}
+												data-testid="feed-post-button"
+											>
+												{loading ? (
+													<Icon name="loaderCircle" className="animate-spin" />
+												) : (
+													<Icon name="sendHorizontal" />
+												)}
+											</IconButton>
+										</PostComposerFooter>
+									</PostComposerSurface>
+								</PostComposerBody>
+							</PostComposer>
+						</Form>
 					</div>
-				</div>
-			) : null}
-
-			<div className="space-y-2" data-testid="feed-post-list">
-				{data.posts.length === 0 ? (
-					<p className="text-sm text-muted-foreground">No posts yet.</p>
 				) : null}
-				{data.posts.map((post) => (
-					<CommunityThreadItem
-						key={post.id}
-						post={post}
-						canReply={Boolean(data.authUser && data.status === "ok")}
-						isAdmin={data.viewerRole === "admin"}
-						loading={loading}
-					/>
-				))}
-			</div>
+
+				{data.q ? (
+					<div
+						className="rounded-md border border-border p-4"
+						data-testid="feed-search-results"
+					>
+						<p className="mb-3 text-sm text-muted-foreground">
+							Results for{" "}
+							<span className="font-medium text-foreground">{data.q}</span>
+						</p>
+						<div className="space-y-2">
+							{data.search.map((item) => (
+								<div
+									key={item.post.id}
+									className="rounded border border-border p-2 text-sm"
+								>
+									<p>{item.post.bodyText}</p>
+									{item.post.group ? (
+										<p className="mt-1 text-xs text-muted-foreground">
+											Group:{" "}
+											<Link
+												to={`/groups/${item.post.group.id}`}
+												className="hover:underline"
+											>
+												{item.post.group.name}
+											</Link>
+										</p>
+									) : null}
+									<p className="text-xs text-muted-foreground">
+										score: {item.score.toFixed(4)}
+									</p>
+								</div>
+							))}
+							{data.search.length === 0 ? (
+								<p className="text-sm text-muted-foreground">No matches.</p>
+							) : null}
+						</div>
+					</div>
+				) : null}
+
+				<div className="space-y-2" data-testid="feed-post-list">
+					{data.posts.length === 0 ? (
+						<p className="text-sm text-muted-foreground">No posts yet.</p>
+					) : null}
+					{data.posts.map((post) => (
+						<CommunityFeedItem
+							key={post.id}
+							post={post}
+							isAdmin={data.viewerRole === "admin"}
+						/>
+					))}
+				</div>
+			</FeedContainer>
 		</AppShell>
 	);
 }

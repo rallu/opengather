@@ -7,9 +7,20 @@ import {
 	useNavigation,
 } from "react-router";
 import { AppShell } from "~/components/app-shell";
+import {
+	PostComposer,
+	PostComposerBody,
+	PostComposerField,
+	PostComposerFooter,
+	PostComposerMedia,
+	PostComposerSurface,
+} from "~/components/post/post-composer";
 import { PostContent } from "~/components/post/post-content";
+import { ProfileImage } from "~/components/profile/profile-image";
 import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
+import { FeedContainer } from "~/components/ui/feed-container";
+import { Icon } from "~/components/ui/icon";
+import { IconButton } from "~/components/ui/icon-button";
 import { writeAuditLogSafely } from "~/server/audit-log.service.server";
 import {
 	type CommunityUser,
@@ -27,7 +38,6 @@ import {
 } from "~/server/group.service.server";
 import { parseGroupVisibilityMode } from "~/server/group-membership.service.server";
 import { getInstanceViewerRole } from "~/server/permissions.server";
-import { canReplyAtThreadDepth } from "~/server/post-thread.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
 
@@ -44,22 +54,30 @@ function toCommunityUser(params: {
 	};
 }
 
-function GroupThreadItem(params: {
-	post: GroupPost;
-	canReply: boolean;
-	loading: boolean;
-}) {
-	const { post, canReply, loading } = params;
-	const replyAllowed = canReply && canReplyAtThreadDepth(post.threadDepth);
+function getInitials(name: string) {
+	return name
+		.split(/\s+/)
+		.filter(Boolean)
+		.slice(0, 2)
+		.map((part) => part[0]?.toUpperCase() ?? "")
+		.join("");
+}
+
+function countReplies(post: GroupPost): number {
+	return post.replies.reduce(
+		(total, reply) => total + 1 + countReplies(reply),
+		0,
+	);
+}
+
+function GroupFeedItem(params: { post: GroupPost }) {
+	const { post } = params;
+	const replyCount = countReplies(post);
+	const postRoute = `/posts/${post.id}`;
 
 	return (
 		<div
-			className={cn(
-				"space-y-3",
-				post.threadDepth > 0
-					? "ml-4 border-l border-border/70 pl-4"
-					: undefined,
-			)}
+			className="space-y-3"
 			data-testid={`group-post-${post.id}`}
 			data-thread-depth={post.threadDepth}
 		>
@@ -72,54 +90,27 @@ function GroupThreadItem(params: {
 					moderationStatus={post.moderationStatus}
 					isHidden={post.isHidden}
 					isDeleted={post.isDeleted}
-					actions={[{ label: "Comment" }, { label: "Share" }]}
+					actions={[
+						{
+							label: `Comments (${replyCount})`,
+							to: postRoute,
+							testId: `group-comment-action-${post.id}`,
+						},
+						{
+							label: "Reply",
+							to: postRoute,
+							testId: `group-reply-action-${post.id}`,
+						},
+					]}
 				>
 					<p>{post.bodyText}</p>
 				</PostContent>
 				<div className="mt-4 flex flex-wrap items-center gap-2">
-					{replyAllowed ? (
-						<Form method="post" className="w-full space-y-2">
-							<input type="hidden" name="_action" value="post" />
-							<input type="hidden" name="parentPostId" value={post.id} />
-							<input
-								name="bodyText"
-								placeholder="Reply"
-								data-testid={`group-reply-input-${post.id}`}
-								className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-							/>
-							<Button
-								type="submit"
-								size="sm"
-								disabled={loading}
-								data-testid={`group-reply-submit-${post.id}`}
-							>
-								Reply
-							</Button>
-						</Form>
-					) : null}
-
-					{canReply && !replyAllowed ? (
-						<p
-							className="text-xs text-muted-foreground"
-							data-testid={`group-reply-limit-${post.id}`}
-						>
-							Reply limit reached
-						</p>
-					) : null}
+					<Button variant="outline" asChild>
+						<Link to={postRoute}>Open thread</Link>
+					</Button>
 				</div>
 			</article>
-			{post.replies.length > 0 ? (
-				<div className="space-y-3">
-					{post.replies.map((reply) => (
-						<GroupThreadItem
-							key={reply.id}
-							post={reply}
-							canReply={canReply}
-							loading={loading}
-						/>
-					))}
-				</div>
-			) : null}
 		</div>
 	);
 }
@@ -554,22 +545,64 @@ export default function GroupDetailPage() {
 					{data.canPost ? (
 						<section className="rounded-lg border border-border p-4">
 							<h2 className="text-lg font-semibold">Post to group</h2>
-							<Form method="post" className="mt-4 space-y-3">
+							<Form method="post" className="mt-4">
 								<input type="hidden" name="_action" value="post" />
-								<textarea
-									name="bodyText"
-									rows={4}
-									data-testid="group-post-body"
-									placeholder="Share something with the group"
-									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-								/>
-								<Button
-									type="submit"
-									disabled={loading}
-									data-testid="group-post-submit"
-								>
-									Post
-								</Button>
+								<PostComposer className="items-start">
+									{data.authUser ? (
+										<PostComposerMedia>
+											<ProfileImage
+												alt={data.authUser.name}
+												fallback={getInitials(data.authUser.name)}
+												size="sm"
+											/>
+										</PostComposerMedia>
+									) : null}
+									<PostComposerBody>
+										<PostComposerSurface>
+											<PostComposerField
+												name="bodyText"
+												rows={4}
+												data-testid="group-post-body"
+												placeholder="Share something with the group"
+											/>
+											<PostComposerFooter className="gap-1 px-2 py-1.5">
+												<div className="flex items-center gap-1">
+													<IconButton
+														type="button"
+														variant="ghost"
+														label="Add image"
+														disabled
+													>
+														<Icon name="imagePlus" />
+													</IconButton>
+													<IconButton
+														type="button"
+														variant="ghost"
+														label="Attach file"
+														disabled
+													>
+														<Icon name="paperclip" />
+													</IconButton>
+												</div>
+												<IconButton
+													type="submit"
+													label={loading ? "Posting" : "Post"}
+													disabled={loading}
+													data-testid="group-post-submit"
+												>
+													{loading ? (
+														<Icon
+															name="loaderCircle"
+															className="animate-spin"
+														/>
+													) : (
+														<Icon name="sendHorizontal" />
+													)}
+												</IconButton>
+											</PostComposerFooter>
+										</PostComposerSurface>
+									</PostComposerBody>
+								</PostComposer>
 							</Form>
 						</section>
 					) : null}
@@ -718,22 +751,19 @@ export default function GroupDetailPage() {
 						</section>
 					) : null}
 
-					<section className="space-y-4" data-testid="group-post-list">
-						{data.posts.length === 0 ? (
-							<div className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
-								No posts in this group yet.
-							</div>
-						) : (
-							data.posts.map((post) => (
-								<GroupThreadItem
-									key={post.id}
-									post={post}
-									canReply={data.canPost}
-									loading={loading}
-								/>
-							))
-						)}
-					</section>
+					<FeedContainer>
+						<section className="space-y-4" data-testid="group-post-list">
+							{data.posts.length === 0 ? (
+								<div className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
+									No posts in this group yet.
+								</div>
+							) : (
+								data.posts.map((post) => (
+									<GroupFeedItem key={post.id} post={post} />
+								))
+							)}
+						</section>
+					</FeedContainer>
 				</>
 			) : null}
 		</AppShell>

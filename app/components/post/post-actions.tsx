@@ -6,6 +6,10 @@ import { cn } from "~/lib/utils";
 export type PostActionData = {
 	label: string;
 	disabled?: boolean;
+	onClick?: () => void;
+	isActive?: boolean;
+	testId?: string;
+	to?: string;
 };
 
 export function PostActions({

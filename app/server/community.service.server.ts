@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Prisma } from "../generated/prisma/client";
+import { Prisma } from "@prisma/client";
 import { getConfig } from "./config.service.server";
 import { getDb } from "./db.server";
 import { cosineSimilarity, toTextVector } from "./embedding.service.server";
@@ -12,11 +12,6 @@ import { processNotificationOutbox } from "./jobs.service.server";
 import { extractMentionEmails } from "./mentions.server";
 import { createNotification } from "./notification.service.server";
 import {
-	buildThreadTree,
-	MAX_THREAD_DEPTH,
-	normalizeThreadDepths,
-} from "./post-thread.server";
-import {
 	canManageInstance,
 	canPostToGroup,
 	canPostToInstanceFeed,
@@ -25,6 +20,11 @@ import {
 	type InstanceVisibilityMode,
 	resolveViewerRoleFromMembership,
 } from "./permissions.server";
+import {
+	buildThreadTree,
+	MAX_THREAD_DEPTH,
+	normalizeThreadDepths,
+} from "./post-thread.server";
 import { getSetupStatus } from "./setup.service.server";
 
 export type CommunityUser = {
@@ -463,6 +463,133 @@ export async function loadCommunity(params: {
 		viewerRole: readAccess.viewerRole,
 		posts: threadedPosts,
 		search,
+	};
+}
+
+function findPostInThread(params: {
+	posts: CommunityPost[];
+	postId: string;
+}): CommunityPost | null {
+	for (const post of params.posts) {
+		if (post.id === params.postId) {
+			return post;
+		}
+		const nestedMatch = findPostInThread({
+			posts: post.replies,
+			postId: params.postId,
+		});
+		if (nestedMatch) {
+			return nestedMatch;
+		}
+	}
+
+	return null;
+}
+
+export async function loadCommunityPostThread(params: {
+	user: CommunityUser | null;
+	postId: string;
+}): Promise<{
+	status:
+		| "ok"
+		| "not_setup"
+		| "requires_registration"
+		| "pending_membership"
+		| "forbidden"
+		| "not_found";
+	viewerRole: "guest" | "member" | "moderator" | "admin";
+	post: CommunityPost | null;
+}> {
+	const status = await getSetupStatus();
+	if (!status.isSetup || !status.instance) {
+		return { status: "not_setup", viewerRole: "guest", post: null };
+	}
+
+	await ensureInstanceMembershipForUser({
+		instanceId: status.instance.id,
+		approvalMode: status.instance.approvalMode,
+		user: params.user,
+	});
+
+	const readAccess = await ensureCanRead({
+		instanceId: status.instance.id,
+		user: params.user,
+	});
+	if (!readAccess.allowed) {
+		return {
+			status:
+				readAccess.reason === "requires_registration"
+					? "requires_registration"
+					: readAccess.reason === "pending_membership"
+						? "pending_membership"
+						: "forbidden",
+			viewerRole: readAccess.viewerRole,
+			post: null,
+		};
+	}
+
+	const includeHidden = await isAdmin({
+		instanceId: status.instance.id,
+		user: params.user,
+	});
+	const readableGroupIds = await getReadableGroupIds({
+		authUser: params.user
+			? {
+					id: params.user.id,
+					hubUserId: params.user.hubUserId,
+				}
+			: null,
+		instanceViewerRole: readAccess.viewerRole,
+	});
+	const rows = await getDb().post.findMany({
+		where: {
+			instanceId: status.instance.id,
+			OR:
+				readableGroupIds.length > 0
+					? [{ groupId: null }, { groupId: { in: readableGroupIds } }]
+					: [{ groupId: null }],
+		},
+		orderBy: { createdAt: "asc" },
+		select: {
+			id: true,
+			parentPostId: true,
+			bodyText: true,
+			groupId: true,
+			moderationStatus: true,
+			hiddenAt: true,
+			deletedAt: true,
+			createdAt: true,
+			group: {
+				select: {
+					id: true,
+					name: true,
+				},
+			},
+		},
+	});
+
+	const visible = rows.filter((row) => {
+		if (includeHidden) {
+			return true;
+		}
+		return (
+			!row.deletedAt && !row.hiddenAt && row.moderationStatus !== "rejected"
+		);
+	});
+	const threadedPosts = buildThreadTree({
+		rows: normalizeThreadDepths({ rows: visible }).map((row) =>
+			mapPost({ row }),
+		),
+	});
+	const post = findPostInThread({
+		posts: threadedPosts,
+		postId: params.postId,
+	});
+
+	return {
+		status: post ? "ok" : "not_found",
+		viewerRole: readAccess.viewerRole,
+		post,
 	};
 }
 

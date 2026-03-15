@@ -1,4 +1,5 @@
 import { createRequestHandler, type ServerBuild } from "react-router";
+import { setRuntimeEnv } from "~/server/env.server";
 
 declare global {
 	interface CloudflareEnvironment extends Env {}
@@ -23,6 +24,7 @@ const requestHandler = createRequestHandler(
 
 export default {
 	fetch(request, env, ctx) {
+		setRuntimeEnv(env);
 		return requestHandler(request, {
 			cloudflare: { env, ctx },
 		});

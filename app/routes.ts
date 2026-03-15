@@ -54,6 +54,10 @@ const routes: RouteConfig = [
 		file: "routes/community.tsx",
 	},
 	{
+		path: "/posts/:postId",
+		file: "routes/post-detail.tsx",
+	},
+	{
 		path: "/groups",
 		file: "routes/groups.tsx",
 	},

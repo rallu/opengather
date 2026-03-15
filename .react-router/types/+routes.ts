@@ -52,6 +52,11 @@ type Pages = {
   "/community": {
     params: {};
   };
+  "/posts/:postId": {
+    params: {
+      "postId": string;
+    };
+  };
   "/groups": {
     params: {};
   };
@@ -85,7 +90,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/metrics" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles/:userId" | "/notifications" | "/settings" | "/server-settings" | "/audit-logs";
+    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/metrics" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles/:userId" | "/notifications" | "/settings" | "/server-settings" | "/audit-logs";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -139,6 +144,10 @@ type RouteFiles = {
     id: "routes/community";
     page: "/community";
   };
+  "routes/post-detail.tsx": {
+    id: "routes/post-detail";
+    page: "/posts/:postId";
+  };
   "routes/groups.tsx": {
     id: "routes/groups";
     page: "/groups";
@@ -188,6 +197,7 @@ type RouteModules = {
   "routes/style-guide": typeof import("./app/routes/style-guide.tsx");
   "routes/feed": typeof import("./app/routes/feed.tsx");
   "routes/community": typeof import("./app/routes/community.tsx");
+  "routes/post-detail": typeof import("./app/routes/post-detail.tsx");
   "routes/groups": typeof import("./app/routes/groups.tsx");
   "routes/group-detail": typeof import("./app/routes/group-detail.tsx");
   "routes/profile": typeof import("./app/routes/profile.tsx");

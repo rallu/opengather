@@ -224,32 +224,34 @@ test.describe("threaded discussions", () => {
 		});
 
 		await page.goto("/feed");
-		await expect(page.getByTestId(`feed-post-${feedThread.rootId}`)).toBeVisible();
-		await expect(page.getByTestId(`feed-post-${feedThread.depth3Id}`)).toBeVisible();
-		await expect(page.getByTestId(`feed-post-${feedThread.rootId}`)).toHaveAttribute(
-			"data-thread-depth",
-			"0",
+		await expect(
+			page.getByTestId(`feed-post-${feedThread.rootId}`),
+		).toBeVisible();
+		await page.getByTestId(`feed-comment-action-${feedThread.rootId}`).click();
+		await expect(page).toHaveURL(new RegExp(`/posts/${feedThread.rootId}$`));
+		await expect(page.getByTestId("post-detail-root")).toContainText(
+			`feed-thread-${now} root`,
 		);
 		await expect(
-			page.getByTestId(`feed-post-${feedThread.depth3Id}`),
-		).toHaveAttribute("data-thread-depth", "3");
-		await expect(page.getByTestId("feed-post-list")).toContainText(
-			`feed-thread-${now} depth 3`,
-		);
-
-		await page.goto(`/groups/${groupId}`);
-		await expect(page.getByTestId(`group-post-${groupThread.rootId}`)).toBeVisible();
-		await expect(
-			page.getByTestId(`group-post-${groupThread.depth3Id}`),
+			page.getByTestId(`post-detail-comment-${feedThread.depth1Id}`),
 		).toBeVisible();
 		await expect(
-			page.getByTestId(`group-reply-input-${groupThread.depth3Id}`),
-		).toHaveCount(0);
+			page.getByTestId(`post-detail-comment-${feedThread.depth3Id}`),
+		).toHaveAttribute("data-thread-depth", "3");
+
+		await page.goto(`/groups/${groupId}`);
 		await expect(
 			page.getByTestId(`group-post-${groupThread.rootId}`),
-		).toHaveAttribute("data-thread-depth", "0");
+		).toBeVisible();
+		await page
+			.getByTestId(`group-comment-action-${groupThread.rootId}`)
+			.click();
+		await expect(page).toHaveURL(new RegExp(`/posts/${groupThread.rootId}$`));
 		await expect(
-			page.getByTestId(`group-post-${groupThread.depth3Id}`),
+			page.getByTestId(`post-detail-comment-${groupThread.depth1Id}`),
+		).toBeVisible();
+		await expect(
+			page.getByTestId(`post-detail-comment-${groupThread.depth3Id}`),
 		).toHaveAttribute("data-thread-depth", "3");
 	});
 });
