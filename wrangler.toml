@@ -1,7 +1,0 @@
-name = "opengather-web"
-compatibility_date = "2024-12-30"
-compatibility_flags = ["nodejs_compat"]
-workers_dev = true
-preview_urls = true
-main = "./build/server/index.js"
-assets = { directory = "./build/client/" }

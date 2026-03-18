@@ -14,12 +14,12 @@
 		"isolatedModules": true,
 		"allowImportingTsExtensions": true,
 		"noEmit": true,
-		"types": ["@cloudflare/workers-types", "vite/client", "node"],
+		"types": ["vite/client", "node"],
 		"baseUrl": ".",
 		"paths": {
 			"~/*": ["./app/*"]
 		}
 	},
-	"include": ["app/**/*", "workers/**/*", "*.d.ts"],
+	"include": ["app/**/*", "*.d.ts"],
 	"exclude": ["node_modules", "build"]
 }

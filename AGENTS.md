@@ -1,6 +1,6 @@
 # Frontend Tailwind Template Development Guide
 
-This template provides a React Router frontend with Tailwind CSS and Shadcn UI components, deployed on Cloudflare Workers.
+This template provides a React Router frontend with Tailwind CSS and Shadcn UI components for a Node-hosted SSR app.
 
 ## Purpose
 
@@ -8,7 +8,6 @@ The frontend-tailwind template sets up:
 - **React Router** for routing
 - **Tailwind CSS** for styling
 - **Shadcn UI** component library
-- **Cloudflare Workers** deployment
 - **better-auth** client integration
 - **Vite** for building
 
@@ -27,8 +26,6 @@ frontend-tailwind/
 │   │   ├── auth-client.ts # better-auth client
 │   │   └── utils.ts
 │   └── tailwind.css       # Tailwind imports
-├── workers/
-│   └── app.ts             # Cloudflare Worker entry
 ├── react-router.config.ts # React Router config
 ├── vite.config.ts         # Vite configuration
 ├── tailwind.config.ts     # Tailwind configuration
@@ -61,12 +58,6 @@ Tailwind CSS configuration:
 - Custom theme settings
 - Shadcn UI integration
 - Content paths for purging
-
-### `workers/app.ts`
-Cloudflare Worker entry point:
-- Handles requests
-- Serves React Router app
-- Configures environment variables
 
 ## Development Guidelines
 
@@ -151,7 +142,7 @@ Components are added to `app/components/ui/`.
 - Add Shadcn UI components
 - Update authentication flows
 - Add new API integrations
-- Configure Cloudflare Worker settings
+- Configure runtime environment variables
 
 ## Best Practices
 
@@ -179,14 +170,7 @@ Components are added to `app/components/ui/`.
 
 ## Deployment
 
-Deploy to Cloudflare Workers:
-```bash
-npm run wrangler:deploy
-```
-
-Update `wrangler.toml` with production settings:
-- 
-- `compatibility_date`: Worker compatibility date
+Deploy the generated Node server from `build/server/index.js` using the same server environment variables described in the project README.
 
 ## Common Patterns
 

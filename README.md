@@ -133,4 +133,4 @@ curl -fsS http://localhost:5173/debug/error-monitoring
 
 ## Deployment
 
-Deploy Node build output from `build/server/index.js`.
+Deploy the Node build output from `build/server/index.js` with the environment variables used in local development.
