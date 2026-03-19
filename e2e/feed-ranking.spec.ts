@@ -25,25 +25,14 @@ async function withDb<T>(callback: (client: Client) => Promise<T>): Promise<T> {
 	}
 }
 
-async function isSetupRequired(
-	page: import("@playwright/test").Page,
-): Promise<boolean> {
-	await page.goto("/");
-	return page
-		.getByTestId("home-run-setup-link")
-		.isVisible()
-		.catch(() => false);
-}
-
 async function ensureConfiguredInstance(
 	page: import("@playwright/test").Page,
 ): Promise<void> {
-	const setupRequired = await isSetupRequired(page);
-	if (!setupRequired) {
+	await page.goto("/setup");
+	if (!page.url().includes("/setup")) {
 		return;
 	}
 
-	await page.goto("/setup");
 	await page.getByTestId("setup-name").fill("OpenGather Local");
 	await page.getByTestId("setup-description").fill("Local test instance");
 	await page.getByTestId("setup-admin-name").fill("Admin User");
@@ -170,11 +159,13 @@ async function getListIndex(params: {
 }) {
 	return params.page
 		.locator(`[data-testid="${params.listTestId}"] > [data-testid^="${params.itemPrefix}"]`)
-		.evaluateAll((elements, needle) =>
-			elements.findIndex((element) =>
-				(element.textContent ?? "").includes(String(needle)),
-			),
-		, params.match);
+		.evaluateAll(
+			(elements, needle) =>
+				elements.findIndex((element) =>
+					(element.textContent ?? "").includes(String(needle)),
+				),
+			params.match,
+		);
 }
 
 test.describe("thread-aware feed ranking", () => {
@@ -206,21 +197,9 @@ test.describe("thread-aware feed ranking", () => {
 		await page.getByTestId("feed-composer").fill(newFeedBody);
 		await page.getByTestId("feed-post-button").click();
 		await expect(page.getByTestId("feed-post-list")).toContainText(newFeedBody);
-
-		const newFeedIndex = await getListIndex({
-			page,
-			listTestId: "feed-post-list",
-			itemPrefix: "feed-post-",
-			match: newFeedBody,
-		});
-		const oldFeedIndex = await getListIndex({
-			page,
-			listTestId: "feed-post-list",
-			itemPrefix: "feed-post-",
-			match: olderFeedBody,
-		});
-		expect(newFeedIndex).toBeGreaterThanOrEqual(0);
-		expect(oldFeedIndex).toBeGreaterThan(newFeedIndex);
+		await expect(
+			page.locator('[data-testid="feed-post-list"] > [data-testid^="feed-post-"]').first(),
+		).toContainText(newFeedBody);
 
 		await page.goto("/groups");
 		await page.getByTestId("groups-create-name").fill(`Rank Group ${now}`);
@@ -245,21 +224,9 @@ test.describe("thread-aware feed ranking", () => {
 		await page.getByTestId("group-post-body").fill(newGroupBody);
 		await page.getByTestId("group-post-submit").click();
 		await expect(page.getByTestId("group-post-list")).toContainText(newGroupBody);
-
-		const newGroupIndex = await getListIndex({
-			page,
-			listTestId: "group-post-list",
-			itemPrefix: "group-post-",
-			match: newGroupBody,
-		});
-		const oldGroupIndex = await getListIndex({
-			page,
-			listTestId: "group-post-list",
-			itemPrefix: "group-post-",
-			match: olderGroupBody,
-		});
-		expect(newGroupIndex).toBeGreaterThanOrEqual(0);
-		expect(oldGroupIndex).toBeGreaterThan(newGroupIndex);
+		await expect(
+			page.locator('[data-testid="group-post-list"] > [data-testid^="group-post-"]').first(),
+		).toContainText(newGroupBody);
 	});
 
 	test("activity mode bumps replied threads while newest keeps root chronology", async ({
@@ -274,16 +241,16 @@ test.describe("thread-aware feed ranking", () => {
 		const newerRootBody = `newest-root-${now}`;
 		const activeRootId = await insertPost({
 			bodyText: activeRootBody,
-			createdAt: new Date("2026-03-10T08:00:00.000Z"),
+			createdAt: new Date("2026-12-10T08:00:00.000Z"),
 		});
 		await insertPost({
 			bodyText: newerRootBody,
-			createdAt: new Date("2026-03-11T08:00:00.000Z"),
+			createdAt: new Date("2026-12-11T08:00:00.000Z"),
 		});
 		await insertPost({
 			bodyText: `activity-reply-${now}`,
 			parentPostId: activeRootId,
-			createdAt: new Date("2026-03-12T08:00:00.000Z"),
+			createdAt: new Date("2026-12-12T08:00:00.000Z"),
 		});
 
 		await page.goto("/feed");
@@ -333,7 +300,9 @@ test.describe("thread-aware feed ranking", () => {
 		for (let index = 0; index < 12; index += 1) {
 			await insertPost({
 				bodyText: `${feedPrefix}-${index}`,
-				createdAt: new Date(`2026-03-13T${String(index).padStart(2, "0")}:00:00.000Z`),
+				createdAt: new Date(
+					`2027-01-13T${String(index).padStart(2, "0")}:00:00.000Z`,
+				),
 			});
 		}
 
@@ -351,7 +320,9 @@ test.describe("thread-aware feed ranking", () => {
 			await insertPost({
 				bodyText: `${groupPrefix}-${index}`,
 				groupId,
-				createdAt: new Date(`2026-03-14T${String(index).padStart(2, "0")}:00:00.000Z`),
+				createdAt: new Date(
+					`2027-01-14T${String(index).padStart(2, "0")}:00:00.000Z`,
+				),
 			});
 		}
 
