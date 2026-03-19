@@ -158,7 +158,9 @@ async function getListIndex(params: {
 	match: string;
 }) {
 	return params.page
-		.locator(`[data-testid="${params.listTestId}"] > [data-testid^="${params.itemPrefix}"]`)
+		.locator(
+			`[data-testid="${params.listTestId}"] > [data-testid^="${params.itemPrefix}"]`,
+		)
 		.evaluateAll(
 			(elements, needle) =>
 				elements.findIndex((element) =>
@@ -180,7 +182,9 @@ test.describe("thread-aware feed ranking", () => {
 		await updateConfig("server_approval_mode", snapshot.serverApprovalMode);
 	});
 
-	test("new root posts appear first in feed and group views", async ({ page }) => {
+	test("new root posts appear first in feed and group views", async ({
+		page,
+	}) => {
 		await ensureAdminSession(page);
 		await updateConfig("server_visibility_mode", "public");
 		await updateConfig("server_approval_mode", "automatic");
@@ -198,7 +202,9 @@ test.describe("thread-aware feed ranking", () => {
 		await page.getByTestId("feed-post-button").click();
 		await expect(page.getByTestId("feed-post-list")).toContainText(newFeedBody);
 		await expect(
-			page.locator('[data-testid="feed-post-list"] > [data-testid^="feed-post-"]').first(),
+			page
+				.locator('[data-testid="feed-post-list"] > [data-testid^="feed-post-"]')
+				.first(),
 		).toContainText(newFeedBody);
 
 		await page.goto("/groups");
@@ -223,9 +229,15 @@ test.describe("thread-aware feed ranking", () => {
 		const newGroupBody = `fresh-group-thread-${now}`;
 		await page.getByTestId("group-post-body").fill(newGroupBody);
 		await page.getByTestId("group-post-submit").click();
-		await expect(page.getByTestId("group-post-list")).toContainText(newGroupBody);
+		await expect(page.getByTestId("group-post-list")).toContainText(
+			newGroupBody,
+		);
 		await expect(
-			page.locator('[data-testid="group-post-list"] > [data-testid^="group-post-"]').first(),
+			page
+				.locator(
+					'[data-testid="group-post-list"] > [data-testid^="group-post-"]',
+				)
+				.first(),
 		).toContainText(newGroupBody);
 	});
 

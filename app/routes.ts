@@ -30,6 +30,10 @@ const routes: RouteConfig = [
 		file: "routes/api-post-list.tsx",
 	},
 	{
+		path: "/media/:assetId/:variantKey",
+		file: "routes/media-asset.ts",
+	},
+	{
 		path: "/metrics",
 		file: "routes/metrics.tsx",
 	},

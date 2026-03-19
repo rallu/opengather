@@ -1,6 +1,6 @@
-import { getServerConfig } from "./config.service.server";
-import { getDb } from "./db.server";
-import { getHubEnv } from "./env.server";
+import { getServerConfig } from "./config.service.server.ts";
+import { getDb } from "./db.server.ts";
+import { getHubEnv } from "./env.server.ts";
 
 export async function createHubAuthorizeUrl(params: {
 	state: string;

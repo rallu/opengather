@@ -49,6 +49,7 @@ model Post {
   childPosts       Post[]    @relation("PostToPost")
   embeddings       PostEmbedding[]
   attachments      PostAttachment[]
+  assets           PostAsset[]
   moderationDecisions ModerationDecision[]
   processingJobs   ProcessingJob[]
 
@@ -238,6 +239,50 @@ model PostAttachment {
 
   @@map("post_attachment")
   @@index([postId], map: "idx_attachment_post_id")
+}
+
+model PostAsset {
+  id               String             @id @db.Text
+  postId           String             @map("post_id") @db.Text
+  instanceId       String             @map("instance_id") @db.Text
+  kind             String             @db.Text
+  processingStatus String             @map("processing_status") @db.Text
+  originalFilename String?            @map("original_filename") @db.Text
+  sourceMimeType   String?            @map("source_mime_type") @db.Text
+  sourceByteSize   Int?               @map("source_byte_size")
+  width            Int?
+  height           Int?
+  durationSeconds  Float?             @map("duration_seconds")
+  sortOrder        Int                @default(0) @map("sort_order")
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime           @default(now()) @map("updated_at") @db.Timestamptz(6)
+  post             Post               @relation(fields: [postId], references: [id], onDelete: Cascade)
+  variants         PostAssetVariant[]
+
+  @@map("post_asset")
+  @@index([postId], map: "idx_post_asset_post_id")
+  @@index([instanceId], map: "idx_post_asset_instance_id")
+  @@index([processingStatus], map: "idx_post_asset_processing_status")
+}
+
+model PostAssetVariant {
+  id              String    @id @db.Text
+  assetId         String    @map("asset_id") @db.Text
+  variantKey      String    @map("variant_key") @db.Text
+  format          String    @db.Text
+  mimeType        String    @map("mime_type") @db.Text
+  storageKey      String    @map("storage_key") @db.Text
+  byteSize        Int       @map("byte_size")
+  width           Int?
+  height          Int?
+  durationSeconds Float?    @map("duration_seconds")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  asset           PostAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("post_asset_variant")
+  @@index([assetId], map: "idx_post_asset_variant_asset_id")
+  @@index([variantKey], map: "idx_post_asset_variant_variant_key")
+  @@unique([assetId, variantKey, format], map: "post_asset_variant_asset_variant_format_unique")
 }
 
 model ModelProviderConfig {

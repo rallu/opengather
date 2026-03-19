@@ -1,6 +1,6 @@
-export type { MembershipRecord, ViewerRole } from "./permissions.server";
+export type { MembershipRecord, ViewerRole } from "./permissions.server.ts";
 export {
 	canAccessAuditLogs,
 	getViewerContext,
 	resolveViewerRoleFromMembership,
-} from "./permissions.server";
+} from "./permissions.server.ts";

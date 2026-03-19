@@ -36,9 +36,39 @@ export async function action({ request }: ActionFunctionArgs) {
 		}
 
 		const formData = await request.formData();
+		const actionType = String(formData.get("_action") ?? "save-hub");
 		const hubEnabled = String(formData.get("hubEnabled") ?? "") === "on";
 		const appOrigin = new URL(request.url).origin;
 		const currentConfig = await getServerConfig();
+
+		if (actionType === "save-media") {
+			const mediaStorageDriver =
+				String(formData.get("mediaStorageDriver") ?? "local") === "local"
+					? "local"
+					: "local";
+			const mediaLocalRoot =
+				String(formData.get("mediaLocalRoot") ?? "").trim() ||
+				"./storage/media";
+			await Promise.all([
+				setConfig("media_storage_driver", mediaStorageDriver),
+				setConfig("media_local_root", mediaLocalRoot),
+			]);
+			await writeAuditLogSafely({
+				action: "server_settings.media_updated",
+				actor: {
+					type: "user",
+					id: authUser.id,
+				},
+				resourceType: "server_settings",
+				resourceId: "media",
+				request,
+				payload: {
+					mediaStorageDriver,
+					mediaLocalRoot,
+				},
+			});
+			return { ok: true };
+		}
 
 		if (hubEnabled) {
 			const instanceName =
@@ -269,6 +299,7 @@ export default function ServerSettingsPage() {
 					</div>
 				) : null}
 				<Form method="post" className="space-y-4">
+					<input type="hidden" name="_action" value="save-hub" />
 					<label className="flex items-center gap-2 text-sm font-medium">
 						<input
 							name="hubEnabled"
@@ -302,6 +333,41 @@ export default function ServerSettingsPage() {
 						</div>
 					) : null}
 					<Button type="submit">Save</Button>
+				</Form>
+			</section>
+
+			<section className="rounded-md border border-border p-4">
+				<h2 className="mb-3 text-base font-semibold">Media Storage</h2>
+				<p className="mb-3 text-sm text-muted-foreground">
+					Assets are always served through this app. The storage driver controls
+					where processed files are kept.
+				</p>
+				<Form method="post" className="space-y-4">
+					<input type="hidden" name="_action" value="save-media" />
+					<label className="block space-y-2 text-sm">
+						<span className="font-medium">Storage driver</span>
+						<select
+							name="mediaStorageDriver"
+							defaultValue={data.hubConfig?.mediaStorageDriver ?? "local"}
+							className="w-full rounded-md border border-input bg-background px-3 py-2"
+						>
+							<option value="local">Local filesystem</option>
+						</select>
+					</label>
+					<label className="block space-y-2 text-sm">
+						<span className="font-medium">Local media root</span>
+						<input
+							name="mediaLocalRoot"
+							type="text"
+							defaultValue={data.hubConfig?.mediaLocalRoot ?? "./storage/media"}
+							className="w-full rounded-md border border-input bg-background px-3 py-2"
+						/>
+					</label>
+					<p className="text-sm text-muted-foreground">
+						Video processing runs through the separate `npm run worker:media`
+						process.
+					</p>
+					<Button type="submit">Save media settings</Button>
 				</Form>
 			</section>
 

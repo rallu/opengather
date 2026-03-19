@@ -22,6 +22,10 @@ const metricDefinitions: Record<string, MetricDefinition> = {
 		type: "counter",
 		help: "Post action outcomes.",
 	},
+	opengather_media_events_total: {
+		type: "counter",
+		help: "Media upload and processing outcomes.",
+	},
 };
 
 const counterValues = new Map<string, number>();
@@ -102,6 +106,19 @@ export function recordPostMetric(params: {
 	incrementCounter({
 		name: "opengather_posts_events_total",
 		labels: {
+			outcome: params.outcome,
+		},
+	});
+}
+
+export function recordMediaMetric(params: {
+	event: "upload" | "job";
+	outcome: "accepted" | "rejected" | "started" | "completed" | "failed";
+}): void {
+	incrementCounter({
+		name: "opengather_media_events_total",
+		labels: {
+			event: params.event,
 			outcome: params.outcome,
 		},
 	});

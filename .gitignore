@@ -30,6 +30,7 @@ npm-debug.log*
 
 # Testing
 coverage/
+storage/
 
 # Misc
 *.tsbuildinfo

@@ -51,7 +51,9 @@ export function ThreadFeedList(params: {
 }) {
 	const fetcher = useFetcher<PostListPage>();
 	const [items, setItems] = React.useState(params.initialPage.items);
-	const [nextCursor, setNextCursor] = React.useState(params.initialPage.nextCursor);
+	const [nextCursor, setNextCursor] = React.useState(
+		params.initialPage.nextCursor,
+	);
 	const [hasMore, setHasMore] = React.useState(params.initialPage.hasMore);
 	const lastRequestedCursorRef = React.useRef<string | null>(null);
 	const sentinelRef = React.useRef<HTMLDivElement | null>(null);
@@ -62,7 +64,6 @@ export function ThreadFeedList(params: {
 		setHasMore(params.initialPage.hasMore);
 		lastRequestedCursorRef.current = null;
 	}, [
-		params.apiPath,
 		params.initialPage.hasMore,
 		params.initialPage.items,
 		params.initialPage.nextCursor,
@@ -94,10 +95,7 @@ export function ThreadFeedList(params: {
 	}, [fetcher.data]);
 
 	const requestMore = React.useEffectEvent((cursor: string) => {
-		if (
-			fetcher.state !== "idle" ||
-			lastRequestedCursorRef.current === cursor
-		) {
+		if (fetcher.state !== "idle" || lastRequestedCursorRef.current === cursor) {
 			return;
 		}
 
@@ -128,7 +126,7 @@ export function ThreadFeedList(params: {
 
 		observer.observe(sentinel);
 		return () => observer.disconnect();
-	}, [hasMore, nextCursor, requestMore]);
+	}, [hasMore, nextCursor]);
 
 	return (
 		<>

@@ -10,6 +10,8 @@ import {
 } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { PostActionItem, PostActions } from "~/components/post/post-actions";
+import { PostAssetDisplay } from "~/components/post/post-asset-display";
+import { PostAssetInput } from "~/components/post/post-asset-input";
 import { PostComposer } from "~/components/post/post-composer";
 import { PostContent } from "~/components/post/post-content";
 import {
@@ -36,15 +38,16 @@ import {
 	logWarn,
 } from "~/server/logger.server";
 import { recordPostMetric } from "~/server/metrics.server";
+import { extractPostUploadsFromMultipartRequest } from "~/server/post-assets.server";
+import {
+	type PostListItem,
+	parsePostListSortMode,
+} from "~/server/post-list.service.server";
 import {
 	buildRateLimitHeaders,
 	checkRateLimit,
 	getRequestIp,
 } from "~/server/rate-limit.server";
-import {
-	parsePostListSortMode,
-	type PostListItem,
-} from "~/server/post-list.service.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 
 function toCommunityUser(params: {
@@ -101,6 +104,7 @@ function CommunityFeedItem(params: { post: PostListItem; isAdmin: boolean }) {
 						className="space-y-4"
 					>
 						<p className="text-[15px] leading-8">{post.bodyText}</p>
+						<PostAssetDisplay assets={post.assets} playableVideo={false} />
 					</PostContent>
 				</Link>
 				<div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-4">
@@ -202,10 +206,23 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export async function action({ request }: ActionFunctionArgs) {
 	const startedAt = Date.now();
 	const requestId = getRequestId(request);
-	const formData = await request.formData();
-	const actionType = String(formData.get("_action") ?? "");
+	let multipart: Awaited<
+		ReturnType<typeof extractPostUploadsFromMultipartRequest>
+	> | null = null;
+	let formData: FormData | null = null;
+	let actionType = "";
 
 	try {
+		const isMultipart = (request.headers.get("content-type") ?? "")
+			.toLowerCase()
+			.includes("multipart/form-data");
+		multipart = isMultipart
+			? await extractPostUploadsFromMultipartRequest({ request })
+			: null;
+		formData = multipart ? null : await request.formData();
+		actionType = multipart
+			? multipart.actionType
+			: String(formData?.get("_action") ?? "");
 		const authUser = await getAuthUserFromRequest({ request });
 		const requestContext = buildRequestContext({
 			request,
@@ -248,10 +265,19 @@ export async function action({ request }: ActionFunctionArgs) {
 				);
 			}
 
-			const text = String(formData.get("bodyText") ?? "");
-			const parentPostId =
-				String(formData.get("parentPostId") ?? "").trim() || undefined;
-			const result = await createPost({ user, text, parentPostId });
+			const text = multipart
+				? multipart.bodyText
+				: String(formData?.get("bodyText") ?? "");
+			const parentPostId = multipart
+				? multipart.parentPostId
+				: String(formData?.get("parentPostId") ?? "").trim() || undefined;
+			const result = await createPost({
+				user,
+				text,
+				parentPostId,
+				uploads: multipart?.uploads ?? [],
+			});
+			await multipart?.cleanup();
 			if (!result.ok) {
 				recordPostMetric({ outcome: "rejected" });
 				logWarn({
@@ -278,8 +304,8 @@ export async function action({ request }: ActionFunctionArgs) {
 		}
 
 		if (actionType === "moderate") {
-			const postId = String(formData.get("postId") ?? "");
-			const status = String(formData.get("status") ?? "approved") as
+			const postId = String(formData?.get("postId") ?? "");
+			const status = String(formData?.get("status") ?? "approved") as
 				| "approved"
 				| "rejected"
 				| "flagged";
@@ -307,7 +333,7 @@ export async function action({ request }: ActionFunctionArgs) {
 		}
 
 		if (actionType === "delete") {
-			const postId = String(formData.get("postId") ?? "");
+			const postId = String(formData?.get("postId") ?? "");
 			const result = await softDeletePost({ user, postId });
 			if (!result.ok) {
 				return { error: result.error };
@@ -328,8 +354,10 @@ export async function action({ request }: ActionFunctionArgs) {
 			return { ok: true };
 		}
 
+		await multipart?.cleanup().catch(() => undefined);
 		return { error: "Unsupported action" };
 	} catch (error) {
+		await multipart?.cleanup().catch(() => undefined);
 		void captureMonitoredError({
 			event: "community.action.failed",
 			error,
@@ -452,7 +480,7 @@ export default function CommunityPage() {
 
 				{data.authUser && data.status === "ok" ? (
 					<section>
-						<Form method="post">
+						<Form method="post" encType="multipart/form-data">
 							<input type="hidden" name="_action" value="post" />
 							<input type="hidden" name="parentPostId" value={""} />
 							<PostComposer
@@ -464,9 +492,12 @@ export default function CommunityPage() {
 								submitTestId="feed-post-button"
 								submitClassName="h-9 w-9 bg-primary text-primary-foreground hover:bg-primary/90"
 								footer={
-									<p className="px-1 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-										Visible in your community feed
-									</p>
+									<div className="space-y-2 px-1">
+										<p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+											Visible in your community feed
+										</p>
+										<PostAssetInput inputTestId="feed-assets-input" />
+									</div>
 								}
 							/>
 						</Form>

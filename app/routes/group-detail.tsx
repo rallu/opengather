@@ -9,6 +9,8 @@ import {
 } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { PostActionItem, PostActions } from "~/components/post/post-actions";
+import { PostAssetDisplay } from "~/components/post/post-asset-display";
+import { PostAssetInput } from "~/components/post/post-asset-input";
 import { PostComposer } from "~/components/post/post-composer";
 import { PostContent } from "~/components/post/post-content";
 import {
@@ -36,9 +38,10 @@ import {
 } from "~/server/group.service.server";
 import { parseGroupVisibilityMode } from "~/server/group-membership.service.server";
 import { getInstanceViewerRole } from "~/server/permissions.server";
+import { extractPostUploadsFromMultipartRequest } from "~/server/post-assets.server";
 import {
-	parsePostListSortMode,
 	type PostListItem,
+	parsePostListSortMode,
 } from "~/server/post-list.service.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
@@ -90,6 +93,7 @@ function GroupFeedItem(params: { post: PostListItem }) {
 						className="space-y-4"
 					>
 						<p className="text-[15px] leading-8">{post.bodyText}</p>
+						<PostAssetDisplay assets={post.assets} playableVideo={false} />
 					</PostContent>
 				</Link>
 				<div className="mt-4 flex items-center justify-between gap-3 border-t border-border/70 pt-4">
@@ -157,226 +161,254 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
-	const formData = await request.formData();
-	const actionType = String(formData.get("_action") ?? "");
-	const authUser = await getAuthUserFromRequest({ request });
-	const groupId = params.groupId ?? "";
+	let multipart: Awaited<
+		ReturnType<typeof extractPostUploadsFromMultipartRequest>
+	> | null = null;
+	let formData: FormData | null = null;
+	let actionType = "";
+	try {
+		const isMultipart = (request.headers.get("content-type") ?? "")
+			.toLowerCase()
+			.includes("multipart/form-data");
+		multipart = isMultipart
+			? await extractPostUploadsFromMultipartRequest({ request })
+			: null;
+		formData = multipart ? null : await request.formData();
+		actionType = multipart
+			? multipart.actionType
+			: String(formData?.get("_action") ?? "");
+		const authUser = await getAuthUserFromRequest({ request });
+		const groupId = params.groupId ?? "";
 
-	if (!authUser) {
-		return { error: "Sign in required" };
-	}
-
-	const setup = await getSetupStatus();
-	if (!setup.isSetup || !setup.instance) {
-		return { error: "Setup not completed" };
-	}
-
-	const user = toCommunityUser({ authUser });
-	await ensureInstanceMembershipForUser({
-		instanceId: setup.instance.id,
-		approvalMode: setup.instance.approvalMode,
-		user,
-	});
-
-	const viewerRole = await getInstanceViewerRole({
-		instanceId: setup.instance.id,
-		userId: authUser.id,
-	});
-
-	if (actionType === "request-access") {
-		const result = await requestGroupAccess({
-			groupId,
-			authUser,
-			instanceViewerRole: viewerRole,
-		});
-		if (!result.ok) {
-			return { error: result.error };
+		if (!authUser) {
+			return { error: "Sign in required" };
 		}
 
-		await writeAuditLogSafely({
-			action:
-				result.outcome === "joined" ? "group.join" : "group.request_access",
-			actor: {
-				type: "user",
-				id: authUser.id,
-			},
-			resourceType: "group",
-			resourceId: groupId,
-			request,
-			payload: {
-				outcome: result.outcome,
-			},
-		});
+		const setup = await getSetupStatus();
+		if (!setup.isSetup || !setup.instance) {
+			return { error: "Setup not completed" };
+		}
 
-		return {
-			ok: true,
-			message:
-				result.outcome === "joined"
-					? "You joined the group."
-					: result.outcome === "requested"
-						? "Access request sent."
-						: "Access request is already pending.",
-		};
-	}
-
-	if (actionType === "post") {
-		const text = String(formData.get("bodyText") ?? "");
-		const parentPostId =
-			String(formData.get("parentPostId") ?? "").trim() || undefined;
-		const result = await createPost({
+		const user = toCommunityUser({ authUser });
+		await ensureInstanceMembershipForUser({
+			instanceId: setup.instance.id,
+			approvalMode: setup.instance.approvalMode,
 			user,
-			text,
-			parentPostId,
-			groupId,
 		});
-		if (!result.ok) {
-			return { error: result.error };
-		}
-		return { ok: true };
-	}
 
-	if (
-		actionType === "approve-membership" ||
-		actionType === "reject-membership"
-	) {
-		const targetUserId = String(formData.get("targetUserId") ?? "");
-		const status =
-			actionType === "approve-membership" ? "approved" : "rejected";
-		const result = await updateGroupMembershipApproval({
-			groupId,
-			managerUserId: authUser.id,
-			targetUserId,
-			status,
+		const viewerRole = await getInstanceViewerRole({
+			instanceId: setup.instance.id,
+			userId: authUser.id,
 		});
-		if (!result.ok) {
-			return { error: result.error };
+
+		if (actionType === "request-access") {
+			const result = await requestGroupAccess({
+				groupId,
+				authUser,
+				instanceViewerRole: viewerRole,
+			});
+			if (!result.ok) {
+				return { error: result.error };
+			}
+
+			await writeAuditLogSafely({
+				action:
+					result.outcome === "joined" ? "group.join" : "group.request_access",
+				actor: {
+					type: "user",
+					id: authUser.id,
+				},
+				resourceType: "group",
+				resourceId: groupId,
+				request,
+				payload: {
+					outcome: result.outcome,
+				},
+			});
+
+			return {
+				ok: true,
+				message:
+					result.outcome === "joined"
+						? "You joined the group."
+						: result.outcome === "requested"
+							? "Access request sent."
+							: "Access request is already pending.",
+			};
 		}
 
-		await writeAuditLogSafely({
-			action:
-				status === "approved"
-					? "group.membership.approve"
-					: "group.membership.reject",
-			actor: {
-				type: "user",
-				id: authUser.id,
-			},
-			resourceType: "group",
-			resourceId: groupId,
-			request,
-			payload: {
+		if (actionType === "post") {
+			const text = multipart
+				? multipart.bodyText
+				: String(formData?.get("bodyText") ?? "");
+			const parentPostId = multipart
+				? multipart.parentPostId
+				: String(formData?.get("parentPostId") ?? "").trim() || undefined;
+			const result = await createPost({
+				user,
+				text,
+				parentPostId,
+				groupId,
+				uploads: multipart?.uploads ?? [],
+			});
+			await multipart?.cleanup();
+			if (!result.ok) {
+				return { error: result.error };
+			}
+			return { ok: true };
+		}
+
+		if (
+			actionType === "approve-membership" ||
+			actionType === "reject-membership"
+		) {
+			const targetUserId = String(formData?.get("targetUserId") ?? "");
+			const status =
+				actionType === "approve-membership" ? "approved" : "rejected";
+			const result = await updateGroupMembershipApproval({
+				groupId,
+				managerUserId: authUser.id,
 				targetUserId,
 				status,
-			},
-		});
+			});
+			if (!result.ok) {
+				return { error: result.error };
+			}
 
-		return {
-			ok: true,
-			message:
-				status === "approved" ? "Membership approved." : "Membership rejected.",
-		};
-	}
+			await writeAuditLogSafely({
+				action:
+					status === "approved"
+						? "group.membership.approve"
+						: "group.membership.reject",
+				actor: {
+					type: "user",
+					id: authUser.id,
+				},
+				resourceType: "group",
+				resourceId: groupId,
+				request,
+				payload: {
+					targetUserId,
+					status,
+				},
+			});
 
-	if (actionType === "update-visibility") {
-		const visibilityMode = parseGroupVisibilityMode(
-			String(formData.get("visibilityMode") ?? "public"),
-		);
-		const result = await updateGroupVisibility({
-			groupId,
-			managerUserId: authUser.id,
-			visibilityMode,
-		});
-		if (!result.ok) {
-			return { error: result.error };
+			return {
+				ok: true,
+				message:
+					status === "approved"
+						? "Membership approved."
+						: "Membership rejected.",
+			};
 		}
 
-		await writeAuditLogSafely({
-			action: "group.visibility.update",
-			actor: {
-				type: "user",
-				id: authUser.id,
-			},
-			resourceType: "group",
-			resourceId: groupId,
-			request,
-			payload: {
-				previousVisibilityMode: result.previousVisibilityMode,
+		if (actionType === "update-visibility") {
+			const visibilityMode = parseGroupVisibilityMode(
+				String(formData?.get("visibilityMode") ?? "public"),
+			);
+			const result = await updateGroupVisibility({
+				groupId,
+				managerUserId: authUser.id,
 				visibilityMode,
-			},
-		});
+			});
+			if (!result.ok) {
+				return { error: result.error };
+			}
 
-		return {
-			ok: true,
-			message: "Group visibility updated.",
-		};
-	}
+			await writeAuditLogSafely({
+				action: "group.visibility.update",
+				actor: {
+					type: "user",
+					id: authUser.id,
+				},
+				resourceType: "group",
+				resourceId: groupId,
+				request,
+				payload: {
+					previousVisibilityMode: result.previousVisibilityMode,
+					visibilityMode,
+				},
+			});
 
-	if (actionType === "update-member-role") {
-		const targetUserId = String(formData.get("targetUserId") ?? "");
-		const role = String(formData.get("role") ?? "");
-		const result = await updateGroupMemberRole({
-			groupId,
-			managerUserId: authUser.id,
-			targetUserId,
-			role,
-		});
-		if (!result.ok) {
-			return { error: result.error };
+			return {
+				ok: true,
+				message: "Group visibility updated.",
+			};
 		}
 
-		await writeAuditLogSafely({
-			action: "group.member.role_update",
-			actor: {
-				type: "user",
-				id: authUser.id,
-			},
-			resourceType: "group",
-			resourceId: groupId,
-			request,
-			payload: {
+		if (actionType === "update-member-role") {
+			const targetUserId = String(formData?.get("targetUserId") ?? "");
+			const role = String(formData?.get("role") ?? "");
+			const result = await updateGroupMemberRole({
+				groupId,
+				managerUserId: authUser.id,
 				targetUserId,
-				role: result.role,
-			},
-		});
+				role,
+			});
+			if (!result.ok) {
+				return { error: result.error };
+			}
 
-		return {
-			ok: true,
-			message: "Member role updated.",
-		};
-	}
+			await writeAuditLogSafely({
+				action: "group.member.role_update",
+				actor: {
+					type: "user",
+					id: authUser.id,
+				},
+				resourceType: "group",
+				resourceId: groupId,
+				request,
+				payload: {
+					targetUserId,
+					role: result.role,
+				},
+			});
 
-	if (actionType === "remove-member") {
-		const targetUserId = String(formData.get("targetUserId") ?? "");
-		const result = await removeGroupMember({
-			groupId,
-			managerUserId: authUser.id,
-			targetUserId,
-		});
-		if (!result.ok) {
-			return { error: result.error };
+			return {
+				ok: true,
+				message: "Member role updated.",
+			};
 		}
 
-		await writeAuditLogSafely({
-			action: "group.member.remove",
-			actor: {
-				type: "user",
-				id: authUser.id,
-			},
-			resourceType: "group",
-			resourceId: groupId,
-			request,
-			payload: {
+		if (actionType === "remove-member") {
+			const targetUserId = String(formData?.get("targetUserId") ?? "");
+			const result = await removeGroupMember({
+				groupId,
+				managerUserId: authUser.id,
 				targetUserId,
-			},
-		});
+			});
+			if (!result.ok) {
+				return { error: result.error };
+			}
 
+			await writeAuditLogSafely({
+				action: "group.member.remove",
+				actor: {
+					type: "user",
+					id: authUser.id,
+				},
+				resourceType: "group",
+				resourceId: groupId,
+				request,
+				payload: {
+					targetUserId,
+				},
+			});
+
+			return {
+				ok: true,
+				message: "Member removed from group.",
+			};
+		}
+
+		await multipart?.cleanup().catch(() => undefined);
+		return { error: "Unsupported action" };
+	} catch (error) {
+		await multipart?.cleanup().catch(() => undefined);
 		return {
-			ok: true,
-			message: "Member removed from group.",
+			error: error instanceof Error ? error.message : "Request failed",
 		};
 	}
-
-	return { error: "Unsupported action" };
 }
 
 export default function GroupDetailPage() {
@@ -537,7 +569,7 @@ export default function GroupDetailPage() {
 					) : null}
 
 					{data.canPost ? (
-						<Form method="post">
+						<Form method="post" encType="multipart/form-data">
 							<input type="hidden" name="_action" value="post" />
 							<PostComposer
 								name="bodyText"
@@ -547,6 +579,7 @@ export default function GroupDetailPage() {
 								loading={loading}
 								disabled={loading}
 								submitTestId="group-post-submit"
+								footer={<PostAssetInput inputTestId="group-assets-input" />}
 							/>
 						</Form>
 					) : null}

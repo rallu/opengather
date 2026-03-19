@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
 	decodePostListCursor,
+	type PostListItem,
 	paginatePostListItems,
 	sortPostListItems,
-	type PostListItem,
 } from "./post-list.service.server.ts";
 
 function buildItem(
@@ -12,6 +12,7 @@ function buildItem(
 ): PostListItem {
 	return {
 		threadDepth: 0,
+		assets: [],
 		moderationStatus: "approved",
 		isHidden: false,
 		isDeleted: false,
@@ -76,7 +77,10 @@ test("newest sorting ignores replies and uses root post creation", () => {
 		"newest",
 	);
 
-	assert.deepEqual(sorted.map((item) => item.id), ["latest-root", "recently-replied"]);
+	assert.deepEqual(
+		sorted.map((item) => item.id),
+		["latest-root", "recently-replied"],
+	);
 });
 
 test("paginatePostListItems emits stable cursors without duplicates", () => {
@@ -118,7 +122,10 @@ test("paginatePostListItems emits stable cursors without duplicates", () => {
 		cursor: firstPage.nextCursor,
 		limit: 2,
 	});
-	assert.deepEqual(secondPage.items.map((item) => item.id), ["thread-a"]);
+	assert.deepEqual(
+		secondPage.items.map((item) => item.id),
+		["thread-a"],
+	);
 	assert.equal(secondPage.hasMore, false);
 });
 

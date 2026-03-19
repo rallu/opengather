@@ -1,9 +1,9 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
-import { getServerConfig } from "./config.service.server";
-import { getDb } from "./db.server";
-import { getAuthEnv, hasDatabaseConfig } from "./env.server";
+import { getServerConfig } from "./config.service.server.ts";
+import { getDb } from "./db.server.ts";
+import { getAuthEnv, hasDatabaseConfig } from "./env.server.ts";
 
 function createAuth(params: {
 	betterAuthUrl: string;

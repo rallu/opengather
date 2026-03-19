@@ -15,12 +15,13 @@ import {
 import { Icon } from "~/components/ui/icon";
 import { IconButton } from "~/components/ui/icon-button";
 import { cn } from "~/lib/utils";
-
+import type { PostAssetSummary } from "~/server/post-assets.server";
 import {
 	type PostActionData,
 	PostActionItem,
 	PostActions,
 } from "./post-actions";
+import { PostAssetDisplay } from "./post-asset-display";
 import { PostLabels } from "./post-labels";
 
 export type PostCommentData = {
@@ -28,6 +29,7 @@ export type PostCommentData = {
 	threadDepth: number;
 	author?: string;
 	body: string;
+	assets?: PostAssetSummary[];
 	createdAt: string;
 	imageSrc?: string;
 	fallback?: string;
@@ -103,6 +105,12 @@ export function PostComment({ comment, children }: PostCommentProps) {
 							<ChatBubbleContent>
 								<ChatBubbleBody>
 									<p>{comment.body || "(no text)"}</p>
+									{comment.assets?.length ? (
+										<PostAssetDisplay
+											assets={comment.assets}
+											className="mt-3"
+										/>
+									) : null}
 								</ChatBubbleBody>
 							</ChatBubbleContent>
 						</ChatBubble>

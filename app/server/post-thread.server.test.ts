@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-	MAX_THREAD_DEPTH,
 	buildThreadTree,
 	canReplyAtThreadDepth,
+	MAX_THREAD_DEPTH,
 	normalizeThreadDepths,
 } from "./post-thread.server.ts";
 

@@ -1,8 +1,8 @@
-import { getBetterAuth } from "./auth.server";
+import { getBetterAuth } from "./auth.server.ts";
 import {
 	getHubIdentityForLocalUser,
 	linkHubInstanceForUser,
-} from "./hub.service.server";
+} from "./hub.service.server.ts";
 
 export function parseCookieHeader(params: {
 	cookieHeader: string | null;

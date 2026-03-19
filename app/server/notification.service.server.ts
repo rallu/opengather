@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { getConfig } from "./config.service.server";
-import { getDb } from "./db.server";
+import { getConfig } from "./config.service.server.ts";
+import { getDb } from "./db.server.ts";
 import {
 	type NotificationKind,
 	type NotificationPayloadByKind,
 	notificationKinds,
-} from "./notification.types.server";
+} from "./notification.types.server.ts";
 
 function isNotificationKind(value: string): value is NotificationKind {
 	return notificationKinds.includes(value as NotificationKind);

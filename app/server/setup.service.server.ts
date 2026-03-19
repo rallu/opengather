@@ -1,15 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { getBetterAuth } from "./auth.server";
+import { getBetterAuth } from "./auth.server.ts";
 import {
 	getConfig,
 	hasAnyConfig,
 	initializeConfigDefaults,
 	setConfig,
-} from "./config.service.server";
-import { getDb } from "./db.server";
-import { captureMonitoredError } from "./error-monitoring.server";
-import { linkHubInstanceForUser } from "./hub.service.server";
-import { logError } from "./logger.server";
+} from "./config.service.server.ts";
+import { getDb } from "./db.server.ts";
+import { captureMonitoredError } from "./error-monitoring.server.ts";
+import { linkHubInstanceForUser } from "./hub.service.server.ts";
+import { logError } from "./logger.server.ts";
 
 export const SINGLETON_INSTANCE_ID = "singleton";
 

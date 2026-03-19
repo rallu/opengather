@@ -1,5 +1,5 @@
-import { getDb } from "./db.server";
-import { pushHubNotification } from "./hub.service.server";
+import { getDb } from "./db.server.ts";
+import { pushHubNotification } from "./hub.service.server.ts";
 
 function toErrorString(params: { error: unknown }): string {
 	if (params.error instanceof Error) {

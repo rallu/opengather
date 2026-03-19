@@ -1,5 +1,9 @@
 import { Prisma } from "@prisma/client";
 import { getDb } from "./db.server.ts";
+import {
+	loadPostAssetSummaries,
+	type PostAssetSummary,
+} from "./post-assets.server.ts";
 import { ensurePostRootIds } from "./post-root.server.ts";
 
 export const POST_LIST_PAGE_SIZE = 10;
@@ -23,6 +27,7 @@ export type PostListItem = {
 	parentPostId?: string;
 	threadDepth: number;
 	bodyText?: string;
+	assets: PostAssetSummary[];
 	group?: {
 		id: string;
 		name: string;
@@ -86,12 +91,12 @@ function asModerationStatus(value: string): PostListItem["moderationStatus"] {
 }
 
 function toIsoString(value: Date | string): string {
-	return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+	return value instanceof Date
+		? value.toISOString()
+		: new Date(value).toISOString();
 }
 
-export function parsePostListSortMode(
-	value?: string | null,
-): PostListSortMode {
+export function parsePostListSortMode(value?: string | null): PostListSortMode {
 	return value === "newest" ? "newest" : "activity";
 }
 
@@ -189,10 +194,7 @@ export function decodePostListCursor(params: {
 			};
 		}
 
-		if (
-			typeof parsed.createdAt !== "string" ||
-			typeof parsed.id !== "string"
-		) {
+		if (typeof parsed.createdAt !== "string" || typeof parsed.id !== "string") {
 			return null;
 		}
 		return {
@@ -220,7 +222,10 @@ export function paginatePostListItems(params: {
 		decodedCursor === null
 			? sorted
 			: sorted.filter((item) => {
-					if (params.sortMode === "activity" && decodedCursor.sortMode === "activity") {
+					if (
+						params.sortMode === "activity" &&
+						decodedCursor.sortMode === "activity"
+					) {
 						return (
 							item.latestActivityAt < decodedCursor.latestActivityAt ||
 							(item.latestActivityAt === decodedCursor.latestActivityAt &&
@@ -234,7 +239,8 @@ export function paginatePostListItems(params: {
 
 					return (
 						item.createdAt < decodedCursor.createdAt ||
-						(item.createdAt === decodedCursor.createdAt && item.id < decodedCursor.id)
+						(item.createdAt === decodedCursor.createdAt &&
+							item.id < decodedCursor.id)
 					);
 				});
 	const pageItems = filtered.slice(0, params.limit);
@@ -245,7 +251,9 @@ export function paginatePostListItems(params: {
 		items: pageItems,
 		hasMore,
 		nextCursor:
-			hasMore && lastItem ? encodePostListCursor({ item: lastItem }) : undefined,
+			hasMore && lastItem
+				? encodePostListCursor({ item: lastItem })
+				: undefined,
 		sortMode: params.sortMode,
 	};
 }
@@ -328,12 +336,16 @@ function getOrderBy(sortMode: PostListSortMode) {
 	`;
 }
 
-function mapPostListItem(row: PostListRow, sortMode: PostListSortMode): PostListItem {
+function mapPostListItem(
+	row: PostListRow,
+	sortMode: PostListSortMode,
+): PostListItem {
 	return {
 		id: row.id,
 		parentPostId: row.parentPostId ?? undefined,
 		threadDepth: 0,
 		bodyText: row.bodyText ?? undefined,
+		assets: [],
 		group:
 			row.groupId && row.groupName
 				? {
@@ -367,7 +379,9 @@ export async function loadPostListPage(params: {
 		sortMode: params.sortMode,
 	});
 	const scopeCondition = getScopeCondition(params.scope);
-	const visibilityCondition = getVisibilityCondition(Boolean(params.includeHidden));
+	const visibilityCondition = getVisibilityCondition(
+		Boolean(params.includeHidden),
+	);
 	const cursorCondition = getCursorCondition({
 		sortMode: params.sortMode,
 		cursor,
@@ -438,14 +452,22 @@ export async function loadPostListPage(params: {
 
 	const hasMore = rows.length > limit;
 	const pageRows = rows.slice(0, limit);
-	const items = pageRows.map((row) => mapPostListItem(row, params.sortMode));
+	const assetMap = await loadPostAssetSummaries({
+		postIds: pageRows.map((row) => row.id),
+	});
+	const items = pageRows.map((row) => ({
+		...mapPostListItem(row, params.sortMode),
+		assets: assetMap.get(row.id) ?? [],
+	}));
 	const lastItem = items.at(-1);
 
 	return {
 		items,
 		hasMore,
 		nextCursor:
-			hasMore && lastItem ? encodePostListCursor({ item: lastItem }) : undefined,
+			hasMore && lastItem
+				? encodePostListCursor({ item: lastItem })
+				: undefined,
 		sortMode: params.sortMode,
 	};
 }

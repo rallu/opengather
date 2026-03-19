@@ -71,7 +71,9 @@ export function buildThreadTree<T extends ThreadedPost>(params: {
 			continue;
 		}
 
-		const parent = row.parentPostId ? nodeById.get(row.parentPostId) : undefined;
+		const parent = row.parentPostId
+			? nodeById.get(row.parentPostId)
+			: undefined;
 		if (!parent || parent.threadDepth + 1 !== row.threadDepth) {
 			roots.push(node);
 			continue;

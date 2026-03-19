@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { getDb } from "./db.server";
+import { getDb } from "./db.server.ts";
 import {
 	ensureGroupMembership,
 	getGroupMembership,
 	parseGroupVisibilityMode,
 	resolveGroupRole,
-} from "./group-membership.service.server";
+} from "./group-membership.service.server.ts";
 import {
 	canJoinGroup,
 	canManageGroup,
@@ -14,13 +14,13 @@ import {
 	type GroupRole,
 	type GroupVisibilityMode,
 	type ViewerRole,
-} from "./permissions.server";
+} from "./permissions.server.ts";
 import {
 	loadPostListPage,
 	type PostListPage,
 	type PostListSortMode,
-} from "./post-list.service.server";
-import { getSetupStatus } from "./setup.service.server";
+} from "./post-list.service.server.ts";
+import { getSetupStatus } from "./setup.service.server.ts";
 
 type AuthUser = {
 	id: string;

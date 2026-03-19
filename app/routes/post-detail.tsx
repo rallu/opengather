@@ -8,6 +8,8 @@ import {
 } from "react-router";
 
 import { AppShell } from "~/components/app-shell";
+import { PostAssetDisplay } from "~/components/post/post-asset-display";
+import { PostAssetInput } from "~/components/post/post-asset-input";
 import {
 	type PostCommentData,
 	PostComments,
@@ -23,6 +25,7 @@ import {
 	createPost,
 	loadCommunityPostThread,
 } from "~/server/community.service.server";
+import { extractPostUploadsFromMultipartRequest } from "~/server/post-assets.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 
 function toCommunityUser(params: {
@@ -67,6 +70,7 @@ function mapComment(post: CommunityPost): PostCommentData {
 		author: "Member",
 		fallback: "M",
 		body: post.bodyText ?? "",
+		assets: post.assets,
 		createdAt: post.createdAt,
 		moderationStatus: post.moderationStatus,
 		isHidden: post.isHidden,
@@ -115,28 +119,52 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		return { error: "Sign in required" };
 	}
 
-	const formData = await request.formData();
-	const actionType = String(formData.get("_action") ?? "");
-	if (actionType !== "post") {
-		return { error: "Unsupported action" };
+	let multipart: Awaited<
+		ReturnType<typeof extractPostUploadsFromMultipartRequest>
+	> | null = null;
+	try {
+		const isMultipart = (request.headers.get("content-type") ?? "")
+			.toLowerCase()
+			.includes("multipart/form-data");
+		multipart = isMultipart
+			? await extractPostUploadsFromMultipartRequest({ request })
+			: null;
+		const formData = multipart ? null : await request.formData();
+		const actionType = multipart
+			? multipart.actionType
+			: String(formData?.get("_action") ?? "");
+		if (actionType !== "post") {
+			await multipart?.cleanup().catch(() => undefined);
+			return { error: "Unsupported action" };
+		}
+
+		const text = multipart
+			? multipart.bodyText
+			: String(formData?.get("bodyText") ?? "");
+		const parentPostId =
+			multipart?.parentPostId ||
+			String(formData?.get("parentPostId") ?? "").trim() ||
+			params.postId ||
+			undefined;
+		const result = await createPost({
+			user,
+			text,
+			parentPostId,
+			uploads: multipart?.uploads ?? [],
+		});
+		await multipart?.cleanup();
+
+		if (!result.ok) {
+			return { error: result.error };
+		}
+
+		return redirect(`/posts/${params.postId ?? ""}`);
+	} catch (error) {
+		await multipart?.cleanup().catch(() => undefined);
+		return {
+			error: error instanceof Error ? error.message : "Request failed",
+		};
 	}
-
-	const text = String(formData.get("bodyText") ?? "");
-	const parentPostId =
-		String(formData.get("parentPostId") ?? "").trim() ||
-		params.postId ||
-		undefined;
-	const result = await createPost({
-		user,
-		text,
-		parentPostId,
-	});
-
-	if (!result.ok) {
-		return { error: result.error };
-	}
-
-	return redirect(`/posts/${params.postId ?? ""}`);
 }
 
 export default function PostDetailPage() {
@@ -202,11 +230,12 @@ export default function PostDetailPage() {
 						isDeleted={data.post.isDeleted}
 					>
 						<p>{data.post.bodyText}</p>
+						<PostAssetDisplay assets={data.post.assets} />
 					</PostContent>
 				</Container>
 
 				{canReply ? (
-					<Form method="post">
+					<Form method="post" encType="multipart/form-data">
 						<input type="hidden" name="_action" value="post" />
 						<input type="hidden" name="parentPostId" value={data.post.id} />
 						<PostComposer
@@ -218,6 +247,7 @@ export default function PostDetailPage() {
 							disabled={loading}
 							submitLabel="Reply"
 							submitTestId="post-detail-reply-submit"
+							footer={<PostAssetInput inputTestId="post-detail-assets-input" />}
 						/>
 					</Form>
 				) : null}

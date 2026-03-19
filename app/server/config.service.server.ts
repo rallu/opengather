@@ -5,9 +5,9 @@ import {
 	configDefinitions,
 	getDefaultConfigValue,
 	parseConfigValue,
-} from "./config.schema.server";
-import { getDb } from "./db.server";
-import { getHubEnv } from "./env.server";
+} from "./config.schema.server.ts";
+import { getDb } from "./db.server.ts";
+import { getHubEnv } from "./env.server.ts";
 
 export async function initializeConfigDefaults(): Promise<void> {
 	const db = getDb();
@@ -95,6 +95,8 @@ export async function getServerConfig(): Promise<{
 	hubRedirectUri: string;
 	hubInstanceName: string;
 	hubInstanceBaseUrl: string;
+	mediaStorageDriver: "local";
+	mediaLocalRoot: string;
 }> {
 	const [
 		betterAuthUrl,
@@ -107,6 +109,8 @@ export async function getServerConfig(): Promise<{
 		hubRedirectUri,
 		hubInstanceName,
 		hubInstanceBaseUrl,
+		mediaStorageDriver,
+		mediaLocalRoot,
 	] = await Promise.all([
 		getConfig("better_auth_url"),
 		getConfig("google_client_id"),
@@ -118,6 +122,8 @@ export async function getServerConfig(): Promise<{
 		getConfig("hub_redirect_uri"),
 		getConfig("hub_instance_name"),
 		getConfig("hub_instance_base_url"),
+		getConfig("media_storage_driver"),
+		getConfig("media_local_root"),
 	]);
 
 	const hubEnv = getHubEnv();
@@ -134,5 +140,7 @@ export async function getServerConfig(): Promise<{
 		hubRedirectUri,
 		hubInstanceName,
 		hubInstanceBaseUrl,
+		mediaStorageDriver,
+		mediaLocalRoot,
 	};
 }

@@ -17,9 +17,5 @@ export default defineConfig({
 		port: 5173,
 		host: true,
 	},
-	plugins: [
-		tailwindcss(),
-		reactRouter(),
-		tsconfigPaths(),
-	],
+	plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
 });

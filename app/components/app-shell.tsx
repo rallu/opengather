@@ -55,22 +55,22 @@ export function AppShell(props: AppShellProps) {
 	const navItems = props.authUser
 		? props.showServerSettings
 			? [
-				...baseNavItems,
-				{
-					to: "/server-settings",
-					label: "Server",
-					testId: "shell-nav-server",
-				},
-			]
+					...baseNavItems,
+					{
+						to: "/server-settings",
+						label: "Server",
+						testId: "shell-nav-server",
+					},
+				]
 			: baseNavItems
 		: [
-			{ to: "/feed", label: "Feed", testId: "shell-nav-feed" },
-			{
-				to: "/style-guide",
-				label: "Style Guide",
-				testId: "shell-nav-style-guide",
-			},
-		];
+				{ to: "/feed", label: "Feed", testId: "shell-nav-feed" },
+				{
+					to: "/style-guide",
+					label: "Style Guide",
+					testId: "shell-nav-style-guide",
+				},
+			];
 
 	const activeItem = navItems.find((item) =>
 		location.pathname.startsWith(item.to),

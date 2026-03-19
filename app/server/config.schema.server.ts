@@ -13,6 +13,8 @@ export type ConfigValueByKey = {
 	server_description: string;
 	server_visibility_mode: "public" | "registered" | "approval";
 	server_approval_mode: "automatic" | "manual";
+	media_storage_driver: "local";
+	media_local_root: string;
 	setup_completed: boolean;
 	setup_instance_id: string;
 	ai_settings: {
@@ -44,6 +46,10 @@ const approvalModes = new Set<ConfigValueByKey["server_approval_mode"]>([
 	"manual",
 ]);
 
+const mediaStorageDrivers = new Set<ConfigValueByKey["media_storage_driver"]>([
+	"local",
+]);
+
 function parseString(raw: unknown, fallback = ""): string {
 	return typeof raw === "string" ? raw : fallback;
 }
@@ -72,6 +78,18 @@ function parseApprovalMode(
 		return raw as ConfigValueByKey["server_approval_mode"];
 	}
 	return "automatic";
+}
+
+function parseMediaStorageDriver(
+	raw: unknown,
+): ConfigValueByKey["media_storage_driver"] {
+	if (
+		typeof raw === "string" &&
+		mediaStorageDrivers.has(raw as ConfigValueByKey["media_storage_driver"])
+	) {
+		return raw as ConfigValueByKey["media_storage_driver"];
+	}
+	return "local";
 }
 
 function parseAiSettings(raw: unknown): ConfigValueByKey["ai_settings"] {
@@ -157,6 +175,14 @@ export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
 	server_approval_mode: {
 		defaultValue: "automatic",
 		parse: (raw) => parseApprovalMode(raw),
+	},
+	media_storage_driver: {
+		defaultValue: "local",
+		parse: (raw) => parseMediaStorageDriver(raw),
+	},
+	media_local_root: {
+		defaultValue: "./storage/media",
+		parse: (raw) => parseString(raw, "./storage/media"),
 	},
 	setup_completed: {
 		defaultValue: false,

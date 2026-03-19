@@ -1,16 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
-import { getConfig } from "./config.service.server";
-import { getDb } from "./db.server";
-import { toTextVector } from "./embedding.service.server";
-import { getReadableGroupIds } from "./group.service.server";
+import { getConfig } from "./config.service.server.ts";
+import { getDb } from "./db.server.ts";
+import { toTextVector } from "./embedding.service.server.ts";
+import { getReadableGroupIds } from "./group.service.server.ts";
 import {
 	getGroupMembership,
 	resolveGroupRole,
-} from "./group-membership.service.server";
-import { processNotificationOutbox } from "./jobs.service.server";
-import { extractMentionEmails } from "./mentions.server";
-import { createNotification } from "./notification.service.server";
+} from "./group-membership.service.server.ts";
+import { processNotificationOutbox } from "./jobs.service.server.ts";
+import { extractMentionEmails } from "./mentions.server.ts";
+import { createNotification } from "./notification.service.server.ts";
 import {
 	canManageInstance,
 	canPostToGroup,
@@ -19,19 +19,24 @@ import {
 	getInstanceViewerRole,
 	type InstanceVisibilityMode,
 	resolveViewerRoleFromMembership,
-} from "./permissions.server";
+} from "./permissions.server.ts";
 import {
-	buildThreadTree,
-	MAX_THREAD_DEPTH,
-	normalizeThreadDepths,
-} from "./post-thread.server";
+	loadPostAssetSummaries,
+	type PostAssetSummary,
+	preparePostAssetsForCreate,
+} from "./post-assets.server.ts";
 import {
 	loadPostListPage,
 	type PostListPage,
 	type PostListSortMode,
-} from "./post-list.service.server";
-import { ensurePostRootIds } from "./post-root.server";
-import { getSetupStatus } from "./setup.service.server";
+} from "./post-list.service.server.ts";
+import { ensurePostRootIds } from "./post-root.server.ts";
+import {
+	buildThreadTree,
+	MAX_THREAD_DEPTH,
+	normalizeThreadDepths,
+} from "./post-thread.server.ts";
+import { getSetupStatus } from "./setup.service.server.ts";
 
 export type CommunityUser = {
 	id: string;
@@ -44,6 +49,7 @@ export type CommunityPost = {
 	parentPostId?: string;
 	threadDepth: number;
 	bodyText?: string;
+	assets: PostAssetSummary[];
 	group?: {
 		id: string;
 		name: string;
@@ -212,6 +218,7 @@ function mapPost(params: {
 		parentPostId: string | null;
 		threadDepth?: number;
 		bodyText: string | null;
+		assets?: PostAssetSummary[];
 		groupId?: string | null;
 		moderationStatus: string;
 		hiddenAt: Date | string | null;
@@ -228,6 +235,7 @@ function mapPost(params: {
 		parentPostId: params.row.parentPostId ?? undefined,
 		threadDepth: params.row.threadDepth ?? 0,
 		bodyText: params.row.bodyText ?? undefined,
+		assets: params.row.assets ?? [],
 		group:
 			params.row.groupId && params.row.group
 				? {
@@ -497,9 +505,17 @@ export async function loadCommunityPostThread(params: {
 			!row.deletedAt && !row.hiddenAt && row.moderationStatus !== "rejected"
 		);
 	});
+	const assetMap = await loadPostAssetSummaries({
+		postIds: visible.map((row) => row.id),
+	});
 	const threadedPosts = buildThreadTree({
 		rows: normalizeThreadDepths({ rows: visible }).map((row) =>
-			mapPost({ row }),
+			mapPost({
+				row: {
+					...row,
+					assets: assetMap.get(row.id) ?? [],
+				},
+			}),
 		),
 	});
 	const post = findPostInThread({
@@ -519,6 +535,13 @@ export async function createPost(params: {
 	text: string;
 	parentPostId?: string;
 	groupId?: string;
+	uploads?: Array<{
+		fieldName: string;
+		filename: string;
+		mimeType: string;
+		byteSize: number;
+		tempFilePath: string;
+	}>;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
 	const status = await getSetupStatus();
 	if (!status.isSetup || !status.instance) {
@@ -603,58 +626,90 @@ export async function createPost(params: {
 
 	const now = new Date();
 	const postId = randomUUID();
+	const instanceId = status.instance.id;
+	const postingUser = params.user;
+	let assetPersistence: Awaited<ReturnType<typeof preparePostAssetsForCreate>>;
+	try {
+		assetPersistence = await preparePostAssetsForCreate({
+			instanceId,
+			postId,
+			uploads: params.uploads ?? [],
+		});
+	} catch (error) {
+		return {
+			ok: false,
+			error: error instanceof Error ? error.message : "Asset processing failed",
+		};
+	}
 	const moderationStatus = text.toLowerCase().includes("illegal")
 		? "rejected"
 		: text.toLowerCase().includes("spam") || text.toLowerCase().includes("scam")
 			? "flagged"
 			: "approved";
 
-	const created = await db.post.create({
-		data: {
-			id: postId,
-			instanceId: status.instance.id,
-			authorId: params.user.hubUserId ?? params.user.id,
-			authorType: "user",
-			groupId: effectiveGroupId ?? null,
-			rootPostId: rootPostId ?? postId,
-			parentPostId: params.parentPostId ?? null,
-			contentType: "text",
-			bodyText: text,
-			moderationStatus,
-			hiddenAt: null,
-			deletedAt: null,
-			createdAt: now,
-			updatedAt: now,
-		},
-	});
+	let created: { id: string } | null = null;
+	try {
+		created = await db.$transaction(async (trx) => {
+			const createdPost = await trx.post.create({
+				data: {
+					id: postId,
+					instanceId,
+					authorId: postingUser.hubUserId ?? postingUser.id,
+					authorType: "user",
+					groupId: effectiveGroupId ?? null,
+					rootPostId: rootPostId ?? postId,
+					parentPostId: params.parentPostId ?? null,
+					contentType: "text",
+					bodyText: text,
+					moderationStatus,
+					hiddenAt: null,
+					deletedAt: null,
+					createdAt: now,
+					updatedAt: now,
+				},
+			});
 
-	await db.postEmbedding.create({
-		data: {
-			id: randomUUID(),
-			postId: created.id,
-			sourceType: "text",
-			modelName: "local-deterministic-embedding",
-			vector: toTextVector({ text }),
-			summaryText: text,
-			createdAt: new Date(),
-		},
-	});
+			await trx.postEmbedding.create({
+				data: {
+					id: randomUUID(),
+					postId: createdPost.id,
+					sourceType: "text",
+					modelName: "local-deterministic-embedding",
+					vector: toTextVector({ text }),
+					summaryText: text,
+					createdAt: new Date(),
+				},
+			});
 
-	await db.moderationDecision.create({
-		data: {
-			id: randomUUID(),
-			postId: created.id,
-			status: moderationStatus,
-			reason:
-				moderationStatus === "approved"
-					? "automated-approval"
-					: "automated-policy-hit",
-			actorType: "ai",
-			actorId: null,
-			modelName: "local-rule-moderation",
-			createdAt: new Date(),
-		},
-	});
+			await trx.moderationDecision.create({
+				data: {
+					id: randomUUID(),
+					postId: createdPost.id,
+					status: moderationStatus,
+					reason:
+						moderationStatus === "approved"
+							? "automated-approval"
+							: "automated-policy-hit",
+					actorType: "ai",
+					actorId: null,
+					modelName: "local-rule-moderation",
+					createdAt: new Date(),
+				},
+			});
+
+			await assetPersistence.persist(trx);
+			return createdPost;
+		});
+	} catch (error) {
+		await assetPersistence.cleanup();
+		return {
+			ok: false,
+			error: error instanceof Error ? error.message : "Failed to create post",
+		};
+	}
+	if (!created) {
+		return { ok: false, error: "Failed to create post" };
+	}
 
 	const mentionEmails = extractMentionEmails({ text });
 	const notifiedLocalUsers = new Set<string>();
