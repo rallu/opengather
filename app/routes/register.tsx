@@ -3,6 +3,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import { Link, redirect, useLoaderData, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { signIn, signUp } from "~/lib/auth-client";
+import { formatAuthErrorMessage } from "~/lib/auth-error";
 import { getServerConfig } from "~/server/config.service.server";
 import { isHubUiEnabled } from "~/server/hub-config.server";
 import {
@@ -75,7 +76,9 @@ export default function Register() {
 			});
 
 			if (result.error) {
-				setError(result.error.message || "Failed to sign up");
+				setError(
+					formatAuthErrorMessage(result.error.message) || "Failed to sign up",
+				);
 			} else {
 				navigate(nextPath);
 			}
@@ -99,7 +102,9 @@ export default function Register() {
 			});
 
 			if (result.error) {
-				throw new Error(result.error.message || "Hub signup failed");
+				throw new Error(
+					formatAuthErrorMessage(result.error.message) || "Hub signup failed",
+				);
 			}
 
 			if (result.data?.redirect) {
@@ -132,7 +137,10 @@ export default function Register() {
 			});
 
 			if (result.error) {
-				throw new Error(result.error.message || "Google signup failed");
+				throw new Error(
+					formatAuthErrorMessage(result.error.message) ||
+						"Google signup failed",
+				);
 			}
 
 			if (result.data?.redirect) {

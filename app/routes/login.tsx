@@ -3,6 +3,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import { Link, redirect, useLoaderData, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { signIn } from "~/lib/auth-client";
+import { formatAuthErrorMessage } from "~/lib/auth-error";
 import { getServerConfig } from "~/server/config.service.server";
 import { isHubUiEnabled } from "~/server/hub-config.server";
 import {
@@ -66,7 +67,9 @@ export default function Login() {
 			});
 
 			if (result.error) {
-				setError(result.error.message || "Failed to sign in");
+				setError(
+					formatAuthErrorMessage(result.error.message) || "Failed to sign in",
+				);
 			} else {
 				navigate(nextPath);
 			}
@@ -90,7 +93,9 @@ export default function Login() {
 			});
 
 			if (result.error) {
-				throw new Error(result.error.message || "Hub login failed");
+				throw new Error(
+					formatAuthErrorMessage(result.error.message) || "Hub login failed",
+				);
 			}
 
 			if (result.data?.redirect) {
@@ -123,7 +128,9 @@ export default function Login() {
 			});
 
 			if (result.error) {
-				throw new Error(result.error.message || "Google login failed");
+				throw new Error(
+					formatAuthErrorMessage(result.error.message) || "Google login failed",
+				);
 			}
 
 			if (result.data?.redirect) {
