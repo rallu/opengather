@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { getConfig } from "./config.service.server";
 import { getDb } from "./db.server";
-import { cosineSimilarity, toTextVector } from "./embedding.service.server";
+import { toTextVector } from "./embedding.service.server";
 import { getReadableGroupIds } from "./group.service.server";
 import {
 	getGroupMembership,
@@ -25,6 +25,12 @@ import {
 	MAX_THREAD_DEPTH,
 	normalizeThreadDepths,
 } from "./post-thread.server";
+import {
+	loadPostListPage,
+	type PostListPage,
+	type PostListSortMode,
+} from "./post-list.service.server";
+import { ensurePostRootIds } from "./post-root.server";
 import { getSetupStatus } from "./setup.service.server";
 
 export type CommunityUser = {
@@ -250,6 +256,7 @@ async function resolveParentPostContext(params: {
 			id: true,
 			instanceId: true,
 			groupId: true,
+			rootPostId: true,
 			parentPostId: true,
 			deletedAt: true,
 			authorId: true,
@@ -296,7 +303,8 @@ async function resolveParentPostContext(params: {
 
 export async function loadCommunity(params: {
 	user: CommunityUser | null;
-	query?: string;
+	sortMode: PostListSortMode;
+	cursor?: string | null;
 }): Promise<{
 	status:
 		| "ok"
@@ -305,12 +313,19 @@ export async function loadCommunity(params: {
 		| "pending_membership"
 		| "forbidden";
 	viewerRole: "guest" | "member" | "moderator" | "admin";
-	posts: CommunityPost[];
-	search: Array<{ post: CommunityPost; score: number }>;
+	page: PostListPage;
 }> {
 	const status = await getSetupStatus();
 	if (!status.isSetup || !status.instance) {
-		return { status: "not_setup", viewerRole: "guest", posts: [], search: [] };
+		return {
+			status: "not_setup",
+			viewerRole: "guest",
+			page: {
+				items: [],
+				hasMore: false,
+				sortMode: params.sortMode,
+			},
+		};
 	}
 
 	await ensureInstanceMembershipForUser({
@@ -332,12 +347,14 @@ export async function loadCommunity(params: {
 						? "pending_membership"
 						: "forbidden",
 			viewerRole: readAccess.viewerRole,
-			posts: [],
-			search: [],
+			page: {
+				items: [],
+				hasMore: false,
+				sortMode: params.sortMode,
+			},
 		};
 	}
 
-	const db = getDb();
 	const includeHidden = await isAdmin({
 		instanceId: status.instance.id,
 		user: params.user,
@@ -351,118 +368,21 @@ export async function loadCommunity(params: {
 			: null,
 		instanceViewerRole: readAccess.viewerRole,
 	});
-	const rows = await db.post.findMany({
-		where: {
+	const page = await loadPostListPage({
+		scope: {
+			kind: "community",
 			instanceId: status.instance.id,
-			OR:
-				readableGroupIds.length > 0
-					? [{ groupId: null }, { groupId: { in: readableGroupIds } }]
-					: [{ groupId: null }],
+			readableGroupIds,
 		},
-		orderBy: { createdAt: "asc" },
-		select: {
-			id: true,
-			parentPostId: true,
-			bodyText: true,
-			groupId: true,
-			moderationStatus: true,
-			hiddenAt: true,
-			deletedAt: true,
-			createdAt: true,
-			group: {
-				select: {
-					id: true,
-					name: true,
-				},
-			},
-		},
+		sortMode: params.sortMode,
+		cursor: params.cursor,
+		includeHidden,
 	});
-
-	const visible = rows.filter((row) => {
-		if (includeHidden) {
-			return true;
-		}
-		return (
-			!row.deletedAt && !row.hiddenAt && row.moderationStatus !== "rejected"
-		);
-	});
-
-	const normalizedVisibleRows = normalizeThreadDepths({ rows: visible });
-	const threadedPosts = buildThreadTree({
-		rows: normalizedVisibleRows.map((row) => mapPost({ row })),
-	});
-
-	let search: Array<{ post: CommunityPost; score: number }> = [];
-	if (params.query && params.query.trim().length > 0) {
-		const embeddings = await db.postEmbedding.findMany({
-			where: {
-				sourceType: "text",
-				post: {
-					instanceId: status.instance.id,
-					OR:
-						readableGroupIds.length > 0
-							? [{ groupId: null }, { groupId: { in: readableGroupIds } }]
-							: [{ groupId: null }],
-				},
-			},
-			select: {
-				postId: true,
-				vector: true,
-				post: {
-					select: {
-						deletedAt: true,
-						hiddenAt: true,
-						moderationStatus: true,
-					},
-				},
-			},
-		});
-
-		const queryVector = toTextVector({ text: params.query.trim() });
-		const scoreById = new Map<string, number>();
-		for (const item of embeddings) {
-			if (
-				!includeHidden &&
-				(item.post.deletedAt ||
-					item.post.hiddenAt ||
-					item.post.moderationStatus === "rejected")
-			) {
-				continue;
-			}
-
-			const score = cosineSimilarity({ left: queryVector, right: item.vector });
-			const current = scoreById.get(item.postId);
-			if (current === undefined || score > current) {
-				scoreById.set(item.postId, score);
-			}
-		}
-
-		const postById = new Map(
-			normalizedVisibleRows.map((row) => [row.id, mapPost({ row })]),
-		);
-		search = [...scoreById.entries()]
-			.sort((a, b) => b[1] - a[1])
-			.slice(0, 10)
-			.map(([postId, score]) => {
-				const post = postById.get(postId);
-				if (!post) {
-					return null;
-				}
-				return {
-					post,
-					score: Number(score.toFixed(6)),
-				};
-			})
-			.filter((item): item is { post: CommunityPost; score: number } =>
-				Boolean(item),
-			);
-	}
 
 	return {
 		status: "ok",
 		viewerRole: readAccess.viewerRole,
-		posts: threadedPosts,
-		search,
+		page,
 	};
 }
 
@@ -532,6 +452,7 @@ export async function loadCommunityPostThread(params: {
 		instanceId: status.instance.id,
 		user: params.user,
 	});
+	await ensurePostRootIds();
 	const readableGroupIds = await getReadableGroupIds({
 		authUser: params.user
 			? {
@@ -613,7 +534,9 @@ export async function createPost(params: {
 	}
 
 	const db = getDb();
+	await ensurePostRootIds();
 	let effectiveGroupId = params.groupId?.trim() || undefined;
+	let rootPostId: string | undefined;
 	let targetUrl = "/feed";
 
 	if (!effectiveGroupId) {
@@ -648,6 +571,7 @@ export async function createPost(params: {
 		}
 
 		effectiveGroupId = parent.groupId ?? effectiveGroupId;
+		rootPostId = parent.rootPostId || parent.id;
 	}
 
 	if (effectiveGroupId) {
@@ -678,6 +602,7 @@ export async function createPost(params: {
 	}
 
 	const now = new Date();
+	const postId = randomUUID();
 	const moderationStatus = text.toLowerCase().includes("illegal")
 		? "rejected"
 		: text.toLowerCase().includes("spam") || text.toLowerCase().includes("scam")
@@ -686,11 +611,12 @@ export async function createPost(params: {
 
 	const created = await db.post.create({
 		data: {
-			id: randomUUID(),
+			id: postId,
 			instanceId: status.instance.id,
 			authorId: params.user.hubUserId ?? params.user.id,
 			authorType: "user",
 			groupId: effectiveGroupId ?? null,
+			rootPostId: rootPostId ?? postId,
 			parentPostId: params.parentPostId ?? null,
 			contentType: "text",
 			bodyText: text,

@@ -1,7 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import {
 	Form,
-	Link,
 	redirect,
 	useActionData,
 	useLoaderData,
@@ -10,19 +9,14 @@ import {
 
 import { AppShell } from "~/components/app-shell";
 import {
-	PostComposer,
-	PostComposerBody,
-	PostComposerField,
-	PostComposerFooter,
-	PostComposerMedia,
-	PostComposerSurface,
-} from "~/components/post/post-composer";
+	type PostCommentData,
+	PostComments,
+} from "~/components/post/post-comments";
+import { PostComposer } from "~/components/post/post-composer";
 import { PostContent } from "~/components/post/post-content";
-import { ProfileImage } from "~/components/profile/profile-image";
+import { Container } from "~/components/ui/container";
+import { ContextBar } from "~/components/ui/context-bar";
 import { FeedContainer } from "~/components/ui/feed-container";
-import { Icon } from "~/components/ui/icon";
-import { IconButton } from "~/components/ui/icon-button";
-import { cn } from "~/lib/utils";
 import {
 	type CommunityPost,
 	type CommunityUser,
@@ -44,15 +38,6 @@ function toCommunityUser(params: {
 	};
 }
 
-function getInitials(name: string) {
-	return name
-		.split(/\s+/)
-		.filter(Boolean)
-		.slice(0, 2)
-		.map((part) => part[0]?.toUpperCase() ?? "")
-		.join("");
-}
-
 function countReplies(post: CommunityPost): number {
 	return post.replies.reduce(
 		(total, reply) => total + 1 + countReplies(reply),
@@ -64,54 +49,42 @@ function canReplyAtThreadDepth(threadDepth: number) {
 	return threadDepth < 3;
 }
 
-function ThreadCommentItem({ post }: { post: CommunityPost }) {
+function getPostTrailLabel(bodyText?: string | null) {
+	const compact = (bodyText ?? "").trim().replace(/\s+/g, " ");
+	if (compact.length <= 48) {
+		return compact || "(no text)";
+	}
+	return `${compact.slice(0, 45).trim()}...`;
+}
+
+function mapComment(post: CommunityPost): PostCommentData {
 	const replyCount = countReplies(post);
 
-	return (
-		<div
-			className={cn(
-				"space-y-3",
-				post.threadDepth > 1
-					? "ml-4 border-l border-border/70 pl-4"
-					: undefined,
-			)}
-			data-testid={`post-detail-comment-${post.id}`}
-			data-thread-depth={post.threadDepth}
-		>
-			<article
-				id={`post-${post.id}`}
-				className="rounded-md border border-border p-3"
-			>
-				<PostContent
-					createdAt={post.createdAt}
-					moderationStatus={post.moderationStatus}
-					isHidden={post.isHidden}
-					isDeleted={post.isDeleted}
-					actions={[
-						{
-							label: `Comments (${replyCount})`,
-							to: `/posts/${post.id}`,
-							testId: `post-detail-comment-action-${post.id}`,
-						},
-						{
-							label: "Reply",
-							to: `/posts/${post.id}`,
-							testId: `post-detail-reply-action-${post.id}`,
-						},
-					]}
-				>
-					<p>{post.bodyText}</p>
-				</PostContent>
-			</article>
-			{post.replies.length > 0 ? (
-				<div className="space-y-3">
-					{post.replies.map((reply) => (
-						<ThreadCommentItem key={reply.id} post={reply} />
-					))}
-				</div>
-			) : null}
-		</div>
-	);
+	return {
+		id: post.id,
+		testId: `post-detail-comment-${post.id}`,
+		threadDepth: post.threadDepth,
+		author: "Member",
+		fallback: "M",
+		body: post.bodyText ?? "",
+		createdAt: post.createdAt,
+		moderationStatus: post.moderationStatus,
+		isHidden: post.isHidden,
+		isDeleted: post.isDeleted,
+		actions: [
+			{
+				label: replyCount === 1 ? "1 reply" : `${replyCount} replies`,
+				to: `/posts/${post.id}`,
+				testId: `post-detail-comment-action-${post.id}`,
+			},
+			{
+				label: "Reply",
+				to: `/posts/${post.id}`,
+				testId: `post-detail-reply-action-${post.id}`,
+			},
+		],
+		replies: post.replies.map(mapComment),
+	};
 }
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -196,18 +169,24 @@ export default function PostDetailPage() {
 
 	const canReply =
 		Boolean(data.authUser) && canReplyAtThreadDepth(data.post.threadDepth);
+	const breadcrumbs = [
+		{ label: "Feed", to: "/feed" },
+		...(data.post.group
+			? [
+					{
+						label: data.post.group.name,
+						to: `/groups/${data.post.group.id}`,
+					},
+				]
+			: []),
+		{ label: getPostTrailLabel(data.post.bodyText) },
+	];
+	const backTo = data.post.group ? `/groups/${data.post.group.id}` : "/feed";
 
 	return (
 		<AppShell authUser={data.authUser}>
 			<FeedContainer className="space-y-4">
-				<div>
-					<Link
-						to="/feed"
-						className="text-sm text-muted-foreground hover:text-foreground"
-					>
-						Back to feed
-					</Link>
-				</div>
+				<ContextBar backTo={backTo} breadcrumbs={breadcrumbs} />
 
 				{actionData && "error" in actionData ? (
 					<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -215,21 +194,7 @@ export default function PostDetailPage() {
 					</div>
 				) : null}
 
-				<article
-					className="rounded-md border border-border p-3"
-					data-testid="post-detail-root"
-				>
-					{data.post.group ? (
-						<p className="mb-3 text-xs text-muted-foreground">
-							Group:{" "}
-							<Link
-								to={`/groups/${data.post.group.id}`}
-								className="font-medium text-foreground hover:underline"
-							>
-								{data.post.group.name}
-							</Link>
-						</p>
-					) : null}
+				<Container data-testid="post-detail-root" className="p-4">
 					<PostContent
 						createdAt={data.post.createdAt}
 						moderationStatus={data.post.moderationStatus}
@@ -238,56 +203,27 @@ export default function PostDetailPage() {
 					>
 						<p>{data.post.bodyText}</p>
 					</PostContent>
-				</article>
+				</Container>
 
 				{canReply ? (
 					<Form method="post">
 						<input type="hidden" name="_action" value="post" />
 						<input type="hidden" name="parentPostId" value={data.post.id} />
-						<PostComposer variant="reply" className="items-start">
-							<PostComposerMedia>
-								<ProfileImage
-									alt={data.authUser?.name ?? "You"}
-									fallback={getInitials(data.authUser?.name ?? "You")}
-									size="sm"
-								/>
-							</PostComposerMedia>
-							<PostComposerBody>
-								<PostComposerSurface>
-									<PostComposerField
-										name="bodyText"
-										placeholder="Write a reply"
-										data-testid="post-detail-reply-body"
-									/>
-									<PostComposerFooter className="justify-end gap-1 px-2 py-1.5">
-										<IconButton
-											type="submit"
-											label="Reply"
-											disabled={loading}
-											data-testid="post-detail-reply-submit"
-										>
-											{loading ? (
-												<Icon name="loaderCircle" className="animate-spin" />
-											) : (
-												<Icon name="sendHorizontal" />
-											)}
-										</IconButton>
-									</PostComposerFooter>
-								</PostComposerSurface>
-							</PostComposerBody>
-						</PostComposer>
+						<PostComposer
+							variant="reply"
+							name="bodyText"
+							placeholder="Write a reply"
+							textareaTestId="post-detail-reply-body"
+							loading={loading}
+							disabled={loading}
+							submitLabel="Reply"
+							submitTestId="post-detail-reply-submit"
+						/>
 					</Form>
 				) : null}
 
 				<section className="space-y-3" data-testid="post-detail-comments">
-					<h2 className="text-lg font-semibold">Comments</h2>
-					{data.post.replies.length === 0 ? (
-						<p className="text-sm text-muted-foreground">No comments yet.</p>
-					) : (
-						data.post.replies.map((reply) => (
-							<ThreadCommentItem key={reply.id} post={reply} />
-						))
-					)}
+					<PostComments comments={data.post.replies.map(mapComment)} />
 				</section>
 			</FeedContainer>
 		</AppShell>

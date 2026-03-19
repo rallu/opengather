@@ -15,7 +15,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
 				size={size}
 				title={title ?? label}
 				aria-label={label}
-				className={cn("h-8 w-8 rounded-md", className)}
+				className={cn("h-8 w-8 rounded-full", className)}
 				{...props}
 			/>
 		);

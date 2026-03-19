@@ -1,6 +1,6 @@
-import type { ButtonHTMLAttributes, HTMLAttributes } from "react";
+import type { HTMLAttributes } from "react";
 
-import { Button } from "~/components/ui/button";
+import { Button, type ButtonProps } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
 export type PostActionData = {
@@ -26,22 +26,21 @@ export function PostActions({
 
 export function PostActionItem({
 	className,
-	variant = "link",
-	type = "button",
+	variant = "ghost",
+	size = "sm",
 	...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
+}: ButtonProps & {
 	variant?: "link" | "ghost";
 }) {
 	return (
 		<Button
-			type={type}
 			variant={variant}
-			size="sm"
+			size={size}
 			className={cn(
-				"h-auto px-0 py-0 text-sm font-medium text-muted-foreground no-underline hover:text-foreground hover:no-underline",
+				"h-8 text-sm font-medium text-muted-foreground no-underline hover:text-foreground hover:no-underline",
 				variant === "ghost"
-					? "rounded-none px-0 text-muted-foreground"
-					: undefined,
+					? "rounded-full px-3.5 hover:bg-accent/80"
+					: "h-auto rounded-none px-0 py-0 hover:bg-transparent",
 				className,
 			)}
 			{...props}

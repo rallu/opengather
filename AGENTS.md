@@ -154,6 +154,11 @@ Components are added to `app/components/ui/`.
 - **Responsive Design**: Use Tailwind's responsive utilities
 - **State Management**: Use React hooks, consider Zustand/Redux for complex state
 
+## UI Copy Rules
+
+- Never use meta headings in the product UI. Do not add labels like "Overview", "Summary", "Details", "Reading", "Workspace", or similar framing text.
+- Avoid headings in the product UI unless there is a strong usability reason. Default to layouts where content, controls, and spacing make the structure self-explanatory.
+
 ## Route Testing Rule
 
 - Any change that can affect a visible route must include route verification before the task is considered complete.

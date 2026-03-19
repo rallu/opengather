@@ -304,7 +304,7 @@ test.describe("group privacy", () => {
 		);
 
 		await page.goto(`/feed?q=${encodeURIComponent(privatePostText)}`);
-		await expect(page.getByTestId("feed-search-results")).not.toContainText(
+		await expect(page.getByTestId("feed-post-list")).not.toContainText(
 			privateGroupName,
 		);
 

@@ -26,6 +26,10 @@ const routes: RouteConfig = [
 		file: "routes/api-auth.ts",
 	},
 	{
+		path: "/api/post-list",
+		file: "routes/api-post-list.tsx",
+	},
+	{
 		path: "/metrics",
 		file: "routes/metrics.tsx",
 	},

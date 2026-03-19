@@ -1,6 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
-import { getDatabaseEnv, hasDatabaseConfig } from "./env.server";
+import { getDatabaseEnv, hasDatabaseConfig } from "./env.server.ts";
 
 let prismaSingleton: PrismaClient | null = null;
 

@@ -8,14 +8,13 @@ type PostCommentsProps = {
 
 function CommentTree({ comments }: { comments: PostCommentData[] }) {
 	return (
-		<div className="space-y-3">
+		<div className="space-y-1.5">
 			{comments.map((comment) => (
-				<div key={comment.id} className="space-y-3">
-					<PostComment comment={comment} />
+				<PostComment key={comment.id} comment={comment}>
 					{comment.replies?.length ? (
 						<CommentTree comments={comment.replies} />
 					) : null}
-				</div>
+				</PostComment>
 			))}
 		</div>
 	);

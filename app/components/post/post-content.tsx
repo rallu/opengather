@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-
-import { ButtonGroup, ButtonGroupItem } from "~/components/ui/button-group";
+import { Link } from "react-router";
 import { cn } from "~/lib/utils";
 import type { PostActionData } from "./post-actions";
+import { PostActionItem, PostActions } from "./post-actions";
 import { PostLabels } from "./post-labels";
 
 type PostContentProps = {
@@ -47,43 +47,40 @@ export function PostContent({
 				{children ?? <p>(no text)</p>}
 			</div>
 			{actions?.length ? (
-				<div className="border-t border-border pt-3">
-					<ButtonGroup>
-						{actions.map((action) =>
-							action.to ? (
-								<ButtonGroupItem
-									key={action.label}
-									asChild
-									className={cn(
-										action.isActive
-											? "bg-accent text-foreground hover:bg-accent"
-											: undefined,
-									)}
-								>
-									<a href={action.to} data-testid={action.testId}>
-										{action.label}
-									</a>
-								</ButtonGroupItem>
-							) : (
-								<ButtonGroupItem
-									key={action.label}
-									type="button"
-									disabled={action.disabled}
-									onClick={action.onClick}
-									aria-pressed={action.isActive}
-									data-testid={action.testId}
-									className={cn(
-										action.isActive
-											? "bg-accent text-foreground hover:bg-accent"
-											: undefined,
-									)}
-								>
-									{action.label}
-								</ButtonGroupItem>
-							),
-						)}
-					</ButtonGroup>
-				</div>
+				<PostActions className="border-t border-border/80 pt-3">
+					{actions.map((action) =>
+						action.to ? (
+							<PostActionItem
+								key={action.label}
+								asChild
+								data-testid={action.testId}
+								className={cn(
+									action.isActive
+										? "bg-accent text-foreground hover:bg-accent"
+										: undefined,
+								)}
+							>
+								<Link to={action.to}>{action.label}</Link>
+							</PostActionItem>
+						) : (
+							<PostActionItem
+								key={action.label}
+								type="button"
+								disabled={action.disabled}
+								onClick={action.onClick}
+								aria-pressed={action.isActive}
+								data-testid={action.testId}
+								className={cn(
+									action.isActive
+										? "bg-accent text-foreground hover:bg-accent"
+										: undefined,
+								)}
+							>
+								{action.label}
+							</PostActionItem>
+						),
+					)}
+				</PostActions>
 			) : null}
 		</div>
 	);

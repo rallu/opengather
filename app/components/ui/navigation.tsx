@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 
+import { Container } from "~/components/ui/container";
 import { cn } from "~/lib/utils";
 
 type NavigationItem = {
@@ -15,9 +16,9 @@ type NavigationProps = {
 
 export function Navigation({ items, className }: NavigationProps) {
 	return (
-		<nav
+		<Container
 			className={cn(
-				"elevation-low flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-card p-1.5",
+				"flex flex-wrap items-center gap-1.5 rounded-lg p-1.5",
 				className,
 			)}
 		>
@@ -35,7 +36,7 @@ export function Navigation({ items, className }: NavigationProps) {
 					{item.label}
 				</Link>
 			))}
-		</nav>
+		</Container>
 	);
 }
 

@@ -3,14 +3,7 @@ import {
 	type PostCommentData,
 	PostComments,
 } from "~/components/post/post-comments";
-import {
-	PostComposer,
-	PostComposerBody,
-	PostComposerField,
-	PostComposerFooter,
-	PostComposerMedia,
-	PostComposerSurface,
-} from "~/components/post/post-composer";
+import { PostComposer } from "~/components/post/post-composer";
 import { PostContent } from "~/components/post/post-content";
 import { PostHeading } from "~/components/post/post-heading";
 import { PostImageContent } from "~/components/post/post-image-content";
@@ -41,6 +34,8 @@ import {
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
+import { Container } from "~/components/ui/container";
+import { ContextBar } from "~/components/ui/context-bar";
 import {
 	Dialog,
 	DialogBody,
@@ -493,6 +488,7 @@ const styleGuideGroups = [
 			{ id: "style-guide-icon", title: "Icon" },
 			{ id: "style-guide-icon-button", title: "Icon Button" },
 			{ id: "style-guide-badge", title: "Badge" },
+			{ id: "style-guide-container", title: "Container" },
 			{ id: "style-guide-card", title: "Card" },
 			{ id: "style-guide-elevation", title: "Elevation" },
 		],
@@ -520,6 +516,7 @@ const styleGuideGroups = [
 		items: [
 			{ id: "style-guide-navigation", title: "Navigation" },
 			{ id: "style-guide-breadcrumb", title: "Breadcrumb" },
+			{ id: "style-guide-context-bar", title: "Context Bar" },
 			{ id: "style-guide-navigation-list", title: "Navigation List" },
 		],
 	},
@@ -994,6 +991,38 @@ export default function StyleGuidePage() {
 										<Badge variant="danger">Rejected</Badge>
 									</CardContent>
 								</Card>
+							</section>
+
+							<section
+								className="space-y-4"
+								data-testid="style-guide-container"
+							>
+								<SectionHeader
+									title="Container"
+									description="Base surface wrapper for navigation rails, composer shells, post blocks, and sidebar utilities when the UI only needs one consistent border-and-shadow treatment."
+								/>
+								<Container
+									className="space-y-4 rounded-lg border-border/50 bg-card p-5"
+									data-testid="style-guide-container"
+								>
+									<div className="flex flex-wrap gap-2">
+										<Button size="sm" variant="secondary">
+											Feed
+										</Button>
+										<Button size="sm" variant="ghost">
+											Groups
+										</Button>
+										<Button size="sm" variant="ghost">
+											Notifications
+										</Button>
+									</div>
+									<div className="rounded-xl border border-border/70 p-4">
+										<p className="text-sm leading-7 text-foreground">
+											Use the same container around post cards, side menus, and
+											composer shells so the surface language stays consistent.
+										</p>
+									</div>
+								</Container>
 							</section>
 
 							<section className="space-y-4" data-testid="style-guide-card">
@@ -1502,6 +1531,36 @@ export default function StyleGuidePage() {
 
 							<section
 								className="space-y-4"
+								data-testid="style-guide-context-bar"
+							>
+								<SectionHeader
+									title="Context Bar"
+									description="Top-level subview navigation with one clear way back, a breadcrumb trail, and optional right-side controls."
+								/>
+								<Card>
+									<CardContent className="pt-6">
+										<ContextBar
+											backTo="/groups"
+											breadcrumbs={[
+												{ label: "Groups", to: "/groups" },
+												{
+													label: "Neighborhood Organizers",
+													to: "/groups/neighborhood-organizers",
+												},
+												{ label: "Repair workshop schedule" },
+											]}
+											actions={
+												<Button size="sm" variant="outline">
+													Share
+												</Button>
+											}
+										/>
+									</CardContent>
+								</Card>
+							</section>
+
+							<section
+								className="space-y-4"
 								data-testid="style-guide-navigation-list"
 							>
 								<SectionHeader
@@ -1809,61 +1868,21 @@ export default function StyleGuidePage() {
 								/>
 								<Card>
 									<CardContent className="space-y-4 pt-6">
-										<PostComposer variant="post">
-											<PostComposerMedia>
-												<ProfileImage
-													src={ainoImage}
-													alt="Aino Moderator"
-													fallback="AM"
-													size="md"
-												/>
-											</PostComposerMedia>
-											<PostComposerBody>
-												<PostComposerSurface>
-													<PostComposerField defaultValue="We have enough volunteers for setup. What we still need is one person to document the route changes before Saturday." />
-													<PostComposerFooter>
-														<div className="flex flex-wrap items-center gap-1">
-															<IconButton label="Add image" variant="ghost">
-																<Icon name="imagePlus" size={16} />
-															</IconButton>
-														</div>
-														<div className="flex flex-wrap items-center gap-1">
-															<IconButton label="Publish post">
-																<Icon name="sendHorizontal" size={16} />
-															</IconButton>
-														</div>
-													</PostComposerFooter>
-												</PostComposerSurface>
-											</PostComposerBody>
-										</PostComposer>
+										<PostComposer
+											variant="post"
+											defaultValue="We have enough volunteers for setup. What we still need is one person to document the route changes before Saturday."
+											footer={
+												<p className="text-sm text-muted-foreground">
+													Visible in your community feed
+												</p>
+											}
+										/>
 
-										<PostComposer variant="reply">
-											<PostComposerMedia>
-												<ProfileImage
-													src={mikaImage}
-													alt="Mika Member"
-													fallback="MM"
-													size="sm"
-												/>
-											</PostComposerMedia>
-											<PostComposerBody>
-												<PostComposerSurface>
-													<PostComposerField placeholder="Add a reply to the thread" />
-													<PostComposerFooter>
-														<div className="flex items-center gap-1">
-															<IconButton label="Add image" variant="ghost">
-																<Icon name="imagePlus" size={16} />
-															</IconButton>
-														</div>
-														<div className="flex items-center gap-1">
-															<IconButton label="Reply">
-																<Icon name="sendHorizontal" size={16} />
-															</IconButton>
-														</div>
-													</PostComposerFooter>
-												</PostComposerSurface>
-											</PostComposerBody>
-										</PostComposer>
+										<PostComposer
+											variant="reply"
+											placeholder="Add a reply to the thread"
+											submitLabel="Reply"
+										/>
 									</CardContent>
 								</Card>
 							</section>

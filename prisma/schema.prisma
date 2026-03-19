@@ -35,6 +35,7 @@ model Post {
   authorId         String    @map("author_id") @db.Text
   authorType       String    @map("author_type") @db.Text
   groupId          String?   @map("group_id") @db.Text
+  rootPostId       String    @default("") @map("root_post_id") @db.Text
   parentPostId     String?   @map("parent_post_id") @db.Text
   contentType      String    @map("content_type") @db.Text
   bodyText         String?   @map("body_text") @db.Text
@@ -56,6 +57,9 @@ model Post {
   @@index([parentPostId], map: "idx_post_parent_post_id")
   @@index([groupId], map: "idx_post_group_id")
   @@index([deletedAt], map: "idx_post_deleted_at")
+  @@index([rootPostId, createdAt], map: "idx_post_root_post_created_at")
+  @@index([instanceId, parentPostId, createdAt], map: "idx_post_instance_parent_created_at")
+  @@index([groupId, parentPostId, createdAt], map: "idx_post_group_parent_created_at")
 }
 
 model PostEmbedding {

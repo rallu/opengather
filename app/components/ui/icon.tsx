@@ -1,9 +1,12 @@
 import {
+	ArrowLeft,
 	Bell,
 	CheckCircle2,
 	ChevronDown,
 	ChevronRight,
 	CircleAlert,
+	CircleMinus,
+	CirclePlus,
 	Compass,
 	Grid2X2,
 	Home,
@@ -24,11 +27,14 @@ import type { SVGProps } from "react";
 import { cn } from "~/lib/utils";
 
 const icons = {
+	arrowLeft: ArrowLeft,
 	bell: Bell,
 	checkCircle2: CheckCircle2,
 	chevronDown: ChevronDown,
 	chevronRight: ChevronRight,
 	circleAlert: CircleAlert,
+	circleMinus: CircleMinus,
+	circlePlus: CirclePlus,
 	compass: Compass,
 	grid2x2: Grid2X2,
 	home: Home,

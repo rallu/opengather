@@ -1,0 +1,52 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e5]:
+      - link "OpenGather" [ref=e7] [cursor=pointer]:
+        - /url: /feed
+      - generic [ref=e8]:
+        - generic [ref=e10]:
+          - img [ref=e12]
+          - textbox "Search" [ref=e15]
+        - generic [ref=e16]:
+          - link "Sign In" [ref=e17] [cursor=pointer]:
+            - /url: /login
+          - link "Register" [ref=e18] [cursor=pointer]:
+            - /url: /register
+  - main [ref=e19]:
+    - generic [ref=e20]:
+      - complementary [ref=e21]:
+        - generic [ref=e22]:
+          - navigation [ref=e25]:
+            - link "Feed" [ref=e26] [cursor=pointer]:
+              - /url: /feed
+              - generic [ref=e27]: Feed
+            - link "Style Guide" [ref=e28] [cursor=pointer]:
+              - /url: /style-guide
+              - generic [ref=e29]: Style Guide
+          - paragraph [ref=e32]: Search always returns to the feed so results stay in one place.
+      - generic [ref=e33]:
+        - generic [ref=e34]: Setup is not completed.
+        - paragraph [ref=e37]: No posts yet.
+      - complementary [ref=e38]:
+        - generic [ref=e39]:
+          - generic [ref=e41]:
+            - generic [ref=e42]:
+              - paragraph [ref=e43]: Visible posts
+              - paragraph [ref=e44]: "0"
+            - generic [ref=e45]:
+              - paragraph [ref=e46]: Search hits
+              - paragraph [ref=e47]: "0"
+            - generic [ref=e48]:
+              - paragraph [ref=e49]: No active search
+              - paragraph [ref=e50]: Sign in to start discussions and reply to existing threads.
+          - generic [ref=e52]:
+            - paragraph [ref=e53]: Click the post body or heading area to open the full thread.
+            - paragraph [ref=e54]: Use the discussion count for a quick jump when you already know what you want.
+  - contentinfo [ref=e55]:
+    - generic [ref=e56]:
+      - paragraph [ref=e57]: OpenGather keeps navigation, content, and secondary tools in separate rails.
+      - paragraph [ref=e58]: Built for slower reading and clearer conversations.
+```

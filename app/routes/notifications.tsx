@@ -2,6 +2,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Form, Link, useLoaderData, useNavigation } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
+import { Container } from "~/components/ui/container";
 import {
 	listNotifications,
 	markAllNotificationsRead,
@@ -78,20 +79,49 @@ export default function NotificationsPage() {
 		);
 	}
 
-	return (
-		<AppShell authUser={data.authUser} title="Notifications">
-			<div className="flex items-center justify-between">
-				<div className="text-sm text-muted-foreground">
-					Total: {data.notifications.length}
+	const unreadCount = data.notifications.filter(
+		(notification) => !notification.readAt,
+	).length;
+	const notificationsAside = (
+		<>
+			<Container className="rounded-lg border-border/50 bg-card">
+				<div className="grid grid-cols-2 gap-3 p-5 text-sm">
+					<div className="rounded-xl bg-muted/50 p-3">
+						<p className="text-sm text-muted-foreground">Total</p>
+						<p className="mt-2 text-2xl font-semibold text-foreground">
+							{data.notifications.length}
+						</p>
+					</div>
+					<div className="rounded-xl bg-muted/50 p-3">
+						<p className="text-sm text-muted-foreground">Unread</p>
+						<p className="mt-2 text-2xl font-semibold text-foreground">
+							{unreadCount}
+						</p>
+					</div>
+					<Form method="post" className="col-span-2">
+						<input type="hidden" name="_action" value="mark_all" />
+						<Button
+							type="submit"
+							variant="outline"
+							disabled={loading || unreadCount === 0}
+							className="w-full rounded-full"
+						>
+							Mark all as read
+						</Button>
+					</Form>
 				</div>
-				<Form method="post">
-					<input type="hidden" name="_action" value="mark_all" />
-					<Button type="submit" variant="outline" disabled={loading}>
-						Mark all as read
-					</Button>
-				</Form>
-			</div>
+			</Container>
+			<Container className="rounded-lg border-border/50 bg-card">
+				<div className="space-y-2 p-5 text-sm text-muted-foreground">
+					<p>Open the notification target only when you need context.</p>
+					<p>Mark items read from the list once the action is complete.</p>
+				</div>
+			</Container>
+		</>
+	);
 
+	return (
+		<AppShell authUser={data.authUser} aside={notificationsAside}>
 			{data.notifications.length === 0 ? (
 				<div className="rounded-md border border-border p-4 text-sm text-muted-foreground">
 					No notifications.

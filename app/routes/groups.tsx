@@ -8,6 +8,7 @@ import {
 } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
+import { Container } from "~/components/ui/container";
 import { writeAuditLogSafely } from "~/server/audit-log.service.server";
 import {
 	type CommunityUser,
@@ -134,13 +135,92 @@ export async function action({ request }: ActionFunctionArgs) {
 export default function GroupsPage() {
 	const data = useLoaderData<typeof loader>();
 	const actionData = useActionData<typeof action>();
+	const groupsAside = (
+		<>
+			<Container className="rounded-lg border-border/50 bg-card">
+				<div className="space-y-3 p-5 text-sm">
+					<p className="text-muted-foreground">
+						Public groups stay browseable here while management tools move to
+						the side rail.
+					</p>
+					<div className="rounded-xl bg-muted/50 p-3">
+						<p className="text-sm text-muted-foreground">Visible groups</p>
+						<p className="mt-2 text-2xl font-semibold text-foreground">
+							{data.groups.length}
+						</p>
+					</div>
+				</div>
+			</Container>
+
+			{data.viewerRole === "admin" ? (
+				<Container className="rounded-lg border-border/50 bg-card">
+					<div className="space-y-3 p-5">
+						<p className="text-sm text-muted-foreground">
+							Create a new group here without pushing the directory further down
+							the page.
+						</p>
+						<Form
+							method="post"
+							className="grid gap-3"
+							data-testid="groups-create-form"
+						>
+							<input type="hidden" name="_action" value="create-group" />
+							<input
+								name="name"
+								data-testid="groups-create-name"
+								placeholder="Group name"
+								className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+							/>
+							<textarea
+								name="description"
+								data-testid="groups-create-description"
+								placeholder="What is this group for?"
+								rows={3}
+								className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+							/>
+							<select
+								name="visibilityMode"
+								data-testid="groups-create-visibility"
+								defaultValue="public"
+								className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+							>
+								<option value="public">Public</option>
+								<option value="instance_members">Instance members</option>
+								<option value="group_members">Group members</option>
+								<option value="private_invite_only">Private invite only</option>
+							</select>
+							<Button
+								type="submit"
+								className="w-full rounded-full"
+								data-testid="groups-create-submit"
+							>
+								Create group
+							</Button>
+						</Form>
+					</div>
+				</Container>
+			) : (
+				<Container className="rounded-lg border-border/50 bg-card">
+					<div className="space-y-2 p-5 text-sm text-muted-foreground">
+						<p>`public` groups are visible to everyone.</p>
+						<p>
+							`instance_members` and `group_members` may require access before
+							posting.
+						</p>
+						<p>
+							`private_invite_only` spaces stay out of the general directory.
+						</p>
+					</div>
+				</Container>
+			)}
+		</>
+	);
 
 	return (
 		<AppShell
 			authUser={data.authUser}
-			title="Groups"
-			subtitle="Browse public groups, request access where allowed, and manage private spaces."
 			showServerSettings={data.viewerRole === "admin"}
+			aside={groupsAside}
 		>
 			{data.status === "not_setup" ? (
 				<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -152,50 +232,6 @@ export default function GroupsPage() {
 				<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
 					{actionData.error}
 				</div>
-			) : null}
-
-			{data.viewerRole === "admin" ? (
-				<section className="rounded-lg border border-border p-4">
-					<h2 className="text-lg font-semibold">Create group</h2>
-					<Form
-						method="post"
-						className="mt-4 grid gap-3"
-						data-testid="groups-create-form"
-					>
-						<input type="hidden" name="_action" value="create-group" />
-						<input
-							name="name"
-							data-testid="groups-create-name"
-							placeholder="Group name"
-							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-						/>
-						<textarea
-							name="description"
-							data-testid="groups-create-description"
-							placeholder="What is this group for?"
-							rows={3}
-							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-						/>
-						<select
-							name="visibilityMode"
-							data-testid="groups-create-visibility"
-							defaultValue="public"
-							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-						>
-							<option value="public">Public</option>
-							<option value="instance_members">Instance members</option>
-							<option value="group_members">Group members</option>
-							<option value="private_invite_only">Private invite only</option>
-						</select>
-						<Button
-							type="submit"
-							className="w-fit"
-							data-testid="groups-create-submit"
-						>
-							Create group
-						</Button>
-					</Form>
-				</section>
 			) : null}
 
 			<section className="space-y-4" data-testid="groups-list">

@@ -15,7 +15,11 @@ import {
 	type GroupVisibilityMode,
 	type ViewerRole,
 } from "./permissions.server";
-import { buildThreadTree, normalizeThreadDepths } from "./post-thread.server";
+import {
+	loadPostListPage,
+	type PostListPage,
+	type PostListSortMode,
+} from "./post-list.service.server";
 import { getSetupStatus } from "./setup.service.server";
 
 type AuthUser = {
@@ -41,18 +45,6 @@ export type GroupSummary = {
 	joinState: "hidden" | "join" | "request" | "pending";
 };
 
-export type GroupPost = {
-	id: string;
-	parentPostId?: string;
-	threadDepth: number;
-	bodyText?: string;
-	moderationStatus: "pending" | "approved" | "rejected" | "flagged";
-	isHidden: boolean;
-	isDeleted: boolean;
-	createdAt: string;
-	replies: GroupPost[];
-};
-
 export type GroupMemberSummary = {
 	userId: string;
 	label: string;
@@ -66,26 +58,6 @@ function parseManagedGroupRole(
 		return raw;
 	}
 	return null;
-}
-
-function asModerationStatus(params: {
-	value: string;
-}): "pending" | "approved" | "rejected" | "flagged" {
-	if (
-		params.value === "pending" ||
-		params.value === "approved" ||
-		params.value === "rejected" ||
-		params.value === "flagged"
-	) {
-		return params.value;
-	}
-	return "pending";
-}
-
-function toIsoString(params: { value: Date | string }): string {
-	return params.value instanceof Date
-		? params.value.toISOString()
-		: new Date(params.value).toISOString();
 }
 
 async function getMembershipStatus(params: {
@@ -146,33 +118,6 @@ function canDiscoverGroup(params: {
 	}
 
 	return params.canJoin.allowed;
-}
-
-function mapGroupPost(params: {
-	row: {
-		id: string;
-		parentPostId: string | null;
-		threadDepth?: number;
-		bodyText: string | null;
-		moderationStatus: string;
-		hiddenAt: Date | string | null;
-		deletedAt: Date | string | null;
-		createdAt: Date | string;
-	};
-}): GroupPost {
-	return {
-		id: params.row.id,
-		parentPostId: params.row.parentPostId ?? undefined,
-		threadDepth: params.row.threadDepth ?? 0,
-		bodyText: params.row.bodyText ?? undefined,
-		moderationStatus: asModerationStatus({
-			value: params.row.moderationStatus,
-		}),
-		isHidden: Boolean(params.row.hiddenAt),
-		isDeleted: Boolean(params.row.deletedAt),
-		createdAt: toIsoString({ value: params.row.createdAt }),
-		replies: [],
-	};
 }
 
 export async function listVisibleGroups(params: {
@@ -361,6 +306,8 @@ export async function loadGroup(params: {
 	groupId: string;
 	authUser: AuthUser;
 	instanceViewerRole: ViewerRole;
+	sortMode: PostListSortMode;
+	cursor?: string | null;
 }): Promise<
 	| { status: "not_setup" | "not_found" | "requires_authentication" }
 	| {
@@ -376,7 +323,7 @@ export async function loadGroup(params: {
 			joinState: GroupSummary["joinState"];
 			canPost: boolean;
 			canManage: boolean;
-			posts: GroupPost[];
+			page: PostListPage;
 			pendingRequests: Array<{
 				userId: string;
 				label: string;
@@ -463,43 +410,25 @@ export async function loadGroup(params: {
 			joinState,
 			canPost: false,
 			canManage: false,
-			posts: [],
+			page: {
+				items: [],
+				hasMore: false,
+				sortMode: params.sortMode,
+			},
 			pendingRequests: [],
 			members: [],
 		};
 	}
-
-	const rows = await db.post.findMany({
-		where: {
+	const includeHidden = canManageGroup({ groupRole }).allowed;
+	const page = await loadPostListPage({
+		scope: {
+			kind: "group",
 			instanceId: setup.instance.id,
 			groupId: group.id,
 		},
-		orderBy: { createdAt: "asc" },
-		select: {
-			id: true,
-			parentPostId: true,
-			bodyText: true,
-			moderationStatus: true,
-			hiddenAt: true,
-			deletedAt: true,
-			createdAt: true,
-		},
-	});
-
-	const includeHidden = canManageGroup({ groupRole }).allowed;
-	const posts = rows.filter((row) => {
-		if (includeHidden) {
-			return true;
-		}
-		return (
-			!row.deletedAt && !row.hiddenAt && row.moderationStatus !== "rejected"
-		);
-	});
-
-	const threadedPosts = buildThreadTree({
-		rows: normalizeThreadDepths({ rows: posts }).map((row) =>
-			mapGroupPost({ row }),
-		),
+		sortMode: params.sortMode,
+		cursor: params.cursor,
+		includeHidden,
 	});
 
 	const pendingRequests = canManageGroup({ groupRole }).allowed
@@ -581,7 +510,7 @@ export async function loadGroup(params: {
 		joinState,
 		canPost: canPostToGroup({ groupRole }).allowed,
 		canManage: canManageGroup({ groupRole }).allowed,
-		posts: threadedPosts,
+		page,
 		pendingRequests: pendingRequests.map((request) => ({
 			userId: request.principalId,
 			label: pendingUserById.get(request.principalId) ?? request.principalId,

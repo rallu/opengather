@@ -4,23 +4,22 @@ import {
 	Link,
 	useActionData,
 	useLoaderData,
+	useLocation,
 	useNavigation,
 } from "react-router";
 import { AppShell } from "~/components/app-shell";
-import {
-	PostComposer,
-	PostComposerBody,
-	PostComposerField,
-	PostComposerFooter,
-	PostComposerMedia,
-	PostComposerSurface,
-} from "~/components/post/post-composer";
+import { PostActionItem, PostActions } from "~/components/post/post-actions";
+import { PostComposer } from "~/components/post/post-composer";
 import { PostContent } from "~/components/post/post-content";
-import { ProfileImage } from "~/components/profile/profile-image";
+import {
+	PostListSortToggle,
+	ThreadFeedList,
+} from "~/components/post/thread-feed-list";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Container } from "~/components/ui/container";
+import { ContextBar } from "~/components/ui/context-bar";
 import { FeedContainer } from "~/components/ui/feed-container";
-import { Icon } from "~/components/ui/icon";
-import { IconButton } from "~/components/ui/icon-button";
 import { writeAuditLogSafely } from "~/server/audit-log.service.server";
 import {
 	type CommunityUser,
@@ -28,7 +27,6 @@ import {
 	ensureInstanceMembershipForUser,
 } from "~/server/community.service.server";
 import {
-	type GroupPost,
 	loadGroup,
 	removeGroupMember,
 	requestGroupAccess,
@@ -38,6 +36,10 @@ import {
 } from "~/server/group.service.server";
 import { parseGroupVisibilityMode } from "~/server/group-membership.service.server";
 import { getInstanceViewerRole } from "~/server/permissions.server";
+import {
+	parsePostListSortMode,
+	type PostListItem,
+} from "~/server/post-list.service.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
 
@@ -54,25 +56,15 @@ function toCommunityUser(params: {
 	};
 }
 
-function getInitials(name: string) {
-	return name
-		.split(/\s+/)
-		.filter(Boolean)
-		.slice(0, 2)
-		.map((part) => part[0]?.toUpperCase() ?? "")
-		.join("");
+function getDiscussionLabel(replyCount: number) {
+	if (replyCount === 0) {
+		return "Start discussion";
+	}
+	return replyCount === 1 ? "1 comment" : `${replyCount} comments`;
 }
 
-function countReplies(post: GroupPost): number {
-	return post.replies.reduce(
-		(total, reply) => total + 1 + countReplies(reply),
-		0,
-	);
-}
-
-function GroupFeedItem(params: { post: GroupPost }) {
+function GroupFeedItem(params: { post: PostListItem }) {
 	const { post } = params;
-	const replyCount = countReplies(post);
 	const postRoute = `/posts/${post.id}`;
 
 	return (
@@ -81,36 +73,38 @@ function GroupFeedItem(params: { post: GroupPost }) {
 			data-testid={`group-post-${post.id}`}
 			data-thread-depth={post.threadDepth}
 		>
-			<article
+			<Container
 				id={`post-${post.id}`}
-				className="rounded-lg border border-border p-4"
+				className="rounded-lg border-border/50 bg-card p-4 transition-colors hover:border-primary/12 sm:p-5"
 			>
-				<PostContent
-					createdAt={post.createdAt}
-					moderationStatus={post.moderationStatus}
-					isHidden={post.isHidden}
-					isDeleted={post.isDeleted}
-					actions={[
-						{
-							label: `Comments (${replyCount})`,
-							to: postRoute,
-							testId: `group-comment-action-${post.id}`,
-						},
-						{
-							label: "Reply",
-							to: postRoute,
-							testId: `group-reply-action-${post.id}`,
-						},
-					]}
+				<Link
+					to={postRoute}
+					className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4"
+					data-testid={`group-thread-link-${post.id}`}
 				>
-					<p>{post.bodyText}</p>
-				</PostContent>
-				<div className="mt-4 flex flex-wrap items-center gap-2">
-					<Button variant="outline" asChild>
-						<Link to={postRoute}>Open thread</Link>
-					</Button>
+					<PostContent
+						createdAt={post.createdAt}
+						moderationStatus={post.moderationStatus}
+						isHidden={post.isHidden}
+						isDeleted={post.isDeleted}
+						className="space-y-4"
+					>
+						<p className="text-[15px] leading-8">{post.bodyText}</p>
+					</PostContent>
+				</Link>
+				<div className="mt-4 flex items-center justify-between gap-3 border-t border-border/70 pt-4">
+					<PostActions className="gap-2">
+						<PostActionItem
+							asChild
+							data-testid={`group-comment-action-${post.id}`}
+						>
+							<Link to={postRoute}>
+								{getDiscussionLabel(post.commentCount)}
+							</Link>
+						</PostActionItem>
+					</PostActions>
 				</div>
-			</article>
+			</Container>
 		</div>
 	);
 }
@@ -118,6 +112,8 @@ function GroupFeedItem(params: { post: GroupPost }) {
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const authUser = await getAuthUserFromRequest({ request });
 	const user = toCommunityUser({ authUser });
+	const url = new URL(request.url);
+	const sortMode = parsePostListSortMode(url.searchParams.get("sort"));
 	const groupId = params.groupId ?? "";
 	const setup = await getSetupStatus();
 	if (!setup.isSetup || !setup.instance) {
@@ -125,6 +121,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			status: "not_setup" as const,
 			authUser,
 			viewerRole: "guest" as const,
+			sortMode,
+			apiPath: `/api/post-list?scope=group&groupId=${groupId}&sort=${sortMode}`,
 		};
 	}
 
@@ -146,12 +144,15 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		groupId,
 		authUser,
 		instanceViewerRole: viewerRole,
+		sortMode,
 	});
 
 	return {
 		...result,
 		authUser,
 		viewerRole,
+		sortMode,
+		apiPath: `/api/post-list?scope=group&groupId=${groupId}&sort=${sortMode}`,
 	};
 }
 
@@ -381,8 +382,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
 export default function GroupDetailPage() {
 	const data = useLoaderData<typeof loader>();
 	const actionData = useActionData<typeof action>();
+	const location = useLocation();
 	const navigation = useNavigation();
 	const loading = navigation.state === "submitting";
+	const buildSortHref = (sortMode: "activity" | "newest") =>
+		`${location.pathname}?sort=${sortMode}`;
 	const group =
 		data.status === "ok" ||
 		data.status === "pending_membership" ||
@@ -393,8 +397,6 @@ export default function GroupDetailPage() {
 	return (
 		<AppShell
 			authUser={data.authUser}
-			title={group?.name ?? "Group"}
-			subtitle={group?.description}
 			showServerSettings={data.viewerRole === "admin"}
 		>
 			{actionData && "error" in actionData ? (
@@ -428,28 +430,22 @@ export default function GroupDetailPage() {
 			) : null}
 
 			{group ? (
-				<div className="rounded-lg border border-border p-4 text-sm">
-					<div className="flex flex-wrap items-center justify-between gap-3">
-						<div className="space-y-1">
-							<p className="font-medium" data-testid="group-visibility-mode">
-								{group.visibilityMode}
-							</p>
-							<p className="text-muted-foreground">
-								Group privacy is enforced for posts and search results.
-							</p>
-						</div>
-						<Button variant="outline" asChild>
-							<Link to="/groups">Back to groups</Link>
-						</Button>
-					</div>
-				</div>
+				<ContextBar
+					backTo="/groups"
+					breadcrumbs={[
+						{ label: "Groups", to: "/groups" },
+						{ label: group.name },
+					]}
+					actions={
+						<Badge variant="neutral" data-testid="group-visibility-mode">
+							{group.visibilityMode}
+						</Badge>
+					}
+				/>
 			) : null}
 
 			{data.status === "requires_authentication" ? (
-				<div
-					className="rounded-lg border border-border p-5"
-					data-testid="group-requires-auth-state"
-				>
+				<Container className="p-5" data-testid="group-requires-auth-state">
 					<p className="text-sm text-muted-foreground">
 						Sign in to view or request access to this group.
 					</p>
@@ -461,14 +457,11 @@ export default function GroupDetailPage() {
 							<Link to="/register">Register</Link>
 						</Button>
 					</div>
-				</div>
+				</Container>
 			) : null}
 
 			{data.status === "forbidden" || data.status === "pending_membership" ? (
-				<div
-					className="rounded-lg border border-border p-5"
-					data-testid="group-membership-state"
-				>
+				<Container className="p-5" data-testid="group-membership-state">
 					<p className="text-sm text-muted-foreground">
 						{data.status === "pending_membership"
 							? "Your membership request is still pending approval."
@@ -486,20 +479,19 @@ export default function GroupDetailPage() {
 							</Button>
 						</Form>
 					) : null}
-				</div>
+				</Container>
 			) : null}
 
 			{data.status === "ok" ? (
 				<>
 					{!data.canPost &&
 					(data.joinState === "join" || data.joinState === "request") ? (
-						<section className="rounded-lg border border-border p-4">
-							<h2 className="text-lg font-semibold">Membership</h2>
-							<p className="mt-2 text-sm text-muted-foreground">
+						<Container className="space-y-4 p-4">
+							<p className="text-sm text-muted-foreground">
 								Join this group to post and participate in member-only
 								discussions.
 							</p>
-							<Form method="post" className="mt-4">
+							<Form method="post">
 								<input type="hidden" name="_action" value="request-access" />
 								<Button
 									type="submit"
@@ -509,13 +501,15 @@ export default function GroupDetailPage() {
 									{data.joinState === "join" ? "Join group" : "Request access"}
 								</Button>
 							</Form>
-						</section>
+						</Container>
 					) : null}
 
 					{data.canManage ? (
-						<section className="rounded-lg border border-border p-4">
-							<h2 className="text-lg font-semibold">Group settings</h2>
-							<Form method="post" className="mt-4 flex flex-wrap gap-3">
+						<Container className="space-y-4 p-4">
+							<p className="text-sm text-muted-foreground">
+								Choose who can see this group and who needs explicit access.
+							</p>
+							<Form method="post" className="flex flex-wrap gap-3">
 								<input type="hidden" name="_action" value="update-visibility" />
 								<select
 									name="visibilityMode"
@@ -539,78 +533,27 @@ export default function GroupDetailPage() {
 									Save visibility
 								</Button>
 							</Form>
-						</section>
+						</Container>
 					) : null}
 
 					{data.canPost ? (
-						<section className="rounded-lg border border-border p-4">
-							<h2 className="text-lg font-semibold">Post to group</h2>
-							<Form method="post" className="mt-4">
-								<input type="hidden" name="_action" value="post" />
-								<PostComposer className="items-start">
-									{data.authUser ? (
-										<PostComposerMedia>
-											<ProfileImage
-												alt={data.authUser.name}
-												fallback={getInitials(data.authUser.name)}
-												size="sm"
-											/>
-										</PostComposerMedia>
-									) : null}
-									<PostComposerBody>
-										<PostComposerSurface>
-											<PostComposerField
-												name="bodyText"
-												rows={4}
-												data-testid="group-post-body"
-												placeholder="Share something with the group"
-											/>
-											<PostComposerFooter className="gap-1 px-2 py-1.5">
-												<div className="flex items-center gap-1">
-													<IconButton
-														type="button"
-														variant="ghost"
-														label="Add image"
-														disabled
-													>
-														<Icon name="imagePlus" />
-													</IconButton>
-													<IconButton
-														type="button"
-														variant="ghost"
-														label="Attach file"
-														disabled
-													>
-														<Icon name="paperclip" />
-													</IconButton>
-												</div>
-												<IconButton
-													type="submit"
-													label={loading ? "Posting" : "Post"}
-													disabled={loading}
-													data-testid="group-post-submit"
-												>
-													{loading ? (
-														<Icon
-															name="loaderCircle"
-															className="animate-spin"
-														/>
-													) : (
-														<Icon name="sendHorizontal" />
-													)}
-												</IconButton>
-											</PostComposerFooter>
-										</PostComposerSurface>
-									</PostComposerBody>
-								</PostComposer>
-							</Form>
-						</section>
+						<Form method="post">
+							<input type="hidden" name="_action" value="post" />
+							<PostComposer
+								name="bodyText"
+								rows={4}
+								textareaTestId="group-post-body"
+								placeholder="Share something with the group"
+								loading={loading}
+								disabled={loading}
+								submitTestId="group-post-submit"
+							/>
+						</Form>
 					) : null}
 
 					{data.pendingRequests.length > 0 ? (
-						<section className="rounded-lg border border-border p-4">
-							<h2 className="text-lg font-semibold">Pending requests</h2>
-							<div className="mt-4 space-y-3" data-testid="group-pending-list">
+						<Container className="p-4">
+							<div className="space-y-3" data-testid="group-pending-list">
 								{data.pendingRequests.map((request) => (
 									<div
 										key={request.userId}
@@ -669,13 +612,12 @@ export default function GroupDetailPage() {
 									</div>
 								))}
 							</div>
-						</section>
+						</Container>
 					) : null}
 
 					{data.canManage ? (
-						<section className="rounded-lg border border-border p-4">
-							<h2 className="text-lg font-semibold">Members</h2>
-							<div className="mt-4 space-y-3" data-testid="group-member-list">
+						<Container className="p-4">
+							<div className="space-y-3" data-testid="group-member-list">
 								{data.members.map((member) => (
 									<div
 										key={member.userId}
@@ -748,21 +690,31 @@ export default function GroupDetailPage() {
 									</div>
 								))}
 							</div>
-						</section>
+						</Container>
 					) : null}
 
 					<FeedContainer>
-						<section className="space-y-4" data-testid="group-post-list">
-							{data.posts.length === 0 ? (
+						<div className="mb-4 flex justify-end">
+							<PostListSortToggle
+								sortMode={data.sortMode}
+								buildHref={buildSortHref}
+								prefix="group"
+							/>
+						</div>
+						<ThreadFeedList
+							key={`${location.pathname}-${data.sortMode}`}
+							initialPage={data.page}
+							apiPath={data.apiPath}
+							listTestId="group-post-list"
+							sentinelTestId="group-post-list-sentinel"
+							loadingTestId="group-post-list-loading"
+							emptyState={
 								<div className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
 									No posts in this group yet.
 								</div>
-							) : (
-								data.posts.map((post) => (
-									<GroupFeedItem key={post.id} post={post} />
-								))
-							)}
-						</section>
+							}
+							renderItem={(post) => <GroupFeedItem key={post.id} post={post} />}
+						/>
 					</FeedContainer>
 				</>
 			) : null}

@@ -6,6 +6,6 @@ type FeedContainerProps = React.HTMLAttributes<HTMLDivElement>;
 
 export function FeedContainer({ className, ...props }: FeedContainerProps) {
 	return (
-		<div className={cn("mx-auto w-full max-w-[600px]", className)} {...props} />
+		<div className={cn("mx-auto w-full max-w-[680px]", className)} {...props} />
 	);
 }

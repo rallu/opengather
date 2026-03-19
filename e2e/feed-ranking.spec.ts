@@ -1,0 +1,366 @@
+import { randomUUID } from "node:crypto";
+import { expect, test } from "@playwright/test";
+import { Client } from "pg";
+
+test.describe.configure({ mode: "serial" });
+
+const databaseUrl =
+	process.env.DATABASE_URL ??
+	"postgres://opengather:opengather@127.0.0.1:5433/opengather";
+
+type ConfigSnapshot = {
+	serverVisibilityMode: string;
+	serverApprovalMode: string;
+};
+
+async function withDb<T>(callback: (client: Client) => Promise<T>): Promise<T> {
+	const client = new Client({
+		connectionString: databaseUrl,
+	});
+	await client.connect();
+	try {
+		return await callback(client);
+	} finally {
+		await client.end();
+	}
+}
+
+async function isSetupRequired(
+	page: import("@playwright/test").Page,
+): Promise<boolean> {
+	await page.goto("/");
+	return page
+		.getByTestId("home-run-setup-link")
+		.isVisible()
+		.catch(() => false);
+}
+
+async function ensureConfiguredInstance(
+	page: import("@playwright/test").Page,
+): Promise<void> {
+	const setupRequired = await isSetupRequired(page);
+	if (!setupRequired) {
+		return;
+	}
+
+	await page.goto("/setup");
+	await page.getByTestId("setup-name").fill("OpenGather Local");
+	await page.getByTestId("setup-description").fill("Local test instance");
+	await page.getByTestId("setup-admin-name").fill("Admin User");
+	await page.getByTestId("setup-admin-email").fill("admin@example.com");
+	await page.getByTestId("setup-admin-password").fill("admin-pass-123");
+	await page.getByTestId("setup-submit").click();
+	await expect(page).toHaveURL(/\/$|\/feed$/);
+}
+
+async function ensureAdminSession(
+	page: import("@playwright/test").Page,
+): Promise<void> {
+	await ensureConfiguredInstance(page);
+	await page.goto("/feed");
+	const alreadySignedIn = await page
+		.getByTestId("shell-sign-out")
+		.isVisible()
+		.catch(() => false);
+	if (alreadySignedIn) {
+		return;
+	}
+
+	await page.goto("/login");
+	await page.getByTestId("login-email").fill("admin@example.com");
+	await page.getByTestId("login-password").fill("admin-pass-123");
+	await page.getByTestId("login-submit").click();
+	await expect(page.getByTestId("shell-sign-out")).toBeVisible();
+}
+
+async function readCommunityConfig(): Promise<ConfigSnapshot> {
+	return withDb(async (client) => {
+		const result = await client.query<{ key: string; value: string }>(
+			`
+				select key, value #>> '{}' as value
+				from config
+				where key in ('server_visibility_mode', 'server_approval_mode')
+			`,
+		);
+		const values = new Map(result.rows.map((row) => [row.key, row.value]));
+		return {
+			serverVisibilityMode: values.get("server_visibility_mode") ?? "public",
+			serverApprovalMode: values.get("server_approval_mode") ?? "automatic",
+		};
+	});
+}
+
+async function updateConfig(key: string, value: string): Promise<void> {
+	await withDb(async (client) => {
+		await client.query(
+			"update config set value = $2::jsonb, updated_at = now() where key = $1",
+			[key, JSON.stringify(value)],
+		);
+	});
+}
+
+async function insertPost(params: {
+	bodyText: string;
+	createdAt: Date;
+	parentPostId?: string;
+	groupId?: string;
+	authorId?: string;
+}): Promise<string> {
+	const postId = randomUUID();
+	await withDb(async (client) => {
+		await client.query(
+			`
+				insert into post (
+					id,
+					instance_id,
+					author_id,
+					author_type,
+					group_id,
+					parent_post_id,
+					content_type,
+					body_text,
+					moderation_status,
+					hidden_at,
+					deleted_at,
+					created_at,
+					updated_at
+				)
+				values ($1, 'singleton', $2, 'user', $3, $4, 'text', $5, 'approved', null, null, $6, $6)
+			`,
+			[
+				postId,
+				params.authorId ?? randomUUID(),
+				params.groupId ?? null,
+				params.parentPostId ?? null,
+				params.bodyText,
+				params.createdAt,
+			],
+		);
+	});
+	return postId;
+}
+
+async function createPublicGroup(name: string): Promise<string> {
+	const groupId = randomUUID();
+	await withDb(async (client) => {
+		await client.query(
+			`
+				insert into community_group (
+					id,
+					instance_id,
+					name,
+					description,
+					visibility_mode,
+					created_at,
+					updated_at
+				)
+				values ($1, 'singleton', $2, 'Ranking test group', 'public', now(), now())
+			`,
+			[groupId, name],
+		);
+	});
+	return groupId;
+}
+
+async function getListIndex(params: {
+	page: import("@playwright/test").Page;
+	listTestId: string;
+	itemPrefix: string;
+	match: string;
+}) {
+	return params.page
+		.locator(`[data-testid="${params.listTestId}"] > [data-testid^="${params.itemPrefix}"]`)
+		.evaluateAll((elements, needle) =>
+			elements.findIndex((element) =>
+				(element.textContent ?? "").includes(String(needle)),
+			),
+		, params.match);
+}
+
+test.describe("thread-aware feed ranking", () => {
+	let snapshot: ConfigSnapshot;
+
+	test.beforeAll(async () => {
+		snapshot = await readCommunityConfig();
+	});
+
+	test.afterAll(async () => {
+		await updateConfig("server_visibility_mode", snapshot.serverVisibilityMode);
+		await updateConfig("server_approval_mode", snapshot.serverApprovalMode);
+	});
+
+	test("new root posts appear first in feed and group views", async ({ page }) => {
+		await ensureAdminSession(page);
+		await updateConfig("server_visibility_mode", "public");
+		await updateConfig("server_approval_mode", "automatic");
+
+		const now = Date.now();
+		const olderFeedBody = `older-feed-thread-${now}`;
+		await insertPost({
+			bodyText: olderFeedBody,
+			createdAt: new Date("2026-03-10T09:00:00.000Z"),
+		});
+
+		await page.goto("/feed?sort=newest");
+		const newFeedBody = `fresh-feed-thread-${now}`;
+		await page.getByTestId("feed-composer").fill(newFeedBody);
+		await page.getByTestId("feed-post-button").click();
+		await expect(page.getByTestId("feed-post-list")).toContainText(newFeedBody);
+
+		const newFeedIndex = await getListIndex({
+			page,
+			listTestId: "feed-post-list",
+			itemPrefix: "feed-post-",
+			match: newFeedBody,
+		});
+		const oldFeedIndex = await getListIndex({
+			page,
+			listTestId: "feed-post-list",
+			itemPrefix: "feed-post-",
+			match: olderFeedBody,
+		});
+		expect(newFeedIndex).toBeGreaterThanOrEqual(0);
+		expect(oldFeedIndex).toBeGreaterThan(newFeedIndex);
+
+		await page.goto("/groups");
+		await page.getByTestId("groups-create-name").fill(`Rank Group ${now}`);
+		await page
+			.getByTestId("groups-create-description")
+			.fill("Group for thread ranking");
+		await page.getByTestId("groups-create-visibility").selectOption("public");
+		await page.getByTestId("groups-create-submit").click();
+		await expect(page).toHaveURL(/\/groups\/.+$/);
+		const groupUrl = page.url();
+		const groupId = groupUrl.split("/groups/")[1] ?? "";
+
+		const olderGroupBody = `older-group-thread-${now}`;
+		await insertPost({
+			bodyText: olderGroupBody,
+			groupId,
+			createdAt: new Date("2026-03-10T10:00:00.000Z"),
+		});
+
+		await page.goto(`${groupUrl}?sort=newest`);
+		const newGroupBody = `fresh-group-thread-${now}`;
+		await page.getByTestId("group-post-body").fill(newGroupBody);
+		await page.getByTestId("group-post-submit").click();
+		await expect(page.getByTestId("group-post-list")).toContainText(newGroupBody);
+
+		const newGroupIndex = await getListIndex({
+			page,
+			listTestId: "group-post-list",
+			itemPrefix: "group-post-",
+			match: newGroupBody,
+		});
+		const oldGroupIndex = await getListIndex({
+			page,
+			listTestId: "group-post-list",
+			itemPrefix: "group-post-",
+			match: olderGroupBody,
+		});
+		expect(newGroupIndex).toBeGreaterThanOrEqual(0);
+		expect(oldGroupIndex).toBeGreaterThan(newGroupIndex);
+	});
+
+	test("activity mode bumps replied threads while newest keeps root chronology", async ({
+		page,
+	}) => {
+		await ensureConfiguredInstance(page);
+		await updateConfig("server_visibility_mode", "public");
+		await updateConfig("server_approval_mode", "automatic");
+
+		const now = Date.now();
+		const activeRootBody = `activity-root-${now}`;
+		const newerRootBody = `newest-root-${now}`;
+		const activeRootId = await insertPost({
+			bodyText: activeRootBody,
+			createdAt: new Date("2026-03-10T08:00:00.000Z"),
+		});
+		await insertPost({
+			bodyText: newerRootBody,
+			createdAt: new Date("2026-03-11T08:00:00.000Z"),
+		});
+		await insertPost({
+			bodyText: `activity-reply-${now}`,
+			parentPostId: activeRootId,
+			createdAt: new Date("2026-03-12T08:00:00.000Z"),
+		});
+
+		await page.goto("/feed");
+		const activityIndex = await getListIndex({
+			page,
+			listTestId: "feed-post-list",
+			itemPrefix: "feed-post-",
+			match: activeRootBody,
+		});
+		const newerIndexInActivity = await getListIndex({
+			page,
+			listTestId: "feed-post-list",
+			itemPrefix: "feed-post-",
+			match: newerRootBody,
+		});
+		expect(activityIndex).toBeGreaterThanOrEqual(0);
+		expect(newerIndexInActivity).toBeGreaterThan(activityIndex);
+
+		await page.getByTestId("feed-sort-newest").click();
+		await expect(page).toHaveURL(/sort=newest/);
+
+		const activityIndexInNewest = await getListIndex({
+			page,
+			listTestId: "feed-post-list",
+			itemPrefix: "feed-post-",
+			match: activeRootBody,
+		});
+		const newerIndex = await getListIndex({
+			page,
+			listTestId: "feed-post-list",
+			itemPrefix: "feed-post-",
+			match: newerRootBody,
+		});
+		expect(newerIndex).toBeGreaterThanOrEqual(0);
+		expect(activityIndexInNewest).toBeGreaterThan(newerIndex);
+	});
+
+	test("feed and group views append more threads after the first 10", async ({
+		page,
+	}) => {
+		await ensureConfiguredInstance(page);
+		await updateConfig("server_visibility_mode", "public");
+		await updateConfig("server_approval_mode", "automatic");
+
+		const now = Date.now();
+		const feedPrefix = `feed-scroll-${now}`;
+		for (let index = 0; index < 12; index += 1) {
+			await insertPost({
+				bodyText: `${feedPrefix}-${index}`,
+				createdAt: new Date(`2026-03-13T${String(index).padStart(2, "0")}:00:00.000Z`),
+			});
+		}
+
+		await page.goto("/feed?sort=newest");
+		const feedItems = page
+			.locator('[data-testid="feed-post-list"] > [data-testid^="feed-post-"]')
+			.filter({ hasText: feedPrefix });
+		await expect(feedItems).toHaveCount(10);
+		await page.getByTestId("feed-post-list-sentinel").scrollIntoViewIfNeeded();
+		await expect(feedItems).toHaveCount(12);
+
+		const groupId = await createPublicGroup(`Scroll Group ${now}`);
+		const groupPrefix = `group-scroll-${now}`;
+		for (let index = 0; index < 12; index += 1) {
+			await insertPost({
+				bodyText: `${groupPrefix}-${index}`,
+				groupId,
+				createdAt: new Date(`2026-03-14T${String(index).padStart(2, "0")}:00:00.000Z`),
+			});
+		}
+
+		await page.goto(`/groups/${groupId}?sort=newest`);
+		const groupItems = page
+			.locator('[data-testid="group-post-list"] > [data-testid^="group-post-"]')
+			.filter({ hasText: groupPrefix });
+		await expect(groupItems).toHaveCount(10);
+		await page.getByTestId("group-post-list-sentinel").scrollIntoViewIfNeeded();
+		await expect(groupItems).toHaveCount(12);
+	});
+});
