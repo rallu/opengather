@@ -4,6 +4,7 @@ import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
 import { writeAuditLogSafely } from "~/server/audit-log.service.server";
 import { getServerConfig, setConfig } from "~/server/config.service.server";
+import { getAppEnv } from "~/server/env.server.ts";
 import {
 	getHubIdentityForLocalUser,
 	linkHubInstanceForUser,
@@ -14,6 +15,7 @@ import {
 	canManageInstance,
 	getViewerContext as getPermissionsViewerContext,
 } from "~/server/permissions.server";
+import { getPublicOrigin } from "~/server/request-origin.server.ts";
 
 async function resolveViewerRole(params: { request: Request }): Promise<{
 	authUser: Awaited<ReturnType<typeof getPermissionsViewerContext>>["authUser"];
@@ -38,7 +40,7 @@ export async function action({ request }: ActionFunctionArgs) {
 		const formData = await request.formData();
 		const actionType = String(formData.get("_action") ?? "save-hub");
 		const hubEnabled = String(formData.get("hubEnabled") ?? "") === "on";
-		const appOrigin = new URL(request.url).origin;
+		const appOrigin = getPublicOrigin(request);
 		const currentConfig = await getServerConfig();
 
 		if (actionType === "save-media") {
@@ -48,7 +50,7 @@ export async function action({ request }: ActionFunctionArgs) {
 					: "local";
 			const mediaLocalRoot =
 				String(formData.get("mediaLocalRoot") ?? "").trim() ||
-				"./storage/media";
+				getAppEnv().MEDIA_LOCAL_ROOT;
 			await Promise.all([
 				setConfig("media_storage_driver", mediaStorageDriver),
 				setConfig("media_local_root", mediaLocalRoot),

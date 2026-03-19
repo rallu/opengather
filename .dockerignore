@@ -1,0 +1,12 @@
+.git
+.github
+.react-router
+build
+coverage
+node_modules
+storage
+test-results
+*.log
+.env
+.env.local
+.env.*.local

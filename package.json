@@ -7,6 +7,7 @@
 		"build": "react-router build",
 		"dev": "npm run prisma:sync && react-router dev",
 		"start": "npm run prisma:sync && react-router-serve ./build/server/index.js",
+		"start:server": "react-router-serve ./build/server/index.js",
 		"worker:media": "node --experimental-strip-types scripts/media-worker.ts",
 		"typecheck": "react-router typegen && tsc --noEmit",
 		"lint": "npm run typecheck && npm run biome:check",

@@ -30,6 +30,10 @@ nvm use
    ```
 5. Open http://localhost:5173
 
+Chrome DevTools automatic workspaces are available in local development at
+`/.well-known/appspecific/com.chrome.devtools.json`, so DevTools can offer a
+workspace connection for this app when you open it on `localhost`.
+
 ## E2E Tests (Playwright)
 
 ```bash
@@ -134,3 +138,29 @@ curl -fsS http://localhost:5173/debug/error-monitoring
 ## Deployment
 
 Deploy the Node build output from `build/server/index.js` with the environment variables used in local development.
+
+## ONCE Deployment
+
+This app now includes an ONCE-compatible image:
+
+- serves HTTP on port `80`
+- exposes a health endpoint at `GET /up`
+- stores mutable data under `/storage`
+- boots an internal Postgres instance automatically when `DATABASE_URL` is not set
+
+Build and run it locally:
+
+```bash
+docker build -t opengather-once .
+docker run --rm -p 8080:80 -v opengather-storage:/storage opengather-once
+```
+
+Optional environment variables for the ONCE image:
+
+- `SECRET_KEY_BASE` or `BETTER_AUTH_SECRET` for auth signing
+- `INTERNAL_POSTGRES_DB`
+- `INTERNAL_POSTGRES_USER`
+- `INTERNAL_POSTGRES_PASSWORD`
+- `HUB_BASE_URL` if you want Hub integration enabled during setup
+
+The setup flow uses forwarded headers and `APP_BASE_URL` when present so reverse-proxied installs can persist the public HTTPS origin correctly.

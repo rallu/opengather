@@ -34,6 +34,9 @@ type Pages = {
   "/api/post-list": {
     params: {};
   };
+  "/.well-known/appspecific/com.chrome.devtools.json": {
+    params: {};
+  };
   "/media/:assetId/:variantKey": {
     params: {
       "assetId": string;
@@ -41,6 +44,9 @@ type Pages = {
     };
   };
   "/metrics": {
+    params: {};
+  };
+  "/up": {
     params: {};
   };
   "/debug/error-monitoring": {
@@ -99,7 +105,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/api/post-list" | "/media/:assetId/:variantKey" | "/metrics" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles/:userId" | "/notifications" | "/settings" | "/server-settings" | "/audit-logs";
+    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/api/post-list" | "/.well-known/appspecific/com.chrome.devtools.json" | "/media/:assetId/:variantKey" | "/metrics" | "/up" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles/:userId" | "/notifications" | "/settings" | "/server-settings" | "/audit-logs";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -129,6 +135,10 @@ type RouteFiles = {
     id: "routes/api-post-list";
     page: "/api/post-list";
   };
+  "routes/chrome-devtools-workspace.ts": {
+    id: "routes/chrome-devtools-workspace";
+    page: "/.well-known/appspecific/com.chrome.devtools.json";
+  };
   "routes/media-asset.ts": {
     id: "routes/media-asset";
     page: "/media/:assetId/:variantKey";
@@ -136,6 +146,10 @@ type RouteFiles = {
   "routes/metrics.tsx": {
     id: "routes/metrics";
     page: "/metrics";
+  };
+  "routes/up.ts": {
+    id: "routes/up";
+    page: "/up";
   };
   "routes/debug-error-monitoring.tsx": {
     id: "routes/debug-error-monitoring";
@@ -208,8 +222,10 @@ type RouteModules = {
   "routes/hub-callback": typeof import("./app/routes/hub-callback.tsx");
   "routes/api-auth": typeof import("./app/routes/api-auth.ts");
   "routes/api-post-list": typeof import("./app/routes/api-post-list.tsx");
+  "routes/chrome-devtools-workspace": typeof import("./app/routes/chrome-devtools-workspace.ts");
   "routes/media-asset": typeof import("./app/routes/media-asset.ts");
   "routes/metrics": typeof import("./app/routes/metrics.tsx");
+  "routes/up": typeof import("./app/routes/up.ts");
   "routes/debug-error-monitoring": typeof import("./app/routes/debug-error-monitoring.tsx");
   "routes/setup": typeof import("./app/routes/setup.tsx");
   "routes/database-required": typeof import("./app/routes/database-required.tsx");

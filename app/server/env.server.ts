@@ -1,3 +1,5 @@
+import path from "node:path";
+
 export type DatabaseEnv = {
 	DATABASE_URL: string;
 };
@@ -10,7 +12,15 @@ export type AuthEnv = {
 	BETTER_AUTH_SECRET: string;
 };
 
-type RuntimeEnv = Partial<DatabaseEnv & HubEnv & AuthEnv>;
+export type AppEnv = {
+	APP_BASE_URL: string;
+	DISABLE_SSL: string;
+	MEDIA_LOCAL_ROOT: string;
+	SECRET_KEY_BASE: string;
+	STORAGE_ROOT: string;
+};
+
+type RuntimeEnv = Partial<DatabaseEnv & HubEnv & AuthEnv & AppEnv>;
 
 const runtimeEnvSymbol = Symbol.for("opengather.runtime.env");
 
@@ -55,13 +65,31 @@ export function getHubEnv(): HubEnv {
 
 export function getAuthEnv(): AuthEnv {
 	return {
-		BETTER_AUTH_SECRET: getRuntimeEnvValue(
-			"BETTER_AUTH_SECRET",
+		BETTER_AUTH_SECRET:
+			getRuntimeEnvValue("BETTER_AUTH_SECRET", "") ||
+			getRuntimeEnvValue("SECRET_KEY_BASE", "") ||
 			"opengather-dev-secret",
-		),
 	};
 }
 
 export function hasDatabaseConfig(): boolean {
 	return Boolean(getDatabaseEnv().DATABASE_URL);
+}
+
+export function getAppEnv(): AppEnv {
+	const storageRoot = getRuntimeEnvValue("STORAGE_ROOT", "");
+	return {
+		APP_BASE_URL: getRuntimeEnvValue("APP_BASE_URL", ""),
+		DISABLE_SSL: getRuntimeEnvValue("DISABLE_SSL", ""),
+		MEDIA_LOCAL_ROOT:
+			getRuntimeEnvValue("MEDIA_LOCAL_ROOT", "") ||
+			(storageRoot ? path.posix.join(storageRoot, "media") : "./storage/media"),
+		SECRET_KEY_BASE: getRuntimeEnvValue("SECRET_KEY_BASE", ""),
+		STORAGE_ROOT: storageRoot || "./storage",
+	};
+}
+
+export function isSslDisabled(): boolean {
+	const value = getAppEnv().DISABLE_SSL.trim().toLowerCase();
+	return value === "1" || value === "true" || value === "yes";
 }

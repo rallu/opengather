@@ -15,6 +15,7 @@ import {
 	getRequestId,
 	logError,
 } from "~/server/logger.server";
+import { getPublicOrigin } from "~/server/request-origin.server.ts";
 import { getSetupStatus, initializeSetup } from "~/server/setup.service.server";
 
 export async function loader() {
@@ -39,8 +40,7 @@ export async function action({ request }: ActionFunctionArgs) {
 		return redirect("/database-required");
 	}
 
-	const requestUrl = new URL(request.url);
-	const appOrigin = requestUrl.origin;
+	const appOrigin = getPublicOrigin(request);
 
 	const formData = await request.formData();
 	const name = String(formData.get("name") ?? "").trim();

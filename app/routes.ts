@@ -30,12 +30,20 @@ const routes: RouteConfig = [
 		file: "routes/api-post-list.tsx",
 	},
 	{
+		path: "/.well-known/appspecific/com.chrome.devtools.json",
+		file: "routes/chrome-devtools-workspace.ts",
+	},
+	{
 		path: "/media/:assetId/:variantKey",
 		file: "routes/media-asset.ts",
 	},
 	{
 		path: "/metrics",
 		file: "routes/metrics.tsx",
+	},
+	{
+		path: "/up",
+		file: "routes/up.ts",
 	},
 	{
 		path: "/debug/error-monitoring",

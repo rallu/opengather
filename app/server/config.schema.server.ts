@@ -1,3 +1,5 @@
+import { getAppEnv, getHubEnv } from "./env.server.ts";
+
 export type ConfigValueByKey = {
 	better_auth_url: string;
 	google_client_id: string;
@@ -49,6 +51,11 @@ const approvalModes = new Set<ConfigValueByKey["server_approval_mode"]>([
 const mediaStorageDrivers = new Set<ConfigValueByKey["media_storage_driver"]>([
 	"local",
 ]);
+
+const appEnv = getAppEnv();
+const hubEnv = getHubEnv();
+const defaultAppBaseUrl = appEnv.APP_BASE_URL || "http://localhost:5173";
+const defaultHubOidcDiscoveryUrl = `${hubEnv.HUB_BASE_URL.replace(/\/+$/, "")}/api/auth/.well-known/openid-configuration`;
 
 function parseString(raw: unknown, fallback = ""): string {
 	return typeof raw === "string" ? raw : fallback;
@@ -115,8 +122,8 @@ function parseAiSettings(raw: unknown): ConfigValueByKey["ai_settings"] {
 
 export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
 	better_auth_url: {
-		defaultValue: "http://localhost:5173",
-		parse: (raw) => parseString(raw, "http://localhost:5173"),
+		defaultValue: defaultAppBaseUrl,
+		parse: (raw) => parseString(raw, defaultAppBaseUrl),
 	},
 	google_client_id: {
 		defaultValue: "",
@@ -131,13 +138,8 @@ export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
 		parse: (raw) => parseBoolean(raw, false),
 	},
 	hub_oidc_discovery_url: {
-		defaultValue:
-			"http://localhost:9000/api/auth/.well-known/openid-configuration",
-		parse: (raw) =>
-			parseString(
-				raw,
-				"http://localhost:9000/api/auth/.well-known/openid-configuration",
-			),
+		defaultValue: defaultHubOidcDiscoveryUrl,
+		parse: (raw) => parseString(raw, defaultHubOidcDiscoveryUrl),
 	},
 	hub_client_id: {
 		defaultValue: "",
@@ -148,17 +150,17 @@ export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
 		parse: (raw) => parseString(raw),
 	},
 	hub_redirect_uri: {
-		defaultValue: "http://localhost:5173/api/auth/oauth2/callback/hub",
+		defaultValue: `${defaultAppBaseUrl}/api/auth/oauth2/callback/hub`,
 		parse: (raw) =>
-			parseString(raw, "http://localhost:5173/api/auth/oauth2/callback/hub"),
+			parseString(raw, `${defaultAppBaseUrl}/api/auth/oauth2/callback/hub`),
 	},
 	hub_instance_name: {
 		defaultValue: "OpenGather Instance",
 		parse: (raw) => parseString(raw, "OpenGather Instance"),
 	},
 	hub_instance_base_url: {
-		defaultValue: "http://localhost:5173",
-		parse: (raw) => parseString(raw, "http://localhost:5173"),
+		defaultValue: defaultAppBaseUrl,
+		parse: (raw) => parseString(raw, defaultAppBaseUrl),
 	},
 	server_name: {
 		defaultValue: "OpenGather",
@@ -181,8 +183,8 @@ export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
 		parse: (raw) => parseMediaStorageDriver(raw),
 	},
 	media_local_root: {
-		defaultValue: "./storage/media",
-		parse: (raw) => parseString(raw, "./storage/media"),
+		defaultValue: appEnv.MEDIA_LOCAL_ROOT,
+		parse: (raw) => parseString(raw, appEnv.MEDIA_LOCAL_ROOT),
 	},
 	setup_completed: {
 		defaultValue: false,
