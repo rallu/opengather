@@ -8,6 +8,7 @@ import {
 } from "./config.schema.server.ts";
 import { getDb } from "./db.server.ts";
 import { getHubEnv } from "./env.server.ts";
+import { hasHubBaseUrl, resolveHubBaseUrl } from "./hub-config.server.ts";
 
 export async function initializeConfigDefaults(): Promise<void> {
 	const db = getDb();
@@ -87,6 +88,7 @@ export async function getServerConfig(): Promise<{
 	betterAuthUrl: string;
 	googleClientId: string;
 	googleClientSecret: string;
+	hubAvailable: boolean;
 	hubEnabled: boolean;
 	hubBaseUrl: string;
 	hubOidcDiscoveryUrl: string;
@@ -127,13 +129,19 @@ export async function getServerConfig(): Promise<{
 	]);
 
 	const hubEnv = getHubEnv();
+	const hubAvailable = hasHubBaseUrl(hubEnv.HUB_BASE_URL);
+	const hubBaseUrl = resolveHubBaseUrl({
+		envBaseUrl: hubEnv.HUB_BASE_URL,
+		discoveryUrl: hubOidcDiscoveryUrl,
+	});
 
 	return {
 		betterAuthUrl,
 		googleClientId,
 		googleClientSecret,
+		hubAvailable,
 		hubEnabled,
-		hubBaseUrl: hubEnv.HUB_BASE_URL,
+		hubBaseUrl,
 		hubOidcDiscoveryUrl,
 		hubClientId,
 		hubClientSecret,

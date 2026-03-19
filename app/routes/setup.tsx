@@ -4,10 +4,14 @@ import {
 	Link,
 	redirect,
 	useActionData,
+	useLoaderData,
 	useNavigation,
 } from "react-router";
 import { Button } from "~/components/ui/button";
-import { hasDatabaseConfig } from "~/server/env.server";
+import {
+	hasDatabaseConfig,
+	hasHubBaseUrlConfigured,
+} from "~/server/env.server";
 import { captureMonitoredError } from "~/server/error-monitoring.server";
 import { registerInstanceWithHub } from "~/server/hub.service.server";
 import {
@@ -31,7 +35,9 @@ export async function loader() {
 	} catch {
 		// Keep setup UI accessible when DB is not reachable.
 	}
-	return null;
+	return {
+		hubAvailable: hasHubBaseUrlConfigured(),
+	};
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -57,7 +63,9 @@ export async function action({ request }: ActionFunctionArgs) {
 	const approvalMode = (formData.get("approvalMode") ?? "automatic") as
 		| "automatic"
 		| "manual";
-	const hubEnabled = String(formData.get("hubEnabled") ?? "") === "on";
+	const hubEnabled =
+		hasHubBaseUrlConfigured() &&
+		String(formData.get("hubEnabled") ?? "") === "on";
 
 	if (!name || !adminName || !adminEmail || !adminPassword) {
 		return {
@@ -126,6 +134,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function SetupWizard() {
+	const data = useLoaderData<typeof loader>();
 	const actionData = useActionData<typeof action>();
 	const navigation = useNavigation();
 	const loading = navigation.state === "submitting";
@@ -267,23 +276,25 @@ export default function SetupWizard() {
 					</div>
 				</div>
 
-				<div className="rounded-md border border-border p-4">
-					<h2 className="mb-3 text-base font-semibold">Connect to Hub</h2>
-					<div className="space-y-4">
-						<label className="flex items-center gap-2 text-sm font-medium">
-							<input
-								name="hubEnabled"
-								type="checkbox"
-								data-testid="setup-hub-enabled"
-							/>
-							Enable Hub connection
-						</label>
-						<p className="text-sm text-muted-foreground">
-							When enabled, this server auto-registers against Hub using
-							environment configuration and stores returned OAuth credentials.
-						</p>
+				{data.hubAvailable ? (
+					<div className="rounded-md border border-border p-4">
+						<h2 className="mb-3 text-base font-semibold">Connect to Hub</h2>
+						<div className="space-y-4">
+							<label className="flex items-center gap-2 text-sm font-medium">
+								<input
+									name="hubEnabled"
+									type="checkbox"
+									data-testid="setup-hub-enabled"
+								/>
+								Enable Hub connection
+							</label>
+							<p className="text-sm text-muted-foreground">
+								When enabled, this server auto-registers against Hub using
+								environment configuration and stores returned OAuth credentials.
+							</p>
+						</div>
 					</div>
-				</div>
+				) : null}
 
 				<div className="flex gap-3">
 					<Button type="submit" disabled={loading} data-testid="setup-submit">

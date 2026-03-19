@@ -1,4 +1,5 @@
 import { getAppEnv, getHubEnv } from "./env.server.ts";
+import { buildHubOidcDiscoveryUrl } from "./hub-config.server.ts";
 
 export type ConfigValueByKey = {
 	better_auth_url: string;
@@ -55,7 +56,9 @@ const mediaStorageDrivers = new Set<ConfigValueByKey["media_storage_driver"]>([
 const appEnv = getAppEnv();
 const hubEnv = getHubEnv();
 const defaultAppBaseUrl = appEnv.APP_BASE_URL || "http://localhost:5173";
-const defaultHubOidcDiscoveryUrl = `${hubEnv.HUB_BASE_URL.replace(/\/+$/, "")}/api/auth/.well-known/openid-configuration`;
+const defaultHubOidcDiscoveryUrl = buildHubOidcDiscoveryUrl(
+	hubEnv.HUB_BASE_URL,
+);
 
 function parseString(raw: unknown, fallback = ""): string {
 	return typeof raw === "string" ? raw : fallback;

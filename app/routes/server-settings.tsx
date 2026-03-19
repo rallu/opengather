@@ -11,6 +11,7 @@ import {
 	registerInstanceWithHub,
 	unregisterInstanceFromHub,
 } from "~/server/hub.service.server";
+import { isHubUiEnabled } from "~/server/hub-config.server.ts";
 import {
 	canManageInstance,
 	getViewerContext as getPermissionsViewerContext,
@@ -170,9 +171,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			authProviders: {
 				emailPassword: true,
 				google: Boolean(config.googleClientId && config.googleClientSecret),
-				hub: Boolean(
-					config.hubEnabled && config.hubClientId && config.hubClientSecret,
-				),
+				hub: isHubUiEnabled({
+					hubAvailable: config.hubAvailable,
+					hubEnabled: config.hubEnabled,
+					hubClientId: config.hubClientId,
+					hubClientSecret: config.hubClientSecret,
+				}),
 			},
 			hubConfig: config,
 		};
@@ -269,12 +273,18 @@ export default function ServerSettingsPage() {
 			</section>
 
 			<section className="rounded-md border border-border p-4">
-				<div className="grid gap-3 sm:grid-cols-3">
-					<AuthProviderTile
-						label="Hub"
-						enabled={data.authProviders.hub}
-						description="Recommended identity provider"
-					/>
+				<div
+					className={`grid gap-3 ${
+						data.hubConfig?.hubAvailable ? "sm:grid-cols-3" : "sm:grid-cols-2"
+					}`}
+				>
+					{data.hubConfig?.hubAvailable ? (
+						<AuthProviderTile
+							label="Hub"
+							enabled={data.authProviders.hub}
+							description="Recommended identity provider"
+						/>
+					) : null}
 					<AuthProviderTile
 						label="Email + Password"
 						enabled={data.authProviders.emailPassword}
@@ -288,55 +298,57 @@ export default function ServerSettingsPage() {
 				</div>
 			</section>
 
-			<section className="rounded-md border border-border p-4">
-				<h2 className="mb-3 text-base font-semibold">Hub Connection</h2>
-				{actionData && "error" in actionData ? (
-					<div className="mb-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-						{actionData.error}
-					</div>
-				) : null}
-				{actionData && "ok" in actionData ? (
-					<div className="mb-3 rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700">
-						Saved.
-					</div>
-				) : null}
-				<Form method="post" className="space-y-4">
-					<input type="hidden" name="_action" value="save-hub" />
-					<label className="flex items-center gap-2 text-sm font-medium">
-						<input
-							name="hubEnabled"
-							type="checkbox"
-							defaultChecked={Boolean(data.hubConfig?.hubEnabled)}
-						/>
-						Enable Hub connection
-					</label>
-					<p className="text-sm text-muted-foreground">
-						Hub URL is resolved from environment. Enabling auto-registers this
-						server and stores returned OAuth + push credentials.
-					</p>
-					{data.hubConfig?.hubEnabled ? (
-						<div className="rounded-md border border-border p-3 text-sm">
-							<p>
-								<span className="text-muted-foreground">Hub URL:</span>{" "}
-								{data.hubConfig.hubBaseUrl}
-							</p>
-							<p>
-								<span className="text-muted-foreground">Client ID:</span>{" "}
-								{data.hubConfig.hubClientId || "-"}
-							</p>
-							<p>
-								<span className="text-muted-foreground">Discovery URL:</span>{" "}
-								{data.hubConfig.hubOidcDiscoveryUrl || "-"}
-							</p>
-							<p>
-								<span className="text-muted-foreground">Instance URL:</span>{" "}
-								{data.hubConfig.hubInstanceBaseUrl || "-"}
-							</p>
+			{data.hubConfig?.hubAvailable ? (
+				<section className="rounded-md border border-border p-4">
+					<h2 className="mb-3 text-base font-semibold">Hub Connection</h2>
+					{actionData && "error" in actionData ? (
+						<div className="mb-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+							{actionData.error}
 						</div>
 					) : null}
-					<Button type="submit">Save</Button>
-				</Form>
-			</section>
+					{actionData && "ok" in actionData ? (
+						<div className="mb-3 rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700">
+							Saved.
+						</div>
+					) : null}
+					<Form method="post" className="space-y-4">
+						<input type="hidden" name="_action" value="save-hub" />
+						<label className="flex items-center gap-2 text-sm font-medium">
+							<input
+								name="hubEnabled"
+								type="checkbox"
+								defaultChecked={Boolean(data.hubConfig?.hubEnabled)}
+							/>
+							Enable Hub connection
+						</label>
+						<p className="text-sm text-muted-foreground">
+							Hub URL is resolved from environment. Enabling auto-registers this
+							server and stores returned OAuth + push credentials.
+						</p>
+						{data.hubConfig?.hubEnabled ? (
+							<div className="rounded-md border border-border p-3 text-sm">
+								<p>
+									<span className="text-muted-foreground">Hub URL:</span>{" "}
+									{data.hubConfig.hubBaseUrl}
+								</p>
+								<p>
+									<span className="text-muted-foreground">Client ID:</span>{" "}
+									{data.hubConfig.hubClientId || "-"}
+								</p>
+								<p>
+									<span className="text-muted-foreground">Discovery URL:</span>{" "}
+									{data.hubConfig.hubOidcDiscoveryUrl || "-"}
+								</p>
+								<p>
+									<span className="text-muted-foreground">Instance URL:</span>{" "}
+									{data.hubConfig.hubInstanceBaseUrl || "-"}
+								</p>
+							</div>
+						) : null}
+						<Button type="submit">Save</Button>
+					</Form>
+				</section>
+			) : null}
 
 			<section className="rounded-md border border-border p-4">
 				<h2 className="mb-3 text-base font-semibold">Media Storage</h2>

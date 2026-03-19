@@ -35,10 +35,10 @@ export default function Home() {
 				className="text-4xl font-bold tracking-tight"
 				data-testid="home-title"
 			>
-				OpenGather MVP
+				OpenGather
 			</h1>
 			<p className="text-lg text-muted-foreground">
-				Single-server feed with Hub identity.
+				Self-hosted community feed for privacy-first groups.
 			</p>
 
 			{data.isSetup === false ? (

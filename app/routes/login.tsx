@@ -4,6 +4,7 @@ import { Link, redirect, useLoaderData, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { signIn } from "~/lib/auth-client";
 import { getServerConfig } from "~/server/config.service.server";
+import { isHubUiEnabled } from "~/server/hub-config.server";
 import {
 	getSetupStatus,
 	isSetupCompleteForRequest,
@@ -26,9 +27,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
 	const config = await getServerConfig();
 	const setup = await getSetupStatus();
 	return {
-		hubAuthEnabled: Boolean(
-			config.hubEnabled && config.hubClientId && config.hubClientSecret,
-		),
+		hubAuthEnabled: isHubUiEnabled({
+			hubAvailable: config.hubAvailable,
+			hubEnabled: config.hubEnabled,
+			hubClientId: config.hubClientId,
+			hubClientSecret: config.hubClientSecret,
+		}),
 		googleAuthEnabled: Boolean(
 			config.googleClientId && config.googleClientSecret,
 		),

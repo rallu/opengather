@@ -1,147 +1,33 @@
-# @opengather/web
+# OpenGather
 
-React Router application that contains both:
+OpenGather is a self-hosted, privacy-first distributed social network designed to be easy to install and easy to run for real communities.
 
-- frontend UI routes
-- server-side loaders/actions for instance business logic
+## ONCE Install
 
-## Getting Started
+An ONCE install script is coming soon.
 
-Use a Prisma 7-compatible Node version:
+The repository already includes an ONCE-compatible container image so the deployment path is ready while the install script is being finalized.
 
-```bash
-nvm use
-```
+## What OpenGather Is
 
-1. Copy the local env file:
-   ```bash
-   cp .env.example .env
-   ```
-2. Start the local database from the workspace root if you are using Docker for Postgres:
-   ```bash
-   docker compose up -d opengather-db
-   ```
-3. Ensure env vars are set (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `HUB_BASE_URL`).
-   Default Compose DB URL: `postgres://opengather:opengather@127.0.0.1:5433/opengather`.
-   Hub URL: `http://127.0.0.1:9000`.
-4. Start dev server:
-   ```bash
-   npm run dev
-   ```
-5. Open http://localhost:5173
+OpenGather is built for communities that want their own space without handing ownership of their conversations, moderation, and member data to a centralized platform.
 
-Chrome DevTools automatic workspaces are available in local development at
-`/.well-known/appspecific/com.chrome.devtools.json`, so DevTools can offer a
-workspace connection for this app when you open it on `localhost`.
+The project is aimed at:
 
-## E2E Tests (Playwright)
+- self-hosted community networks
+- privacy-first deployments
+- local ownership of data and moderation rules
+- simple operations for small groups and independent operators
 
-```bash
-npm run test:e2e
-```
+The longer-term network model is distributed rather than single-platform. Individual OpenGather deployments can remain autonomous while still participating in a broader ecosystem over time.
 
-The default test database URL targets the Docker Compose database on `127.0.0.1:5433`.
+OpenGather Hub exists as optional ecosystem infrastructure for identity and discovery, but it is not required for a public open-source deployment of this repo.
 
-Test runtime rule:
-- Keep the app test port at `5173`.
-- If Playwright startup conflicts with `5173`, assume an existing local dev server is already running and reuse it (do not change ports).
+## Custom Installation
 
-## Authentication
+### ONCE-Compatible Container
 
-- better-auth client: `app/lib/auth-client.ts`
-- better-auth server handler route: `/api/auth/*`
-- Google OAuth is handled by `better-auth` social provider config (when configured in the app database)
-
-## Pages
-
-- `/` - Home page with setup and session status
-- `/login` - Sign in page
-- `/register` - Sign up page
-- `/setup` - First-run single-tenant setup wizard
-  - includes initial admin account creation
-- `/feed` - Default server feed (posts, replies, semantic search, moderation controls)
-- `/community` - Legacy alias to `/feed`
-- `/profile` - Signed-in profile activity feed (posts and actions)
-- `/settings` - Personal profile/account settings
-- `/server-settings` - Server-level settings for admins
-- `/audit-logs` - Admin-only audit log review page
-- `/auth/hub/login` - Start Hub OIDC login
-- `/auth/hub/callback` - Hub OIDC callback handler
-
-## Server Modules
-
-Backend logic lives in `app/server/*.server.ts`.
-
-## Structured Logging
-
-- Logs are emitted as JSON lines (`stdout`/`stderr`) from `app/server/logger.server.ts`.
-- Core fields include: `timestamp`, `level`, `event`, `requestId`, `method`, `path`, and optional `userId`.
-- `X-Request-Id` is set on server-rendered and auth responses. If an incoming `x-request-id` exists, it is reused.
-
-Local development:
-- Run `npm run dev` and inspect structured logs directly in terminal output.
-- Use `jq` for readability, for example: `npm run dev | jq -R 'fromjson? // .'`.
-
-Production:
-- Ship raw JSON logs from process output to your log sink/collector.
-- Index at minimum `event`, `requestId`, `path`, `statusCode`, and `durationMs`.
-- Alert on repeated `level=error` events and spikes in `auth.rate_limited` / `community.post.rate_limited`.
-
-## Metrics
-
-- Prometheus-compatible metrics endpoint: `GET /metrics`.
-- Core metrics:
-  - `opengather_instance_up`
-  - `opengather_instance_uptime_seconds`
-  - `opengather_database_up`
-  - `opengather_auth_flow_total{flow,outcome}`
-  - `opengather_posts_events_total{outcome}`
-  - `opengather_metrics_scrape_total`
-
-Quick scrape test:
-```bash
-curl -fsS http://localhost:5173/metrics
-```
-
-Detailed dashboard queries and alert thresholds:
-- `OBSERVABILITY.md`
-
-## Error Monitoring
-
-- Error monitoring service: `app/server/error-monitoring.server.ts`.
-- Captures server exceptions with:
-  - request context (`requestId`, method, path)
-  - tags (`environment`, `service`, `release`)
-  - deduplication window
-  - sampling rate
-- Optional outbound delivery via webhook URL.
-- High-severity events can be routed to a dedicated alert webhook URL.
-
-Config keys (stored in `config` table):
-- `error_monitoring_enabled` (boolean)
-- `error_monitoring_webhook_url` (string)
-- `error_monitoring_alert_webhook_url` (string)
-- `error_monitoring_sample_rate` (number, `0..1`)
-- `error_monitoring_dedupe_window_seconds` (number)
-
-Controlled test event (admin only):
-```bash
-curl -fsS http://localhost:5173/debug/error-monitoring
-```
-
-## Backup and Recovery
-
-- Backup/restore scripts are in `scripts/`.
-- Runbook with automation, restore, and DR steps:
-  - `BACKUP_RECOVERY.md`
-
-## Deployment
-
-Deploy the Node build output from `build/server/index.js` with the environment variables used in local development.
-
-## ONCE Deployment
-
-This app now includes an ONCE-compatible image:
+This repository includes an ONCE-compatible image that:
 
 - serves HTTP on port `80`
 - exposes a health endpoint at `GET /up`
@@ -157,10 +43,80 @@ docker run --rm -p 8080:80 -v opengather-storage:/storage opengather-once
 
 Optional environment variables for the ONCE image:
 
-- `SECRET_KEY_BASE` or `BETTER_AUTH_SECRET` for auth signing
+- `DATABASE_URL` if you want to use an external Postgres instance
+- `BETTER_AUTH_SECRET` or `SECRET_KEY_BASE` for auth signing
+- `APP_BASE_URL` when running behind a reverse proxy
+- `HUB_BASE_URL` only if you want to enable optional Hub integration
 - `INTERNAL_POSTGRES_DB`
 - `INTERNAL_POSTGRES_USER`
 - `INTERNAL_POSTGRES_PASSWORD`
-- `HUB_BASE_URL` if you want Hub integration enabled during setup
 
-The setup flow uses forwarded headers and `APP_BASE_URL` when present so reverse-proxied installs can persist the public HTTPS origin correctly.
+The setup flow respects forwarded headers and `APP_BASE_URL`, so reverse-proxied installs can persist the public HTTPS origin correctly.
+
+### Manual Node Installation
+
+Use a Prisma 7-compatible Node version:
+
+```bash
+nvm use
+```
+
+1. Copy the local env file.
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Set at least:
+
+   - `DATABASE_URL`
+   - `BETTER_AUTH_SECRET`
+
+   `HUB_BASE_URL` is optional and only needed when you want Hub integration enabled in the UI.
+
+3. Start Postgres. From the workspace root, the default local database is:
+
+   ```bash
+   docker compose up -d opengather-db
+   ```
+
+   Default Compose DB URL:
+   `postgres://opengather:opengather@127.0.0.1:5433/opengather`
+
+4. Start the app:
+
+   ```bash
+   npm run dev
+   ```
+
+5. Open [http://localhost:5173](http://localhost:5173).
+
+## Development
+
+Chrome DevTools automatic workspaces are available in local development at `/.well-known/appspecific/com.chrome.devtools.json`, so DevTools can offer a workspace connection when you open the app on `localhost`.
+
+Core commands:
+
+```bash
+npm run lint
+npm run test:unit
+npm run test:e2e
+npm run build
+```
+
+The default Playwright test database URL targets the Docker Compose database on `127.0.0.1:5433`.
+
+Test runtime rule:
+
+- Keep the app test port at `5173`.
+- If Playwright startup conflicts with `5173`, assume an existing local dev server is already running and reuse it.
+
+Useful project areas:
+
+- `app/server/*.server.ts` for backend logic
+- `app/routes/*` for route loaders, actions, and UI
+- `scripts/once-entrypoint.sh` for ONCE container boot logic
+- `OBSERVABILITY.md` for metrics and monitoring guidance
+- `BACKUP_RECOVERY.md` for backup and restore operations
+
+Structured logging, metrics, error monitoring, and backup tooling are already included in the app for self-hosted operations.

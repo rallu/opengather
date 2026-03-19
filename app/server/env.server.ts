@@ -1,4 +1,5 @@
 import path from "node:path";
+import { hasHubBaseUrl, normalizeHubBaseUrl } from "./hub-config.server.ts";
 
 export type DatabaseEnv = {
 	DATABASE_URL: string;
@@ -59,8 +60,12 @@ export function getDatabaseEnv(): DatabaseEnv {
 
 export function getHubEnv(): HubEnv {
 	return {
-		HUB_BASE_URL: getRuntimeEnvValue("HUB_BASE_URL", "http://localhost:9000"),
+		HUB_BASE_URL: normalizeHubBaseUrl(getRuntimeEnvValue("HUB_BASE_URL", "")),
 	};
+}
+
+export function hasHubBaseUrlConfigured(): boolean {
+	return hasHubBaseUrl(getHubEnv().HUB_BASE_URL);
 }
 
 export function getAuthEnv(): AuthEnv {
