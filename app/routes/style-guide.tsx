@@ -575,11 +575,8 @@ export default function StyleGuidePage() {
 				<div className="flex w-full items-center justify-between gap-4 px-6 py-4 lg:px-8">
 					<div className="space-y-1">
 						<h1 className="text-2xl font-semibold tracking-tight">
-							Style Guide
+							Style Guide - OpenGather
 						</h1>
-						<p className="text-sm text-muted-foreground">
-							Internal component reference with full-width space for the system.
-						</p>
 					</div>
 					<Button asChild variant="outline">
 						<Link to="/feed">Back to feed</Link>
@@ -591,20 +588,6 @@ export default function StyleGuidePage() {
 				className="space-y-10 px-6 py-8 lg:px-8"
 				data-testid="style-guide-page"
 			>
-				<Card className="overflow-hidden border-primary/15 bg-gradient-to-br from-background via-background to-muted/40">
-					<CardHeader className="gap-4">
-						<CardTitle className="text-3xl leading-tight sm:text-4xl">
-							Shared building pieces for the first OpenGather interface system.
-						</CardTitle>
-						<CardDescription className="max-w-4xl text-sm leading-7">
-							This route has its own full-page layout so the component system,
-							left-side anchor navigation, and example surfaces have enough room
-							to breathe. It stays token-based, keeps room for community
-							theming, and acts as the reference for future extraction work.
-						</CardDescription>
-					</CardHeader>
-				</Card>
-
 				<div className="lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-10">
 					<aside className="hidden lg:block">
 						<div

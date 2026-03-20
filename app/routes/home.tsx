@@ -2,14 +2,22 @@ import type { LoaderFunctionArgs } from "react-router";
 import { Link, redirect, useLoaderData } from "react-router";
 import { Button } from "~/components/ui/button";
 import { signOut, useSession } from "~/lib/auth-client";
+import { shouldRedirectHome } from "~/server/home-route.server";
+import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
-	void request;
-
 	try {
-		const status = await getSetupStatus();
-		if (status.isSetup && status.instance?.visibilityMode === "public") {
+		const [status, authUser] = await Promise.all([
+			getSetupStatus(),
+			getAuthUserFromRequest({ request }),
+		]);
+		if (
+			shouldRedirectHome({
+				isSetup: status.isSetup,
+				isAuthenticated: Boolean(authUser),
+			})
+		) {
 			return redirect("/feed");
 		}
 

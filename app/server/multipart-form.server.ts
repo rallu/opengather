@@ -71,7 +71,8 @@ export async function parseMultipartForm(params: {
 			});
 
 			busboy.on("file", (fieldName, stream, info) => {
-				const filename = info.filename?.trim() || `${randomUUID()}.bin`;
+				const originalFilename = info.filename?.trim() ?? "";
+				const filename = originalFilename || `${randomUUID()}.bin`;
 				const safeName = filename.replace(/[^\w.-]+/g, "-");
 				const tempFilePath = path.join(
 					tempDir,
@@ -91,6 +92,11 @@ export async function parseMultipartForm(params: {
 					stream,
 					createWriteStream(tempFilePath),
 				).then(async () => {
+					if (!originalFilename && byteSize === 0) {
+						await unlink(tempFilePath).catch(() => undefined);
+						return;
+					}
+
 					if (hitLimit) {
 						await unlink(tempFilePath).catch(() => undefined);
 						throw new Error(
