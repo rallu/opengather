@@ -24,6 +24,8 @@ type PostComposerProps = Omit<
 	submittingLabel?: string;
 	footer?: React.ReactNode;
 	submitClassName?: string;
+	resetKey?: string | number | null;
+	shortcutHint?: string;
 };
 
 const PostComposer = React.forwardRef<HTMLDivElement, PostComposerProps>(
@@ -43,10 +45,13 @@ const PostComposer = React.forwardRef<HTMLDivElement, PostComposerProps>(
 			submittingLabel,
 			footer,
 			submitClassName,
+			resetKey,
+			shortcutHint,
 			...props
 		},
 		ref,
 	) => {
+		const [value, setValue] = React.useState(defaultValue ?? "");
 		const resolvedPlaceholder =
 			placeholder ??
 			(variant === "post"
@@ -56,6 +61,19 @@ const PostComposer = React.forwardRef<HTMLDivElement, PostComposerProps>(
 			submitLabel ?? (variant === "post" ? "Post" : "Reply");
 		const resolvedSubmittingLabel =
 			submittingLabel ?? (variant === "post" ? "Posting" : resolvedSubmitLabel);
+		const resolvedShortcutHint =
+			shortcutHint ?? "Send with Cmd+Enter or Ctrl+Enter";
+
+		React.useEffect(() => {
+			setValue(defaultValue ?? "");
+		}, [defaultValue]);
+
+		React.useEffect(() => {
+			if (resetKey === undefined) {
+				return;
+			}
+			setValue(defaultValue ?? "");
+		}, [defaultValue, resetKey]);
 
 		return (
 			<div ref={ref} className={cn("min-w-0", className)} {...props}>
@@ -63,10 +81,27 @@ const PostComposer = React.forwardRef<HTMLDivElement, PostComposerProps>(
 					<Textarea
 						name={name}
 						rows={rows}
-						defaultValue={defaultValue}
+						value={value}
 						placeholder={resolvedPlaceholder}
 						disabled={disabled}
 						data-testid={textareaTestId}
+						aria-keyshortcuts="Meta+Enter Control+Enter Alt+Enter"
+						onChange={(event) => setValue(event.currentTarget.value)}
+						onKeyDown={(event) => {
+							if (
+								event.key !== "Enter" ||
+								(!event.metaKey && !event.ctrlKey && !event.altKey)
+							) {
+								return;
+							}
+
+							event.preventDefault();
+							if (disabled) {
+								return;
+							}
+
+							event.currentTarget.form?.requestSubmit();
+						}}
 						className={cn(
 							"resize-none border-0 bg-transparent text-[15px] leading-7 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
 							variant === "post"
@@ -80,7 +115,12 @@ const PostComposer = React.forwardRef<HTMLDivElement, PostComposerProps>(
 							variant === "reply" ? "min-h-12" : "min-h-13",
 						)}
 					>
-						<div className="min-w-0 flex-1">{footer}</div>
+						<div className="min-w-0 flex flex-1 flex-wrap items-center gap-2">
+							{footer}
+							<span className="text-xs leading-5 text-muted-foreground">
+								{resolvedShortcutHint}
+							</span>
+						</div>
 						<IconButton
 							type="submit"
 							label={loading ? resolvedSubmittingLabel : resolvedSubmitLabel}

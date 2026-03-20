@@ -1,3 +1,4 @@
+import * as React from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import {
 	Form,
@@ -60,8 +61,15 @@ function getPostTrailLabel(bodyText?: string | null) {
 	return `${compact.slice(0, 45).trim()}...`;
 }
 
-function mapComment(post: CommunityPost): PostCommentData {
+function mapComment(params: {
+	post: CommunityPost;
+	activeReplyId: string | null;
+	canReply: boolean;
+	setActiveReplyId: React.Dispatch<React.SetStateAction<string | null>>;
+}): PostCommentData {
+	const { post, activeReplyId, canReply, setActiveReplyId } = params;
 	const replyCount = countReplies(post);
+	const canReplyHere = canReply && canReplyAtThreadDepth(post.threadDepth);
 
 	return {
 		id: post.id,
@@ -78,16 +86,31 @@ function mapComment(post: CommunityPost): PostCommentData {
 		actions: [
 			{
 				label: replyCount === 1 ? "1 reply" : `${replyCount} replies`,
-				to: `/posts/${post.id}`,
+				disabled: true,
 				testId: `post-detail-comment-action-${post.id}`,
 			},
-			{
-				label: "Reply",
-				to: `/posts/${post.id}`,
-				testId: `post-detail-reply-action-${post.id}`,
-			},
+			...(canReplyHere
+				? [
+						{
+							label: activeReplyId === post.id ? "Cancel reply" : "Reply",
+							onClick: () =>
+								setActiveReplyId((current) =>
+									current === post.id ? null : post.id,
+								),
+							isActive: activeReplyId === post.id,
+							testId: `post-detail-reply-action-${post.id}`,
+						},
+					]
+				: []),
 		],
-		replies: post.replies.map(mapComment),
+		replies: post.replies.map((reply) =>
+			mapComment({
+				post: reply,
+				activeReplyId,
+				canReply,
+				setActiveReplyId,
+			}),
+		),
 	};
 }
 
@@ -172,6 +195,15 @@ export default function PostDetailPage() {
 	const actionData = useActionData<typeof action>();
 	const navigation = useNavigation();
 	const loading = navigation.state === "submitting";
+	const post = data.status !== "not_found" ? data.post : null;
+	const replyResetKey = post
+		? `${post.id}:${countReplies(post)}`
+		: "post-detail";
+	const [activeReplyId, setActiveReplyId] = React.useState<string | null>(null);
+	React.useEffect(() => {
+		void replyResetKey;
+		setActiveReplyId(null);
+	}, [replyResetKey]);
 
 	if (data.status === "not_setup") {
 		return (
@@ -183,7 +215,7 @@ export default function PostDetailPage() {
 		);
 	}
 
-	if (data.status === "not_found" || !data.post) {
+	if (data.status === "not_found" || !post) {
 		return (
 			<AppShell authUser={data.authUser}>
 				<FeedContainer>
@@ -195,21 +227,28 @@ export default function PostDetailPage() {
 		);
 	}
 
-	const canReply =
-		Boolean(data.authUser) && canReplyAtThreadDepth(data.post.threadDepth);
+	const canReply = data.canReply && canReplyAtThreadDepth(post.threadDepth);
+	const comments = post.replies.map((reply) =>
+		mapComment({
+			post: reply,
+			activeReplyId,
+			canReply: data.canReply,
+			setActiveReplyId,
+		}),
+	);
 	const breadcrumbs = [
 		{ label: "Feed", to: "/feed" },
-		...(data.post.group
+		...(post.group
 			? [
 					{
-						label: data.post.group.name,
-						to: `/groups/${data.post.group.id}`,
+						label: post.group.name,
+						to: `/groups/${post.group.id}`,
 					},
 				]
 			: []),
-		{ label: getPostTrailLabel(data.post.bodyText) },
+		{ label: getPostTrailLabel(post.bodyText) },
 	];
-	const backTo = data.post.group ? `/groups/${data.post.group.id}` : "/feed";
+	const backTo = post.group ? `/groups/${post.group.id}` : "/feed";
 
 	return (
 		<AppShell authUser={data.authUser}>
@@ -224,20 +263,20 @@ export default function PostDetailPage() {
 
 				<Container data-testid="post-detail-root" className="p-4">
 					<PostContent
-						createdAt={data.post.createdAt}
-						moderationStatus={data.post.moderationStatus}
-						isHidden={data.post.isHidden}
-						isDeleted={data.post.isDeleted}
+						createdAt={post.createdAt}
+						moderationStatus={post.moderationStatus}
+						isHidden={post.isHidden}
+						isDeleted={post.isDeleted}
 					>
-						<p>{data.post.bodyText}</p>
-						<PostAssetDisplay assets={data.post.assets} />
+						<p>{post.bodyText}</p>
+						<PostAssetDisplay assets={post.assets} />
 					</PostContent>
 				</Container>
 
 				{canReply ? (
 					<Form method="post" encType="multipart/form-data">
 						<input type="hidden" name="_action" value="post" />
-						<input type="hidden" name="parentPostId" value={data.post.id} />
+						<input type="hidden" name="parentPostId" value={post.id} />
 						<PostComposer
 							variant="reply"
 							name="bodyText"
@@ -247,13 +286,53 @@ export default function PostDetailPage() {
 							disabled={loading}
 							submitLabel="Reply"
 							submitTestId="post-detail-reply-submit"
-							footer={<PostAssetInput inputTestId="post-detail-assets-input" />}
+							resetKey={replyResetKey}
+							footer={
+								<PostAssetInput
+									inputTestId="post-detail-assets-input"
+									videoInputTestId="post-detail-video-input"
+									imageButtonTestId="post-detail-image-button"
+									videoButtonTestId="post-detail-video-button"
+									resetKey={replyResetKey}
+								/>
+							}
 						/>
 					</Form>
 				) : null}
 
 				<section className="space-y-3" data-testid="post-detail-comments">
-					<PostComments comments={data.post.replies.map(mapComment)} />
+					<PostComments
+						comments={comments}
+						renderReplyComposer={(comment) =>
+							activeReplyId === comment.id ? (
+								<Form method="post" encType="multipart/form-data">
+									<input type="hidden" name="_action" value="post" />
+									<input type="hidden" name="parentPostId" value={comment.id} />
+									<PostComposer
+										variant="reply"
+										name="bodyText"
+										placeholder="Write a reply"
+										rows={3}
+										loading={loading}
+										disabled={loading}
+										submitLabel="Reply"
+										textareaTestId={`post-detail-inline-reply-body-${comment.id}`}
+										submitTestId={`post-detail-inline-reply-submit-${comment.id}`}
+										resetKey={replyResetKey}
+										footer={
+											<PostAssetInput
+												inputTestId={`post-detail-inline-assets-input-${comment.id}`}
+												videoInputTestId={`post-detail-inline-video-input-${comment.id}`}
+												imageButtonTestId={`post-detail-inline-image-button-${comment.id}`}
+												videoButtonTestId={`post-detail-inline-video-button-${comment.id}`}
+												resetKey={replyResetKey}
+											/>
+										}
+									/>
+								</Form>
+							) : null
+						}
+					/>
 				</section>
 			</FeedContainer>
 		</AppShell>

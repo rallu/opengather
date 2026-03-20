@@ -183,12 +183,9 @@ export default function Login() {
 
 				{hubAuthEnabled ? (
 					<section className="space-y-3 rounded-lg border bg-muted/40 p-4">
-						<div>
-							<p className="text-sm font-semibold">Recommended</p>
-							<p className="text-sm text-muted-foreground">
-								Use Hub to sign in with your existing opengather identity.
-							</p>
-						</div>
+						<p className="text-sm text-muted-foreground">
+							Use Hub to sign in with your existing opengather identity.
+						</p>
 						<Button
 							type="button"
 							className="h-11 w-full"
@@ -201,9 +198,9 @@ export default function Login() {
 					</section>
 				) : null}
 
-				<div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
+				<div className="flex items-center gap-3 text-xs text-muted-foreground">
 					<div className="h-px flex-1 bg-border" />
-					<span>Other sign in methods</span>
+					<span>Local sign-in</span>
 					<div className="h-px flex-1 bg-border" />
 				</div>
 

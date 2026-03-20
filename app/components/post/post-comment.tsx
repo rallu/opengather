@@ -43,10 +43,15 @@ export type PostCommentData = {
 
 type PostCommentProps = {
 	comment: PostCommentData;
+	replyComposer?: ReactNode;
 	children?: ReactNode;
 };
 
-export function PostComment({ comment, children }: PostCommentProps) {
+export function PostComment({
+	comment,
+	replyComposer,
+	children,
+}: PostCommentProps) {
 	const author = comment.author?.trim() || "Member";
 	const hasChildren = Boolean(children);
 	const [isOpen, setIsOpen] = useState(true);
@@ -169,6 +174,7 @@ export function PostComment({ comment, children }: PostCommentProps) {
 								</PostActions>
 							</ChatBubbleFooter>
 						) : null}
+						{replyComposer ? <div className="pt-2">{replyComposer}</div> : null}
 					</div>
 					{hasChildren && isOpen ? (
 						<>

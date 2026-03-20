@@ -62,6 +62,7 @@ async function signInLocal(params: {
 async function uploadImageToComposer(params: {
 	page: import("@playwright/test").Page;
 	bodyTestId: string;
+	imageButtonTestId: string;
 	inputTestId: string;
 	submitTestId: string;
 	text: string;
@@ -69,6 +70,7 @@ async function uploadImageToComposer(params: {
 }) {
 	const pngBuffer = await buildPngBuffer();
 	await params.page.getByTestId(params.bodyTestId).fill(params.text);
+	await params.page.getByTestId(params.imageButtonTestId).click();
 	await params.page.getByTestId(params.inputTestId).setInputFiles({
 		name: params.filename,
 		mimeType: "image/png",
@@ -93,6 +95,7 @@ test("media endpoint keeps public images public and private group images private
 	await uploadImageToComposer({
 		page,
 		bodyTestId: "feed-composer",
+		imageButtonTestId: "feed-image-button",
 		inputTestId: "feed-assets-input",
 		submitTestId: "feed-post-button",
 		text: publicPostText,
@@ -136,6 +139,7 @@ test("media endpoint keeps public images public and private group images private
 	await uploadImageToComposer({
 		page,
 		bodyTestId: "group-post-body",
+		imageButtonTestId: "group-image-button",
 		inputTestId: "group-assets-input",
 		submitTestId: "group-post-submit",
 		text: privatePostText,

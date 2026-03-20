@@ -21,6 +21,7 @@ import {
 	Settings,
 	TriangleAlert,
 	Users,
+	Video,
 } from "lucide-react";
 import type { SVGProps } from "react";
 
@@ -48,6 +49,7 @@ const icons = {
 	settings: Settings,
 	triangleAlert: TriangleAlert,
 	users: Users,
+	video: Video,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons;

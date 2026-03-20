@@ -24,12 +24,29 @@ function useDialogContext() {
 type DialogProps = {
 	children: React.ReactNode;
 	defaultOpen?: boolean;
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
 };
 
-export function Dialog({ children, defaultOpen = false }: DialogProps) {
-	const [open, setOpen] = React.useState(defaultOpen);
+export function Dialog({
+	children,
+	defaultOpen = false,
+	open: controlledOpen,
+	onOpenChange,
+}: DialogProps) {
+	const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen);
 	const titleId = React.useId();
 	const descriptionId = React.useId();
+	const open = controlledOpen ?? uncontrolledOpen;
+	const setOpen = React.useCallback(
+		(nextOpen: boolean) => {
+			if (controlledOpen === undefined) {
+				setUncontrolledOpen(nextOpen);
+			}
+			onOpenChange?.(nextOpen);
+		},
+		[controlledOpen, onOpenChange],
+	);
 
 	return (
 		<DialogContext.Provider value={{ descriptionId, open, setOpen, titleId }}>

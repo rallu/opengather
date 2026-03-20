@@ -24,6 +24,7 @@ import { FeedContainer } from "~/components/ui/feed-container";
 import { writeAuditLogSafely } from "~/server/audit-log.service.server";
 import {
 	type CommunityUser,
+	type CreatedPostSummary,
 	createPost,
 	loadCommunity,
 	moderatePost,
@@ -68,6 +69,40 @@ function getDiscussionLabel(replyCount: number) {
 		return "Start discussion";
 	}
 	return replyCount === 1 ? "1 comment" : `${replyCount} comments`;
+}
+
+function toPriorityPostListItem(params: {
+	post: CreatedPostSummary;
+	sortMode: "activity" | "newest";
+}): PostListItem {
+	return {
+		id: params.post.id,
+		parentPostId: params.post.parentPostId,
+		threadDepth: 0,
+		bodyText: params.post.bodyText,
+		assets: params.post.assets,
+		group: params.post.group,
+		moderationStatus: params.post.moderationStatus,
+		isHidden: params.post.isHidden,
+		isDeleted: params.post.isDeleted,
+		createdAt: params.post.createdAt,
+		commentCount: params.post.commentCount,
+		latestActivityAt: params.post.latestActivityAt,
+		sortMode: params.sortMode,
+	};
+}
+
+function isSuccessfulPostAction(
+	actionData: ReturnType<typeof useActionData<typeof action>>,
+): actionData is { ok: true; actionType: "post"; createdPost: PostListItem } {
+	return Boolean(
+		actionData &&
+			"ok" in actionData &&
+			actionData.ok &&
+			actionData.actionType === "post" &&
+			"createdPost" in actionData &&
+			actionData.createdPost,
+	);
 }
 
 function CommunityFeedItem(params: { post: PostListItem; isAdmin: boolean }) {
@@ -206,6 +241,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export async function action({ request }: ActionFunctionArgs) {
 	const startedAt = Date.now();
 	const requestId = getRequestId(request);
+	const sortMode = parsePostListSortMode(
+		new URL(request.url).searchParams.get("sort"),
+	);
 	let multipart: Awaited<
 		ReturnType<typeof extractPostUploadsFromMultipartRequest>
 	> | null = null;
@@ -300,7 +338,14 @@ export async function action({ request }: ActionFunctionArgs) {
 				},
 			});
 			recordPostMetric({ outcome: "created" });
-			return { ok: true };
+			return {
+				ok: true as const,
+				actionType,
+				createdPost: toPriorityPostListItem({
+					post: result.createdPost,
+					sortMode,
+				}),
+			};
 		}
 
 		if (actionType === "moderate") {
@@ -329,7 +374,7 @@ export async function action({ request }: ActionFunctionArgs) {
 					outcome: "success",
 				},
 			});
-			return { ok: true };
+			return { ok: true as const, actionType };
 		}
 
 		if (actionType === "delete") {
@@ -351,7 +396,7 @@ export async function action({ request }: ActionFunctionArgs) {
 					outcome: "success",
 				},
 			});
-			return { ok: true };
+			return { ok: true as const, actionType };
 		}
 
 		await multipart?.cleanup().catch(() => undefined);
@@ -387,6 +432,15 @@ export default function CommunityPage() {
 	const location = useLocation();
 	const navigation = useNavigation();
 	const loading = navigation.state === "submitting";
+	const successfulPostAction = isSuccessfulPostAction(actionData)
+		? actionData
+		: null;
+	const composerResetKey = successfulPostAction?.createdPost.id;
+	const priorityPost =
+		successfulPostAction &&
+		successfulPostAction.createdPost.parentPostId === undefined
+			? successfulPostAction.createdPost
+			: undefined;
 	const buildSortHref = (sortMode: "activity" | "newest") =>
 		`${location.pathname}?sort=${sortMode}`;
 	const communityAside = (
@@ -491,12 +545,16 @@ export default function CommunityPage() {
 								disabled={loading || data.status !== "ok"}
 								submitTestId="feed-post-button"
 								submitClassName="h-9 w-9 bg-primary text-primary-foreground hover:bg-primary/90"
+								resetKey={composerResetKey}
 								footer={
-									<div className="space-y-2 px-1">
-										<p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-											Visible in your community feed
-										</p>
-										<PostAssetInput inputTestId="feed-assets-input" />
+									<div className="px-1">
+										<PostAssetInput
+											inputTestId="feed-assets-input"
+											videoInputTestId="feed-video-input"
+											imageButtonTestId="feed-image-button"
+											videoButtonTestId="feed-video-button"
+											resetKey={composerResetKey}
+										/>
 									</div>
 								}
 							/>
@@ -511,6 +569,7 @@ export default function CommunityPage() {
 					listTestId="feed-post-list"
 					sentinelTestId="feed-post-list-sentinel"
 					loadingTestId="feed-post-list-loading"
+					priorityItem={priorityPost}
 					emptyState={
 						<p className="text-sm text-muted-foreground">No posts yet.</p>
 					}

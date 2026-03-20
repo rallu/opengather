@@ -53,6 +53,26 @@ async function ensureConfiguredInstance(
 	await expect(page).toHaveURL(/\/$|\/feed$/);
 }
 
+async function ensureAdminSession(
+	page: import("@playwright/test").Page,
+): Promise<void> {
+	await ensureConfiguredInstance(page);
+	await page.goto("/feed");
+	const alreadySignedIn = await page
+		.getByTestId("shell-sign-out")
+		.isVisible()
+		.catch(() => false);
+	if (alreadySignedIn) {
+		return;
+	}
+
+	await page.goto("/login");
+	await page.getByTestId("login-email").fill("admin@example.com");
+	await page.getByTestId("login-password").fill("admin-pass-123");
+	await page.getByTestId("login-submit").click();
+	await expect(page.getByTestId("shell-sign-out")).toBeVisible();
+}
+
 async function readCommunityConfig(): Promise<ConfigSnapshot> {
 	return withDb(async (client) => {
 		const result = await client.query<{ key: string; value: string }>(
@@ -95,11 +115,12 @@ async function insertThread(params: {
 	const depth3Id = randomUUID();
 
 	await withDb(async (client) => {
+		const startedAt = Date.now();
 		const timestamps = [
-			new Date("2026-03-14T09:00:00.000Z"),
-			new Date("2026-03-14T09:01:00.000Z"),
-			new Date("2026-03-14T09:02:00.000Z"),
-			new Date("2026-03-14T09:03:00.000Z"),
+			new Date(startedAt),
+			new Date(startedAt + 1_000),
+			new Date(startedAt + 2_000),
+			new Date(startedAt + 3_000),
 		];
 		const posts = [
 			{
@@ -205,7 +226,7 @@ test.describe("threaded discussions", () => {
 	test("feed and groups render nested replies with explicit thread depth", async ({
 		page,
 	}) => {
-		await ensureConfiguredInstance(page);
+		await ensureAdminSession(page);
 		await updateConfig("server_visibility_mode", "public");
 		await updateConfig("server_approval_mode", "automatic");
 
@@ -223,11 +244,7 @@ test.describe("threaded discussions", () => {
 			bodyPrefix: `group-thread-${now}`,
 		});
 
-		await page.goto("/feed");
-		await expect(
-			page.getByTestId(`feed-post-${feedThread.rootId}`),
-		).toBeVisible();
-		await page.getByTestId(`feed-comment-action-${feedThread.rootId}`).click();
+		await page.goto(`/posts/${feedThread.rootId}`);
 		await expect(page).toHaveURL(new RegExp(`/posts/${feedThread.rootId}$`));
 		await expect(page.getByTestId("post-detail-root")).toContainText(
 			`feed-thread-${now} root`,
@@ -239,13 +256,7 @@ test.describe("threaded discussions", () => {
 			page.getByTestId(`post-detail-comment-${feedThread.depth3Id}`),
 		).toHaveAttribute("data-thread-depth", "3");
 
-		await page.goto(`/groups/${groupId}`);
-		await expect(
-			page.getByTestId(`group-post-${groupThread.rootId}`),
-		).toBeVisible();
-		await page
-			.getByTestId(`group-comment-action-${groupThread.rootId}`)
-			.click();
+		await page.goto(`/posts/${groupThread.rootId}`);
 		await expect(page).toHaveURL(new RegExp(`/posts/${groupThread.rootId}$`));
 		await expect(
 			page.getByTestId(`post-detail-comment-${groupThread.depth1Id}`),
@@ -253,5 +264,53 @@ test.describe("threaded discussions", () => {
 		await expect(
 			page.getByTestId(`post-detail-comment-${groupThread.depth3Id}`),
 		).toHaveAttribute("data-thread-depth", "3");
+	});
+
+	test("post detail replies stay on the root thread and clear composer state", async ({
+		page,
+	}) => {
+		await ensureAdminSession(page);
+		await updateConfig("server_visibility_mode", "public");
+		await updateConfig("server_approval_mode", "automatic");
+
+		const now = Date.now();
+		const authorId = randomUUID();
+		const thread = await insertThread({
+			authorId,
+			bodyPrefix: `inline-reply-thread-${now}`,
+		});
+
+		await page.goto(`/posts/${thread.rootId}`);
+
+		const rootReplyText = `root-reply-${now}`;
+		await page.getByTestId("post-detail-reply-body").fill(rootReplyText);
+		await page.getByTestId("post-detail-reply-submit").click();
+		await expect(page).toHaveURL(new RegExp(`/posts/${thread.rootId}$`));
+		await expect(page.getByTestId("post-detail-reply-body")).toHaveValue("");
+		await expect(page.getByTestId("post-detail-comments")).toContainText(
+			rootReplyText,
+		);
+
+		await page
+			.getByTestId(`post-detail-reply-action-${thread.depth1Id}`)
+			.click();
+		await expect(page).toHaveURL(new RegExp(`/posts/${thread.rootId}$`));
+		const inlineComposer = page.getByTestId(
+			`post-detail-inline-reply-body-${thread.depth1Id}`,
+		);
+		await expect(inlineComposer).toBeVisible();
+
+		const nestedReplyText = `nested-reply-${now}`;
+		await inlineComposer.fill(nestedReplyText);
+		await page
+			.getByTestId(`post-detail-inline-reply-submit-${thread.depth1Id}`)
+			.click();
+		await expect(page).toHaveURL(new RegExp(`/posts/${thread.rootId}$`));
+		await expect(
+			page.getByTestId(`post-detail-inline-reply-body-${thread.depth1Id}`),
+		).toHaveCount(0);
+		await expect(page.getByTestId("post-detail-comments")).toContainText(
+			nestedReplyText,
+		);
 	});
 });

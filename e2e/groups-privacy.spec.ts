@@ -296,7 +296,7 @@ test.describe("group privacy", () => {
 		);
 
 		await page.goto("/feed");
-		await expect(page.getByTestId("feed-post-list")).toContainText(
+		await expect(page.getByTestId("feed-post-list")).not.toContainText(
 			publicPostText,
 		);
 		await expect(page.getByTestId("feed-post-list")).not.toContainText(
@@ -312,6 +312,12 @@ test.describe("group privacy", () => {
 		await expect(page.getByTestId("group-post-list")).toContainText(
 			publicPostText,
 		);
+		await page
+			.getByTestId("group-post-list")
+			.locator("[data-testid^='group-comment-action-']")
+			.first()
+			.click();
+		await expect(page.getByTestId("post-detail-reply-body")).toHaveCount(0);
 
 		await page.goto(`/groups/${privateGroupId}`);
 		await expect(page.getByTestId("group-requires-auth-state")).toContainText(
@@ -335,6 +341,13 @@ test.describe("group privacy", () => {
 		await expect(
 			page.getByTestId(`group-card-${privateGroupId}`),
 		).toBeVisible();
+		await page.goto("/feed");
+		await expect(page.getByTestId("feed-post-list")).not.toContainText(
+			publicPostText,
+		);
+		await expect(page.getByTestId("feed-post-list")).not.toContainText(
+			privatePostText,
+		);
 
 		await page.goto(`/groups/${privateGroupId}`);
 		await expect(page.getByTestId("group-request-access")).toBeVisible();
@@ -372,10 +385,23 @@ test.describe("group privacy", () => {
 		await expect(page.getByTestId("group-post-list")).toContainText(
 			privatePostText,
 		);
-		await page.getByTestId("group-post-body").fill("Member-only follow-up");
+		const memberFollowUp = `Member-only follow-up ${Date.now()}`;
+		await page.getByTestId("group-post-body").fill(memberFollowUp);
 		await page.getByTestId("group-post-submit").click();
 		await expect(page.getByTestId("group-post-list")).toContainText(
-			"Member-only follow-up",
+			memberFollowUp,
 		);
+		await page.goto("/feed");
+		const memberFeedItems = page
+			.getByTestId("feed-post-list")
+			.locator("[data-testid^='feed-post-']")
+			.filter({ hasText: memberFollowUp });
+		for (let index = 0; index < 6; index += 1) {
+			if ((await memberFeedItems.count()) > 0) {
+				break;
+			}
+			await page.getByTestId("feed-post-list-sentinel").scrollIntoViewIfNeeded();
+		}
+		await expect(memberFeedItems).toHaveCount(1);
 	});
 });

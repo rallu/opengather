@@ -25,6 +25,7 @@ import { FeedContainer } from "~/components/ui/feed-container";
 import { writeAuditLogSafely } from "~/server/audit-log.service.server";
 import {
 	type CommunityUser,
+	type CreatedPostSummary,
 	createPost,
 	ensureInstanceMembershipForUser,
 } from "~/server/community.service.server";
@@ -64,6 +65,40 @@ function getDiscussionLabel(replyCount: number) {
 		return "Start discussion";
 	}
 	return replyCount === 1 ? "1 comment" : `${replyCount} comments`;
+}
+
+function toPriorityPostListItem(params: {
+	post: CreatedPostSummary;
+	sortMode: "activity" | "newest";
+}): PostListItem {
+	return {
+		id: params.post.id,
+		parentPostId: params.post.parentPostId,
+		threadDepth: 0,
+		bodyText: params.post.bodyText,
+		assets: params.post.assets,
+		group: params.post.group,
+		moderationStatus: params.post.moderationStatus,
+		isHidden: params.post.isHidden,
+		isDeleted: params.post.isDeleted,
+		createdAt: params.post.createdAt,
+		commentCount: params.post.commentCount,
+		latestActivityAt: params.post.latestActivityAt,
+		sortMode: params.sortMode,
+	};
+}
+
+function isSuccessfulPostAction(
+	actionData: ReturnType<typeof useActionData<typeof action>>,
+): actionData is { ok: true; actionType: "post"; createdPost: PostListItem } {
+	return Boolean(
+		actionData &&
+			"ok" in actionData &&
+			actionData.ok &&
+			actionData.actionType === "post" &&
+			"createdPost" in actionData &&
+			actionData.createdPost,
+	);
 }
 
 function GroupFeedItem(params: { post: PostListItem }) {
@@ -161,6 +196,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
+	const sortMode = parsePostListSortMode(
+		new URL(request.url).searchParams.get("sort"),
+	);
 	let multipart: Awaited<
 		ReturnType<typeof extractPostUploadsFromMultipartRequest>
 	> | null = null;
@@ -227,7 +265,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			});
 
 			return {
-				ok: true,
+				ok: true as const,
+				actionType,
 				message:
 					result.outcome === "joined"
 						? "You joined the group."
@@ -255,7 +294,14 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			if (!result.ok) {
 				return { error: result.error };
 			}
-			return { ok: true };
+			return {
+				ok: true as const,
+				actionType,
+				createdPost: toPriorityPostListItem({
+					post: result.createdPost,
+					sortMode,
+				}),
+			};
 		}
 
 		if (
@@ -294,7 +340,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			});
 
 			return {
-				ok: true,
+				ok: true as const,
+				actionType,
 				message:
 					status === "approved"
 						? "Membership approved."
@@ -331,7 +378,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			});
 
 			return {
-				ok: true,
+				ok: true as const,
+				actionType,
 				message: "Group visibility updated.",
 			};
 		}
@@ -365,7 +413,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			});
 
 			return {
-				ok: true,
+				ok: true as const,
+				actionType,
 				message: "Member role updated.",
 			};
 		}
@@ -396,7 +445,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			});
 
 			return {
-				ok: true,
+				ok: true as const,
+				actionType,
 				message: "Member removed from group.",
 			};
 		}
@@ -417,6 +467,15 @@ export default function GroupDetailPage() {
 	const location = useLocation();
 	const navigation = useNavigation();
 	const loading = navigation.state === "submitting";
+	const successfulPostAction = isSuccessfulPostAction(actionData)
+		? actionData
+		: null;
+	const composerResetKey = successfulPostAction?.createdPost.id;
+	const priorityPost =
+		successfulPostAction &&
+		successfulPostAction.createdPost.parentPostId === undefined
+			? successfulPostAction.createdPost
+			: undefined;
 	const buildSortHref = (sortMode: "activity" | "newest") =>
 		`${location.pathname}?sort=${sortMode}`;
 	const group =
@@ -579,7 +638,16 @@ export default function GroupDetailPage() {
 								loading={loading}
 								disabled={loading}
 								submitTestId="group-post-submit"
-								footer={<PostAssetInput inputTestId="group-assets-input" />}
+								resetKey={composerResetKey}
+								footer={
+									<PostAssetInput
+										inputTestId="group-assets-input"
+										videoInputTestId="group-video-input"
+										imageButtonTestId="group-image-button"
+										videoButtonTestId="group-video-button"
+										resetKey={composerResetKey}
+									/>
+								}
 							/>
 						</Form>
 					) : null}
@@ -741,6 +809,7 @@ export default function GroupDetailPage() {
 							listTestId="group-post-list"
 							sentinelTestId="group-post-list-sentinel"
 							loadingTestId="group-post-list-loading"
+							priorityItem={priorityPost}
 							emptyState={
 								<div className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
 									No posts in this group yet.

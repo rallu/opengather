@@ -158,6 +158,10 @@ Components are added to `app/components/ui/`.
 
 - Never use meta headings in the product UI. Do not add labels like "Overview", "Summary", "Details", "Reading", "Workspace", or similar framing text.
 - Avoid headings in the product UI unless there is a strong usability reason. Default to layouts where content, controls, and spacing make the structure self-explanatory.
+- Treat short eyebrow text, helper labels, and section-introducer copy as meta headings too. If the text mainly frames the UI instead of delivering product content, do not add it.
+- Do not add labels such as "Visible in your community feed", "Share with the community", "About this post", or similar copy above inputs, upload areas, or controls unless the text is the primary content users need to act on.
+- Prefer direct helper copy integrated into the component body or no extra copy at all. Do not create a heading-shaped sentence just to explain the section.
+- Before finishing UI copy changes, do a specific pass for meta framing text and remove any label that exists only to describe the block beneath it.
 
 ## Route Testing Rule
 

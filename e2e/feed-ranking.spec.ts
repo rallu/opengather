@@ -196,11 +196,12 @@ test.describe("thread-aware feed ranking", () => {
 			createdAt: new Date("2026-03-10T09:00:00.000Z"),
 		});
 
-		await page.goto("/feed?sort=newest");
+		await page.goto("/feed");
 		const newFeedBody = `fresh-feed-thread-${now}`;
 		await page.getByTestId("feed-composer").fill(newFeedBody);
 		await page.getByTestId("feed-post-button").click();
 		await expect(page.getByTestId("feed-post-list")).toContainText(newFeedBody);
+		await expect(page.getByTestId("feed-composer")).toHaveValue("");
 		await expect(
 			page
 				.locator('[data-testid="feed-post-list"] > [data-testid^="feed-post-"]')
@@ -225,13 +226,14 @@ test.describe("thread-aware feed ranking", () => {
 			createdAt: new Date("2026-03-10T10:00:00.000Z"),
 		});
 
-		await page.goto(`${groupUrl}?sort=newest`);
+		await page.goto(groupUrl);
 		const newGroupBody = `fresh-group-thread-${now}`;
 		await page.getByTestId("group-post-body").fill(newGroupBody);
 		await page.getByTestId("group-post-submit").click();
 		await expect(page.getByTestId("group-post-list")).toContainText(
 			newGroupBody,
 		);
+		await expect(page.getByTestId("group-post-body")).toHaveValue("");
 		await expect(
 			page
 				.locator(
@@ -239,6 +241,24 @@ test.describe("thread-aware feed ranking", () => {
 				)
 				.first(),
 		).toContainText(newGroupBody);
+	});
+
+	test("composer shortcut submits a new feed post", async ({ page }) => {
+		await ensureAdminSession(page);
+		await updateConfig("server_visibility_mode", "public");
+		await updateConfig("server_approval_mode", "automatic");
+
+		const bodyText = `shortcut-post-${Date.now()}`;
+		await page.goto("/feed");
+		await page.getByTestId("feed-composer").fill(bodyText);
+		await page.getByTestId("feed-composer").press("Control+Enter");
+		await expect(page.getByTestId("feed-post-list")).toContainText(bodyText);
+		await expect(page.getByTestId("feed-composer")).toHaveValue("");
+		await expect(
+			page
+				.locator('[data-testid="feed-post-list"] > [data-testid^="feed-post-"]')
+				.first(),
+		).toContainText(bodyText);
 	});
 
 	test("activity mode bumps replied threads while newest keeps root chronology", async ({

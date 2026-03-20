@@ -3,7 +3,10 @@ import { Prisma } from "@prisma/client";
 import { getConfig } from "./config.service.server.ts";
 import { getDb } from "./db.server.ts";
 import { toTextVector } from "./embedding.service.server.ts";
-import { getReadableGroupIds } from "./group.service.server.ts";
+import {
+	getFeedGroupIds,
+	getReadableGroupIds,
+} from "./group.service.server.ts";
 import {
 	getGroupMembership,
 	resolveGroupRole,
@@ -59,6 +62,23 @@ export type CommunityPost = {
 	isDeleted: boolean;
 	createdAt: string;
 	replies: CommunityPost[];
+};
+
+export type CreatedPostSummary = {
+	id: string;
+	parentPostId?: string;
+	bodyText?: string;
+	assets: PostAssetSummary[];
+	group?: {
+		id: string;
+		name: string;
+	};
+	moderationStatus: "pending" | "approved" | "rejected" | "flagged";
+	isHidden: boolean;
+	isDeleted: boolean;
+	createdAt: string;
+	latestActivityAt: string;
+	commentCount: number;
 };
 
 function asModerationStatus(params: {
@@ -367,14 +387,13 @@ export async function loadCommunity(params: {
 		instanceId: status.instance.id,
 		user: params.user,
 	});
-	const readableGroupIds = await getReadableGroupIds({
+	const readableGroupIds = await getFeedGroupIds({
 		authUser: params.user
 			? {
 					id: params.user.id,
 					hubUserId: params.user.hubUserId,
 				}
 			: null,
-		instanceViewerRole: readAccess.viewerRole,
 	});
 	const page = await loadPostListPage({
 		scope: {
@@ -427,10 +446,16 @@ export async function loadCommunityPostThread(params: {
 		| "not_found";
 	viewerRole: "guest" | "member" | "moderator" | "admin";
 	post: CommunityPost | null;
+	canReply: boolean;
 }> {
 	const status = await getSetupStatus();
 	if (!status.isSetup || !status.instance) {
-		return { status: "not_setup", viewerRole: "guest", post: null };
+		return {
+			status: "not_setup",
+			viewerRole: "guest",
+			post: null,
+			canReply: false,
+		};
 	}
 
 	await ensureInstanceMembershipForUser({
@@ -453,6 +478,7 @@ export async function loadCommunityPostThread(params: {
 						: "forbidden",
 			viewerRole: readAccess.viewerRole,
 			post: null,
+			canReply: false,
 		};
 	}
 
@@ -522,11 +548,29 @@ export async function loadCommunityPostThread(params: {
 		posts: threadedPosts,
 		postId: params.postId,
 	});
+	const canReply = post
+		? post.group
+			? canPostToGroup({
+					groupRole: resolveGroupRole(
+						params.user
+							? await getGroupMembership({
+									groupId: post.group.id,
+									userId: params.user.id,
+								})
+							: null,
+					),
+				}).allowed
+			: await ensureCanPost({
+					instanceId: status.instance.id,
+					user: params.user,
+				})
+		: false;
 
 	return {
 		status: post ? "ok" : "not_found",
 		viewerRole: readAccess.viewerRole,
 		post,
+		canReply,
 	};
 }
 
@@ -542,7 +586,9 @@ export async function createPost(params: {
 		byteSize: number;
 		tempFilePath: string;
 	}>;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<
+	{ ok: true; createdPost: CreatedPostSummary } | { ok: false; error: string }
+> {
 	const status = await getSetupStatus();
 	if (!status.isSetup || !status.instance) {
 		return { ok: false, error: "Setup not completed" };
@@ -561,6 +607,7 @@ export async function createPost(params: {
 	let effectiveGroupId = params.groupId?.trim() || undefined;
 	let rootPostId: string | undefined;
 	let targetUrl = "/feed";
+	let targetGroupName: string | undefined;
 
 	if (!effectiveGroupId) {
 		const canPost = await ensureCanPost({
@@ -622,6 +669,7 @@ export async function createPost(params: {
 		}
 
 		targetUrl = `/groups/${group.id}`;
+		targetGroupName = group.name;
 	}
 
 	const now = new Date();
@@ -711,6 +759,28 @@ export async function createPost(params: {
 		return { ok: false, error: "Failed to create post" };
 	}
 
+	const assetMap = await loadPostAssetSummaries({
+		postIds: [created.id],
+	});
+	const createdPost: CreatedPostSummary = {
+		id: created.id,
+		parentPostId: params.parentPostId ?? undefined,
+		bodyText: text,
+		assets: assetMap.get(created.id) ?? [],
+		group: effectiveGroupId
+			? {
+					id: effectiveGroupId,
+					name: targetGroupName ?? "Group",
+				}
+			: undefined,
+		moderationStatus,
+		isHidden: false,
+		isDeleted: false,
+		createdAt: now.toISOString(),
+		latestActivityAt: now.toISOString(),
+		commentCount: 0,
+	};
+
 	const mentionEmails = extractMentionEmails({ text });
 	const notifiedLocalUsers = new Set<string>();
 	if (mentionEmails.length > 0) {
@@ -794,7 +864,7 @@ export async function createPost(params: {
 		}
 	}
 
-	return { ok: true };
+	return { ok: true, createdPost };
 }
 
 export async function moderatePost(params: {

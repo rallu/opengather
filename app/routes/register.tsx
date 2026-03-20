@@ -211,12 +211,9 @@ export default function Register() {
 
 				{hubAuthEnabled ? (
 					<section className="space-y-3 rounded-lg border bg-muted/40 p-4">
-						<div>
-							<p className="text-sm font-semibold">Recommended</p>
-							<p className="text-sm text-muted-foreground">
-								Create or access your account through Hub first.
-							</p>
-						</div>
+						<p className="text-sm text-muted-foreground">
+							Create or access your account through Hub first.
+						</p>
 						<Button
 							type="button"
 							className="h-11 w-full"
@@ -229,9 +226,9 @@ export default function Register() {
 					</section>
 				) : null}
 
-				<div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
+				<div className="flex items-center gap-3 text-xs text-muted-foreground">
 					<div className="h-px flex-1 bg-border" />
-					<span>Other sign up methods</span>
+					<span>Local account</span>
 					<div className="h-px flex-1 bg-border" />
 				</div>
 

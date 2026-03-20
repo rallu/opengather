@@ -248,6 +248,35 @@ export async function getReadableGroupIds(params: {
 	return readable.filter((groupId): groupId is string => groupId !== null);
 }
 
+export async function getFeedGroupIds(params: {
+	authUser: AuthUser;
+}): Promise<string[]> {
+	if (!params.authUser) {
+		return [];
+	}
+
+	const setup = await getSetupStatus();
+	if (!setup.isSetup || !setup.instance) {
+		return [];
+	}
+
+	const memberships = await getDb().groupMembership.findMany({
+		where: {
+			principalId: params.authUser.id,
+			principalType: "user",
+			approvalStatus: "approved",
+			group: {
+				instanceId: setup.instance.id,
+			},
+		},
+		select: {
+			groupId: true,
+		},
+	});
+
+	return memberships.map((membership) => membership.groupId);
+}
+
 export async function createGroup(params: {
 	authUser: NonNullable<AuthUser>;
 	instanceViewerRole: ViewerRole;

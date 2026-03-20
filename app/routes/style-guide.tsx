@@ -1854,11 +1854,7 @@ export default function StyleGuidePage() {
 										<PostComposer
 											variant="post"
 											defaultValue="We have enough volunteers for setup. What we still need is one person to document the route changes before Saturday."
-											footer={
-												<p className="text-sm text-muted-foreground">
-													Visible in your community feed
-												</p>
-											}
+											footer={null}
 										/>
 
 										<PostComposer

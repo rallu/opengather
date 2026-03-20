@@ -48,9 +48,25 @@ export function ThreadFeedList(params: {
 	loadingTestId: string;
 	emptyState: React.ReactNode;
 	renderItem: (item: PostListItem) => React.ReactNode;
+	priorityItem?: PostListItem;
 }) {
 	const fetcher = useFetcher<PostListPage>();
-	const [items, setItems] = React.useState(params.initialPage.items);
+	const prioritizeItem = React.useCallback(
+		(items: PostListItem[]) => {
+			if (!params.priorityItem) {
+				return items;
+			}
+
+			return [
+				params.priorityItem,
+				...items.filter((item) => item.id !== params.priorityItem?.id),
+			];
+		},
+		[params.priorityItem],
+	);
+	const [items, setItems] = React.useState(() =>
+		prioritizeItem(params.initialPage.items),
+	);
 	const [nextCursor, setNextCursor] = React.useState(
 		params.initialPage.nextCursor,
 	);
@@ -59,7 +75,7 @@ export function ThreadFeedList(params: {
 	const sentinelRef = React.useRef<HTMLDivElement | null>(null);
 
 	React.useEffect(() => {
-		setItems(params.initialPage.items);
+		setItems(prioritizeItem(params.initialPage.items));
 		setNextCursor(params.initialPage.nextCursor);
 		setHasMore(params.initialPage.hasMore);
 		lastRequestedCursorRef.current = null;
@@ -67,6 +83,7 @@ export function ThreadFeedList(params: {
 		params.initialPage.hasMore,
 		params.initialPage.items,
 		params.initialPage.nextCursor,
+		prioritizeItem,
 	]);
 
 	React.useEffect(() => {
@@ -87,12 +104,20 @@ export function ThreadFeedList(params: {
 				mergedItems.push(item);
 			}
 
-			return mergedItems;
+			return prioritizeItem(mergedItems);
 		});
 		setNextCursor(page.nextCursor);
 		setHasMore(page.hasMore);
 		lastRequestedCursorRef.current = null;
-	}, [fetcher.data]);
+	}, [fetcher.data, prioritizeItem]);
+
+	React.useEffect(() => {
+		if (!params.priorityItem) {
+			return;
+		}
+
+		setItems((currentItems) => prioritizeItem(currentItems));
+	}, [params.priorityItem, prioritizeItem]);
 
 	const requestMore = React.useEffectEvent((cursor: string) => {
 		if (fetcher.state !== "idle" || lastRequestedCursorRef.current === cursor) {
