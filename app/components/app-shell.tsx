@@ -1,11 +1,17 @@
-import type { ReactNode } from "react";
-import { Form, Link, useLocation } from "react-router";
+import { type ReactNode, useEffect } from "react";
+import { Form, Link, useFetcher, useLocation } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Container } from "~/components/ui/container";
 import { Icon } from "~/components/ui/icon";
 import { Input } from "~/components/ui/input";
 import { signOut } from "~/lib/auth-client";
 import { cn } from "~/lib/utils";
+
+type NotificationSummaryData = {
+	unreadCount: number;
+	pendingApprovalCount: number;
+	canAccessApprovals: boolean;
+};
 
 type ShellAuthUser = {
 	name: string;
@@ -30,8 +36,19 @@ const baseNavItems = [
 		testId: "shell-nav-notifications",
 	},
 	{ to: "/profile", label: "Profile", testId: "shell-nav-profile" },
-	{ to: "/settings", label: "Settings", testId: "shell-nav-settings" }
+	{ to: "/settings", label: "Settings", testId: "shell-nav-settings" },
 ];
+
+function NavBadge(props: { count: number; testId: string }) {
+	return (
+		<span
+			className="rounded-full bg-background/20 px-2 py-0.5 text-xs font-semibold"
+			data-testid={props.testId}
+		>
+			{props.count}
+		</span>
+	);
+}
 
 function ShellPanel(props: { children?: ReactNode; className?: string }) {
 	return (
@@ -47,20 +64,43 @@ function ShellPanel(props: { children?: ReactNode; className?: string }) {
 
 export function AppShell(props: AppShellProps) {
 	const location = useLocation();
+	const notificationSummaryFetcher = useFetcher<NotificationSummaryData>();
+	const notificationRefreshKey = `${location.pathname}:${location.search}`;
+
+	useEffect(() => {
+		void notificationRefreshKey;
+		if (!props.authUser) {
+			return;
+		}
+		if (notificationSummaryFetcher.state === "idle") {
+			notificationSummaryFetcher.load("/api/notifications/summary");
+		}
+	}, [notificationRefreshKey, notificationSummaryFetcher, props.authUser]);
+
+	const notificationSummary = notificationSummaryFetcher.data;
 	const navItems = props.authUser
-		? props.showServerSettings
-			? [
+		? [
 				...baseNavItems,
-				{
-					to: "/server-settings",
-					label: "Server",
-					testId: "shell-nav-server",
-				},
+				...(notificationSummary?.canAccessApprovals
+					? [
+							{
+								to: "/approvals",
+								label: "Approvals",
+								testId: "shell-nav-approvals",
+							},
+						]
+					: []),
+				...(props.showServerSettings
+					? [
+							{
+								to: "/server-settings",
+								label: "Server",
+								testId: "shell-nav-server",
+							},
+						]
+					: []),
 			]
-			: baseNavItems
-		: [
-			{ to: "/feed", label: "Feed", testId: "shell-nav-feed" },
-		];
+		: [{ to: "/feed", label: "Feed", testId: "shell-nav-feed" }];
 
 	const activeItem = navItems.find((item) =>
 		location.pathname.startsWith(item.to),
@@ -166,13 +206,29 @@ export function AppShell(props: AppShellProps) {
 											to={item.to}
 											data-testid={item.testId}
 											className={cn(
-												"flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+												"flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
 												activeItem === item.to
 													? "bg-primary text-primary-foreground"
 													: "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
 											)}
 										>
 											<span>{item.label}</span>
+											{item.to === "/notifications" &&
+											notificationSummary &&
+											notificationSummary.unreadCount > 0 ? (
+												<NavBadge
+													count={notificationSummary.unreadCount}
+													testId="shell-nav-notifications-badge"
+												/>
+											) : null}
+											{item.to === "/approvals" &&
+											notificationSummary &&
+											notificationSummary.pendingApprovalCount > 0 ? (
+												<NavBadge
+													count={notificationSummary.pendingApprovalCount}
+													testId="shell-nav-approvals-badge"
+												/>
+											) : null}
 										</Link>
 									))}
 								</nav>

@@ -58,6 +58,30 @@ const groupMemberRoles = new Set<GroupRole>([
 ]);
 const groupManagerRoles = new Set<GroupRole>(["moderator", "admin", "owner"]);
 
+export function getAllowedProfileVisibilityModes(params: {
+	instanceVisibilityMode: InstanceVisibilityMode;
+}): ProfileVisibilityMode[] {
+	if (params.instanceVisibilityMode === "public") {
+		return ["public", "instance_members", "private"];
+	}
+
+	return ["instance_members", "private"];
+}
+
+export function resolveEffectiveProfileVisibility(params: {
+	instanceVisibilityMode: InstanceVisibilityMode;
+	visibilityMode: ProfileVisibilityMode;
+}): ProfileVisibilityMode {
+	if (
+		params.instanceVisibilityMode !== "public" &&
+		params.visibilityMode === "public"
+	) {
+		return "instance_members";
+	}
+
+	return params.visibilityMode;
+}
+
 export function resolveViewerRoleFromMembership(
 	membership: MembershipRecord,
 ): ViewerRole {

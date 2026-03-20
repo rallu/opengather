@@ -34,3 +34,5 @@ storage/
 
 # Misc
 *.tsbuildinfo
+
+test-results/

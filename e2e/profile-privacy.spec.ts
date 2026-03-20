@@ -232,4 +232,88 @@ test.describe("profile privacy", () => {
 			profilePost,
 		);
 	});
+
+	test("profiles cannot stay public when the instance is members only", async ({
+		page,
+	}) => {
+		await ensureConfiguredInstance(page);
+		await updateConfig("server_visibility_mode", "public");
+		await updateConfig("server_approval_mode", "automatic");
+
+		const now = Date.now();
+		const owner = {
+			name: `Owner Closed ${now}`,
+			email: `owner-closed-${now}@example.com`,
+			password: "owner-pass-123",
+		};
+		const viewer = {
+			name: `Viewer Closed ${now}`,
+			email: `viewer-closed-${now}@example.com`,
+			password: "viewer-pass-123",
+		};
+		const profilePost = `Members only hello ${now}`;
+
+		await registerUser({
+			page,
+			...owner,
+		});
+		await page.goto("/feed");
+		await page.getByTestId("feed-composer").fill(profilePost);
+		await page.getByTestId("feed-post-button").click();
+		await expect(page.getByTestId("feed-post-list")).toContainText(profilePost);
+
+		const ownerUserId = await getUserIdByEmail(owner.email);
+
+		await signOut(page);
+		await page.goto(`/profiles/${ownerUserId}`);
+		await expect(page.getByTestId("profile-activity-list")).toContainText(
+			profilePost,
+		);
+
+		await updateConfig("server_visibility_mode", "registered");
+
+		await page.goto(`/profiles/${ownerUserId}`);
+		await expect(page.getByTestId("profile-requires-auth-state")).toContainText(
+			"Sign in to view this profile.",
+		);
+
+		await signInUser({
+			page,
+			email: owner.email,
+			password: owner.password,
+		});
+		await page.goto("/settings");
+		await expect(page.getByTestId("settings-profile-visibility")).toHaveValue(
+			"instance_members",
+		);
+		await expect(
+			page.getByText(
+				"Public profiles are unavailable because this instance is not public.",
+			),
+		).toBeVisible();
+
+		const profileVisibilityOptions = await page
+			.getByTestId("settings-profile-visibility")
+			.locator("option")
+			.evaluateAll((options) =>
+				options.map((option) => ({
+					value: option.getAttribute("value"),
+					label: option.textContent?.trim(),
+				})),
+			);
+		expect(profileVisibilityOptions).toEqual([
+			{ value: "instance_members", label: "Instance members" },
+			{ value: "private", label: "Private" },
+		]);
+
+		await signOut(page);
+		await registerUser({
+			page,
+			...viewer,
+		});
+		await page.goto(`/profiles/${ownerUserId}`);
+		await expect(page.getByTestId("profile-activity-list")).toContainText(
+			profilePost,
+		);
+	});
 });

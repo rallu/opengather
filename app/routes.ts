@@ -30,6 +30,10 @@ const routes: RouteConfig = [
 		file: "routes/api-post-list.tsx",
 	},
 	{
+		path: "/api/notifications/summary",
+		file: "routes/api-notifications-summary.tsx",
+	},
+	{
 		path: "/.well-known/appspecific/com.chrome.devtools.json",
 		file: "routes/chrome-devtools-workspace.ts",
 	},
@@ -92,6 +96,10 @@ const routes: RouteConfig = [
 	{
 		path: "/notifications",
 		file: "routes/notifications.tsx",
+	},
+	{
+		path: "/approvals",
+		file: "routes/approvals.tsx",
 	},
 	{
 		path: "/settings",

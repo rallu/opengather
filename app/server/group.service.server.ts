@@ -1,4 +1,9 @@
 import { randomUUID } from "node:crypto";
+import {
+	buildGroupMembershipRequestKey,
+	notifyPendingGroupMembershipApprovers,
+	resolveGroupMembershipApproval,
+} from "./approval.service.server.ts";
 import { getDb } from "./db.server.ts";
 import {
 	ensureGroupMembership,
@@ -356,6 +361,7 @@ export async function loadGroup(params: {
 			pendingRequests: Array<{
 				userId: string;
 				label: string;
+				requestKey: string;
 				role: string;
 				approvalStatus: string;
 			}>;
@@ -543,6 +549,10 @@ export async function loadGroup(params: {
 		pendingRequests: pendingRequests.map((request) => ({
 			userId: request.principalId,
 			label: pendingUserById.get(request.principalId) ?? request.principalId,
+			requestKey: buildGroupMembershipRequestKey({
+				groupId: group.id,
+				requesterUserId: request.principalId,
+			}),
 			role: request.role,
 			approvalStatus: request.approvalStatus,
 		})),
@@ -619,6 +629,12 @@ export async function requestGroupAccess(params: {
 		userId: params.authUser.id,
 		approvalMode,
 	});
+	if (result.created && result.membership.approvalStatus === "pending") {
+		await notifyPendingGroupMembershipApprovers({
+			groupId: group.id,
+			requesterUserId: params.authUser.id,
+		});
+	}
 
 	return {
 		ok: true,
@@ -633,37 +649,7 @@ export async function updateGroupMembershipApproval(params: {
 	targetUserId: string;
 	status: "approved" | "rejected";
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-	const setup = await getSetupStatus();
-	if (!setup.isSetup || !setup.instance) {
-		return { ok: false, error: "Setup not completed" };
-	}
-
-	const managerMembership = await getGroupMembership({
-		groupId: params.groupId,
-		userId: params.managerUserId,
-	});
-	const managerRole = resolveGroupRole(managerMembership);
-	if (!canManageGroup({ groupRole: managerRole }).allowed) {
-		return { ok: false, error: "Group manager access required" };
-	}
-
-	const updated = await getDb().groupMembership.updateMany({
-		where: {
-			groupId: params.groupId,
-			principalId: params.targetUserId,
-			principalType: "user",
-		},
-		data: {
-			approvalStatus: params.status,
-			updatedAt: new Date(),
-		},
-	});
-
-	if (updated.count === 0) {
-		return { ok: false, error: "Membership request not found" };
-	}
-
-	return { ok: true };
+	return resolveGroupMembershipApproval(params);
 }
 
 export async function updateGroupVisibility(params: {

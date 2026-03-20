@@ -1,10 +1,14 @@
 import { randomUUID } from "node:crypto";
+import { getConfig } from "./config.service.server.ts";
 import { getDb } from "./db.server.ts";
 import { getReadableGroupIds } from "./group.service.server.ts";
 import {
 	canViewProfile,
+	getAllowedProfileVisibilityModes,
 	getInstanceViewerRole,
+	type InstanceVisibilityMode,
 	type ProfileVisibilityMode,
+	resolveEffectiveProfileVisibility,
 	type ViewerRole,
 } from "./permissions.server.ts";
 
@@ -35,11 +39,17 @@ export function parseProfileVisibilityMode(
 export async function getProfileVisibility(params: {
 	userId: string;
 }): Promise<ProfileVisibilityMode> {
-	const preference = await getDb().profilePreference.findUnique({
-		where: { userId: params.userId },
-		select: { visibilityMode: true },
+	const [preference, instanceVisibilityMode] = await Promise.all([
+		getDb().profilePreference.findUnique({
+			where: { userId: params.userId },
+			select: { visibilityMode: true },
+		}),
+		getConfig("server_visibility_mode"),
+	]);
+	return resolveEffectiveProfileVisibility({
+		instanceVisibilityMode,
+		visibilityMode: parseProfileVisibilityMode(preference?.visibilityMode),
 	});
-	return parseProfileVisibilityMode(preference?.visibilityMode);
 }
 
 export async function setProfileVisibility(params: {
@@ -47,20 +57,43 @@ export async function setProfileVisibility(params: {
 	visibilityMode: ProfileVisibilityMode;
 }): Promise<void> {
 	const now = new Date();
+	const instanceVisibilityMode = await getConfig("server_visibility_mode");
+	const visibilityMode = resolveEffectiveProfileVisibility({
+		instanceVisibilityMode,
+		visibilityMode: params.visibilityMode,
+	});
 	await getDb().profilePreference.upsert({
 		where: { userId: params.userId },
 		create: {
 			id: randomUUID(),
 			userId: params.userId,
-			visibilityMode: params.visibilityMode,
+			visibilityMode,
 			createdAt: now,
 			updatedAt: now,
 		},
 		update: {
-			visibilityMode: params.visibilityMode,
+			visibilityMode,
 			updatedAt: now,
 		},
 	});
+}
+
+export function listProfileVisibilityOptions(params: {
+	instanceVisibilityMode: InstanceVisibilityMode;
+}): Array<{ value: ProfileVisibilityMode; label: string }> {
+	const allowedValues = getAllowedProfileVisibilityModes({
+		instanceVisibilityMode: params.instanceVisibilityMode,
+	});
+
+	return allowedValues.map((value) => ({
+		value,
+		label:
+			value === "public"
+				? "Public"
+				: value === "instance_members"
+					? "Instance members"
+					: "Private",
+	}));
 }
 
 function toIsoString(value: Date | string): string {

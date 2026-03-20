@@ -668,47 +668,14 @@ export default function GroupDetailPage() {
 											</p>
 										</div>
 										<div className="flex gap-2">
-											<Form method="post">
-												<input
-													type="hidden"
-													name="_action"
-													value="approve-membership"
-												/>
-												<input
-													type="hidden"
-													name="targetUserId"
-													value={request.userId}
-												/>
-												<Button
-													type="submit"
-													size="sm"
-													disabled={loading}
-													data-testid={`group-pending-approve-${request.userId}`}
+											<Button asChild size="sm" variant="outline">
+												<Link
+													to={`/approvals?request=${encodeURIComponent(request.requestKey)}`}
+													data-testid={`group-pending-open-${request.userId}`}
 												>
-													Approve
-												</Button>
-											</Form>
-											<Form method="post">
-												<input
-													type="hidden"
-													name="_action"
-													value="reject-membership"
-												/>
-												<input
-													type="hidden"
-													name="targetUserId"
-													value={request.userId}
-												/>
-												<Button
-													type="submit"
-													size="sm"
-													variant="outline"
-													disabled={loading}
-													data-testid={`group-pending-reject-${request.userId}`}
-												>
-													Reject
-												</Button>
-											</Form>
+													Review in approvals
+												</Link>
+											</Button>
 										</div>
 									</div>
 								))}

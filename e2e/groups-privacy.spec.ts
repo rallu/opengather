@@ -14,6 +14,11 @@ const memberUser = {
 	email: `member-${Date.now()}@example.com`,
 	password: "member-pass-123",
 };
+const outsiderUser = {
+	name: `Outsider ${Date.now()}`,
+	email: `outsider-${Date.now()}@example.com`,
+	password: "outsider-pass-123",
+};
 
 const publicGroupName = `Public Group ${Date.now()}`;
 const publicPostText = `Public announcement ${Date.now()}`;
@@ -129,6 +134,19 @@ async function getUserIdByEmail(email: string): Promise<string> {
 		);
 		if (result.rowCount === 0 || !result.rows[0]?.id) {
 			throw new Error(`User not found for ${email}`);
+		}
+		return result.rows[0].id;
+	});
+}
+
+async function getPostIdByBodyText(bodyText: string): Promise<string> {
+	return withDb(async (client) => {
+		const result = await client.query<{ id: string }>(
+			"select id from post where body_text = $1 order by created_at desc limit 1",
+			[bodyText],
+		);
+		if (result.rowCount === 0 || !result.rows[0]?.id) {
+			throw new Error(`Post not found for body text: ${bodyText}`);
 		}
 		return result.rows[0].id;
 	});
@@ -365,8 +383,6 @@ test.describe("group privacy", () => {
 			email: adminUser.email,
 			password: adminUser.password,
 		});
-		await page.goto(`/groups/${privateGroupId}`);
-		const memberUserId = await getUserIdByEmail(memberUser.email);
 		await expect(
 			page.getByTestId(`group-pending-request-${memberUserId}`),
 		).toContainText(memberUser.email);
@@ -400,8 +416,69 @@ test.describe("group privacy", () => {
 			if ((await memberFeedItems.count()) > 0) {
 				break;
 			}
-			await page.getByTestId("feed-post-list-sentinel").scrollIntoViewIfNeeded();
+			await page
+				.getByTestId("feed-post-list-sentinel")
+				.scrollIntoViewIfNeeded();
 		}
 		await expect(memberFeedItems).toHaveCount(1);
+	});
+
+	test("private group posts do not leak through profiles, post pages, or notifications", async ({
+		page,
+	}) => {
+		await ensureConfiguredInstance(page);
+
+		if (!(await hasUser(outsiderUser.email))) {
+			await registerLocal({
+				page,
+				name: outsiderUser.name,
+				email: outsiderUser.email,
+				password: outsiderUser.password,
+			});
+			await signOutIfNeeded(page);
+		}
+
+		await signInLocal({
+			page,
+			email: memberUser.email,
+			password: memberUser.password,
+		});
+		const secretPostText = `Secret group ping ${Date.now()} ${outsiderUser.email}`;
+		await page.goto(`/groups/${privateGroupId}`);
+		await page.getByTestId("group-post-body").fill(secretPostText);
+		await page.getByTestId("group-post-submit").click();
+		await expect(page.getByTestId("group-post-list")).toContainText(
+			secretPostText,
+		);
+
+		const memberUserId = await getUserIdByEmail(memberUser.email);
+		const secretPostId = await getPostIdByBodyText(secretPostText);
+
+		await signOutIfNeeded(page);
+		await page.goto(`/profiles/${memberUserId}`);
+		await expect(page.getByTestId("profile-activity-list")).toBeVisible();
+		await expect(page.getByTestId("profile-activity-list")).not.toContainText(
+			secretPostText,
+		);
+
+		await page.goto(`/posts/${secretPostId}`);
+		await expect(page.getByText("Post not found.")).toBeVisible();
+
+		await signInLocal({
+			page,
+			email: outsiderUser.email,
+			password: outsiderUser.password,
+		});
+		await page.goto(`/profiles/${memberUserId}`);
+		await expect(page.getByTestId("profile-activity-list")).toBeVisible();
+		await expect(page.getByTestId("profile-activity-list")).not.toContainText(
+			secretPostText,
+		);
+
+		await page.goto(`/posts/${secretPostId}`);
+		await expect(page.getByText("Post not found.")).toBeVisible();
+
+		await page.goto("/notifications");
+		await expect(page.locator("body")).not.toContainText(secretPostText);
 	});
 });

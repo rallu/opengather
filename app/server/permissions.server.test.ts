@@ -13,6 +13,8 @@ import {
 	canViewGroup,
 	canViewInstanceFeed,
 	canViewProfile,
+	getAllowedProfileVisibilityModes,
+	resolveEffectiveProfileVisibility,
 	resolveEventVisibilityMode,
 	resolveGroupRoleFromMembership,
 	resolveViewerRoleFromMembership,
@@ -337,5 +339,34 @@ test("canViewProfile handles self, public, members-only, and private profiles", 
 			visibilityMode: "private",
 		}),
 		{ allowed: false, reason: "private_profile" },
+	);
+});
+
+test("profile visibility options and effective visibility follow instance visibility", () => {
+	assert.deepEqual(
+		getAllowedProfileVisibilityModes({
+			instanceVisibilityMode: "public",
+		}),
+		["public", "instance_members", "private"],
+	);
+	assert.deepEqual(
+		getAllowedProfileVisibilityModes({
+			instanceVisibilityMode: "registered",
+		}),
+		["instance_members", "private"],
+	);
+	assert.equal(
+		resolveEffectiveProfileVisibility({
+			instanceVisibilityMode: "approval",
+			visibilityMode: "public",
+		}),
+		"instance_members",
+	);
+	assert.equal(
+		resolveEffectiveProfileVisibility({
+			instanceVisibilityMode: "public",
+			visibilityMode: "public",
+		}),
+		"public",
 	);
 });

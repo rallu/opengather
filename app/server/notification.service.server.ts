@@ -221,6 +221,17 @@ export async function listNotifications(params: {
 	}));
 }
 
+export async function countUnreadNotifications(params: {
+	userId: string;
+}): Promise<number> {
+	return getDb().notification.count({
+		where: {
+			userId: params.userId,
+			readAt: null,
+		},
+	});
+}
+
 export async function markNotificationRead(params: {
 	userId: string;
 	notificationId: string;
@@ -248,5 +259,21 @@ export async function markAllNotificationsRead(params: {
 			readAt: new Date(),
 		},
 	});
+	return result.count;
+}
+
+export async function markNotificationsReadByRelatedEntityId(params: {
+	relatedEntityId: string;
+}): Promise<number> {
+	const result = await getDb().notification.updateMany({
+		where: {
+			relatedEntityId: params.relatedEntityId,
+			readAt: null,
+		},
+		data: {
+			readAt: new Date(),
+		},
+	});
+
 	return result.count;
 }

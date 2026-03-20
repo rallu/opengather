@@ -132,6 +132,7 @@ export default function NotificationsPage() {
 						<li
 							key={notification.id}
 							className="rounded-md border border-border p-4"
+							data-testid={`notification-item-${notification.relatedEntityId ?? notification.id}`}
 						>
 							<div className="flex items-start justify-between gap-3">
 								<div className="space-y-1">
@@ -146,6 +147,7 @@ export default function NotificationsPage() {
 										<Link
 											className="text-sm underline"
 											to={notification.targetUrl}
+											data-testid={`notification-open-${notification.relatedEntityId ?? notification.id}`}
 										>
 											Open
 										</Link>

@@ -108,7 +108,7 @@ export default function ProfilePage() {
 
 			<div className="flex gap-3">
 				<Button variant="outline" asChild>
-					<Link to={data.publicProfilePath}>Open Public Profile</Link>
+					<Link to={data.publicProfilePath}>Open Profile Page</Link>
 				</Button>
 				<Button variant="outline" asChild>
 					<Link to="/settings">Edit Privacy</Link>

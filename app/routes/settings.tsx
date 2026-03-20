@@ -9,6 +9,7 @@ import {
 import { getViewerContext } from "~/server/permissions.server";
 import {
 	getProfileVisibility,
+	listProfileVisibilityOptions,
 	parseProfileVisibilityMode,
 	setProfileVisibility,
 } from "~/server/profile.service.server";
@@ -60,6 +61,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			profileVisibility: authUser
 				? await getProfileVisibility({ userId: authUser.id })
 				: "public",
+			profileVisibilityOptions: listProfileVisibilityOptions({
+				instanceVisibilityMode: setup.instance?.visibilityMode ?? "public",
+			}),
 		};
 	} catch {
 		return {
@@ -68,6 +72,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			setup: { isSetup: false },
 			notificationChannels: null,
 			profileVisibility: "public" as const,
+			profileVisibilityOptions: listProfileVisibilityOptions({
+				instanceVisibilityMode: "public",
+			}),
 		};
 	}
 }
@@ -108,7 +115,7 @@ export default function SettingsPage() {
 							</Button>
 							<Button variant="outline" asChild>
 								<Link to={`/profiles/${data.authUser.id}`}>
-									Open Public Profile
+									Open Profile Page
 								</Link>
 							</Button>
 							{data.viewerRole === "admin" ? (
@@ -147,6 +154,12 @@ export default function SettingsPage() {
 								>
 									Who can view your profile activity
 								</label>
+								{data.setup.instance?.visibilityMode !== "public" ? (
+									<p className="text-sm text-muted-foreground">
+										Public profiles are unavailable because this instance is not
+										public.
+									</p>
+								) : null}
 								<select
 									id="profile-visibility"
 									name="profileVisibility"
@@ -154,9 +167,11 @@ export default function SettingsPage() {
 									data-testid="settings-profile-visibility"
 									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 								>
-									<option value="public">Public</option>
-									<option value="instance_members">Instance members</option>
-									<option value="private">Private</option>
+									{data.profileVisibilityOptions.map((option) => (
+										<option key={option.value} value={option.value}>
+											{option.label}
+										</option>
+									))}
 								</select>
 							</div>
 							<Button

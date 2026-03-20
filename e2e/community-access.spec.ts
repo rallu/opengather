@@ -12,6 +12,11 @@ type ConfigSnapshot = {
 	serverApprovalMode: string;
 };
 
+const adminUser = {
+	email: "admin@example.com",
+	password: "admin-pass-123",
+};
+
 async function withDb<T>(callback: (client: Client) => Promise<T>): Promise<T> {
 	const client = new Client({
 		connectionString: databaseUrl,
@@ -79,6 +84,53 @@ async function updateConfig(key: string, value: string): Promise<void> {
 	});
 }
 
+async function signInLocal(params: {
+	page: import("@playwright/test").Page;
+	email: string;
+	password: string;
+}): Promise<void> {
+	await params.page.goto("/feed");
+	if (
+		await params.page
+			.getByTestId("shell-sign-out")
+			.isVisible()
+			.catch(() => false)
+	) {
+		return;
+	}
+
+	await params.page.goto("/login");
+	await params.page.getByTestId("login-email").fill(params.email);
+	await params.page.getByTestId("login-password").fill(params.password);
+	await params.page.getByTestId("login-submit").click();
+	await expect(params.page.getByTestId("shell-sign-out")).toBeVisible();
+}
+
+async function signOutIfNeeded(
+	page: import("@playwright/test").Page,
+): Promise<void> {
+	await page.context().clearCookies();
+	await page.goto("/feed");
+	await page.evaluate(() => {
+		window.localStorage.clear();
+		window.sessionStorage.clear();
+	});
+	await page.goto("/");
+}
+
+async function getUserIdByEmail(email: string): Promise<string> {
+	return withDb(async (client) => {
+		const result = await client.query<{ id: string }>(
+			'select id from "user" where email = $1 limit 1',
+			[email],
+		);
+		if (result.rowCount === 0 || !result.rows[0]?.id) {
+			throw new Error(`User not found for ${email}`);
+		}
+		return result.rows[0].id;
+	});
+}
+
 test.describe("community access flow", () => {
 	let snapshot: ConfigSnapshot;
 
@@ -95,6 +147,7 @@ test.describe("community access flow", () => {
 		page,
 	}) => {
 		await ensureConfiguredInstance(page);
+		await signOutIfNeeded(page);
 		await updateConfig("server_visibility_mode", "registered");
 		await updateConfig("server_approval_mode", "automatic");
 
@@ -112,17 +165,19 @@ test.describe("community access flow", () => {
 		await expect(page.getByTestId("login-context")).toBeVisible();
 	});
 
-	test("signed-in pending member sees clear pending-access state without posting controls", async ({
+	test("manual approval notifies admins and approval unlocks access", async ({
 		page,
 	}) => {
 		await ensureConfiguredInstance(page);
+		await signOutIfNeeded(page);
 		await updateConfig("server_visibility_mode", "approval");
 		await updateConfig("server_approval_mode", "manual");
 
 		const now = Date.now();
+		const pendingEmail = `pending-${now}@example.com`;
 		await page.goto("/register?next=%2Ffeed&reason=members-only");
 		await page.getByTestId("register-name").fill(`Pending ${now}`);
-		await page.getByTestId("register-email").fill(`pending-${now}@example.com`);
+		await page.getByTestId("register-email").fill(pendingEmail);
 		await page.getByTestId("register-password").fill("pending-pass-123");
 		await page.getByTestId("register-submit").click();
 
@@ -130,5 +185,49 @@ test.describe("community access flow", () => {
 		await expect(page.getByTestId("feed-pending-state")).toBeVisible();
 		await expect(page.getByTestId("feed-composer")).toHaveCount(0);
 		await expect(page.getByTestId("feed-reply-composer")).toHaveCount(0);
+
+		const pendingUserId = await getUserIdByEmail(pendingEmail);
+		const requestKey = `instance:singleton:${pendingUserId}`;
+
+		await signOutIfNeeded(page);
+		await signInLocal({
+			page,
+			email: adminUser.email,
+			password: adminUser.password,
+		});
+		await expect(page.getByTestId("shell-nav-approvals")).toBeVisible();
+		await expect(page.getByTestId("shell-nav-approvals-badge")).toContainText(
+			/\d+/,
+		);
+		await expect(
+			page.getByTestId("shell-nav-notifications-badge"),
+		).toContainText(/\d+/);
+
+		await page.goto("/notifications");
+		await expect(
+			page.getByTestId(`notification-item-${requestKey}`),
+		).toContainText(pendingEmail);
+		await page.getByTestId(`notification-open-${requestKey}`).click();
+		await expect(page).toHaveURL(/\/approvals\?request=/);
+		await expect(page.getByTestId(`approvals-row-${requestKey}`)).toContainText(
+			pendingEmail,
+		);
+		await page.getByTestId(`approvals-approve-${requestKey}`).click();
+		await expect(page.getByTestId("approvals-action-message")).toContainText(
+			"Server membership approved.",
+		);
+		await expect(page.getByTestId(`approvals-row-${requestKey}`)).toHaveCount(
+			0,
+		);
+
+		await signOutIfNeeded(page);
+		await signInLocal({
+			page,
+			email: pendingEmail,
+			password: "pending-pass-123",
+		});
+		await page.goto("/feed");
+		await expect(page.getByTestId("feed-pending-state")).toHaveCount(0);
+		await expect(page.getByTestId("feed-post-button")).toBeVisible();
 	});
 });

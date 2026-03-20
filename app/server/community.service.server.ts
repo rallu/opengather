@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
+import { notifyPendingInstanceMembershipApprovers } from "./approval.service.server.ts";
 import { getConfig } from "./config.service.server.ts";
 import { getDb } from "./db.server.ts";
 import { toTextVector } from "./embedding.service.server.ts";
@@ -9,6 +10,7 @@ import {
 } from "./group.service.server.ts";
 import {
 	getGroupMembership,
+	parseGroupVisibilityMode,
 	resolveGroupRole,
 } from "./group-membership.service.server.ts";
 import { processNotificationOutbox } from "./jobs.service.server.ts";
@@ -18,6 +20,7 @@ import {
 	canManageInstance,
 	canPostToGroup,
 	canPostToInstanceFeed,
+	canViewGroup,
 	canViewInstanceFeed,
 	getInstanceViewerRole,
 	type InstanceVisibilityMode,
@@ -105,9 +108,18 @@ export async function ensureInstanceMembershipForUser(params: {
 	instanceId: string;
 	approvalMode: "automatic" | "manual";
 	user: CommunityUser | null;
-}): Promise<void> {
+}): Promise<{
+	created: boolean;
+	membership: {
+		role: string;
+		approvalStatus: string;
+	} | null;
+}> {
 	if (!params.user) {
-		return;
+		return {
+			created: false,
+			membership: null,
+		};
 	}
 
 	const db = getDb();
@@ -117,11 +129,23 @@ export async function ensureInstanceMembershipForUser(params: {
 			principalId: params.user.id,
 			principalType: "user",
 		},
-		select: { id: true },
+		select: { role: true, approvalStatus: true },
 	});
 	if (existing) {
-		return;
+		return {
+			created: false,
+			membership: {
+				role: existing.role,
+				approvalStatus: existing.approvalStatus,
+			},
+		};
 	}
+
+	const membership = {
+		role: "member",
+		approvalStatus:
+			params.approvalMode === "automatic" ? "approved" : "pending",
+	};
 
 	await db.instanceMembership.create({
 		data: {
@@ -129,13 +153,24 @@ export async function ensureInstanceMembershipForUser(params: {
 			instanceId: params.instanceId,
 			principalId: params.user.id,
 			principalType: "user",
-			role: "member",
-			approvalStatus:
-				params.approvalMode === "automatic" ? "approved" : "pending",
+			role: membership.role,
+			approvalStatus: membership.approvalStatus,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
 	});
+
+	if (membership.approvalStatus === "pending") {
+		await notifyPendingInstanceMembershipApprovers({
+			instanceId: params.instanceId,
+			requesterUserId: params.user.id,
+		});
+	}
+
+	return {
+		created: true,
+		membership,
+	};
 }
 
 async function ensureCanRead(params: {
@@ -230,6 +265,43 @@ async function isAdmin(params: {
 		userId: params.user.id,
 	});
 	return canManageInstance({ viewerRole: role }).allowed;
+}
+
+async function canUserAccessPostAudience(params: {
+	instanceId: string;
+	userId: string;
+	instanceVisibilityMode: InstanceVisibilityMode;
+	group?: {
+		id: string;
+		visibilityMode: string;
+	} | null;
+}): Promise<boolean> {
+	const instanceViewerRole = await getInstanceViewerRole({
+		instanceId: params.instanceId,
+		userId: params.userId,
+	});
+
+	if (!params.group?.id) {
+		return canViewInstanceFeed({
+			visibilityMode: params.instanceVisibilityMode,
+			viewerRole: instanceViewerRole,
+			isAuthenticated: true,
+		}).allowed;
+	}
+
+	const groupRole = resolveGroupRole(
+		await getGroupMembership({
+			groupId: params.group.id,
+			userId: params.userId,
+		}),
+	);
+
+	return canViewGroup({
+		isAuthenticated: true,
+		instanceViewerRole,
+		groupRole,
+		visibilityMode: parseGroupVisibilityMode(params.group.visibilityMode),
+	}).allowed;
 }
 
 function mapPost(params: {
@@ -608,6 +680,12 @@ export async function createPost(params: {
 	let rootPostId: string | undefined;
 	let targetUrl = "/feed";
 	let targetGroupName: string | undefined;
+	let notificationGroup:
+		| {
+				id: string;
+				visibilityMode: string;
+		  }
+		| undefined;
 
 	if (!effectiveGroupId) {
 		const canPost = await ensureCanPost({
@@ -653,6 +731,7 @@ export async function createPost(params: {
 			select: {
 				id: true,
 				name: true,
+				visibilityMode: true,
 			},
 		});
 		if (!group) {
@@ -670,6 +749,10 @@ export async function createPost(params: {
 
 		targetUrl = `/groups/${group.id}`;
 		targetGroupName = group.name;
+		notificationGroup = {
+			id: group.id,
+			visibilityMode: group.visibilityMode,
+		};
 	}
 
 	const now = new Date();
@@ -783,7 +866,7 @@ export async function createPost(params: {
 
 	const mentionEmails = extractMentionEmails({ text });
 	const notifiedLocalUsers = new Set<string>();
-	if (mentionEmails.length > 0) {
+	if (moderationStatus !== "rejected" && mentionEmails.length > 0) {
 		const mentionedUsers = await db.$queryRaw<
 			Array<{ local_id: string; hub_user_id: string | null; email: string }>
 		>(
@@ -797,6 +880,16 @@ export async function createPost(params: {
 
 		for (const user of mentionedUsers) {
 			if (user.local_id === params.user.id) {
+				continue;
+			}
+			if (
+				!(await canUserAccessPostAudience({
+					instanceId,
+					userId: user.local_id,
+					instanceVisibilityMode: status.instance.visibilityMode,
+					group: notificationGroup,
+				}))
+			) {
 				continue;
 			}
 			notifiedLocalUsers.add(user.local_id);
@@ -843,7 +936,14 @@ export async function createPost(params: {
 			if (
 				localParentAuthor &&
 				localParentAuthor.id !== params.user.id &&
-				!notifiedLocalUsers.has(localParentAuthor.id)
+				!notifiedLocalUsers.has(localParentAuthor.id) &&
+				moderationStatus !== "rejected" &&
+				(await canUserAccessPostAudience({
+					instanceId,
+					userId: localParentAuthor.id,
+					instanceVisibilityMode: status.instance.visibilityMode,
+					group: notificationGroup,
+				}))
 			) {
 				await createNotification({
 					userId: localParentAuthor.id,
