@@ -143,6 +143,7 @@ model ProfilePreference {
   id             String   @id @db.Text
   userId         String   @unique(map: "profile_preference_user_unique") @map("user_id") @db.Text
   visibilityMode String   @map("visibility_mode") @db.Text
+  summary        String?  @db.Text
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
