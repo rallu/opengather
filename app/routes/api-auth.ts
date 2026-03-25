@@ -23,13 +23,16 @@ function parsePositiveInteger(
 	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+const DEFAULT_AUTH_RATE_LIMIT_MAX_REQUESTS =
+	process.env.NODE_ENV === "production" ? 30 : 500;
+
 const AUTH_RATE_LIMIT_WINDOW_MS = parsePositiveInteger(
 	process.env.AUTH_RATE_LIMIT_WINDOW_MS,
 	60_000,
 );
 const AUTH_RATE_LIMIT_MAX_REQUESTS = parsePositiveInteger(
 	process.env.AUTH_RATE_LIMIT_MAX_REQUESTS,
-	30,
+	DEFAULT_AUTH_RATE_LIMIT_MAX_REQUESTS,
 );
 
 function requiresHubOAuthHandler(request: Request): boolean {

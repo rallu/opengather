@@ -209,6 +209,7 @@ test.describe("thread-aware feed ranking", () => {
 		await page.goto("/feed");
 		const newFeedBody = `fresh-feed-thread-${now}`;
 		await page.getByTestId("feed-composer").fill(newFeedBody);
+		await expect(page.getByTestId("feed-composer")).toHaveValue(newFeedBody);
 		await page.getByTestId("feed-post-button").click();
 		await expect(page.getByTestId("feed-post-list")).toContainText(newFeedBody);
 		await expect(page.getByTestId("feed-composer")).toHaveValue("");
@@ -239,6 +240,7 @@ test.describe("thread-aware feed ranking", () => {
 		await page.goto(groupUrl);
 		const newGroupBody = `fresh-group-thread-${now}`;
 		await page.getByTestId("group-post-body").fill(newGroupBody);
+		await expect(page.getByTestId("group-post-body")).toHaveValue(newGroupBody);
 		await page.getByTestId("group-post-submit").click();
 		await expect(page.getByTestId("group-post-list")).toContainText(
 			newGroupBody,
