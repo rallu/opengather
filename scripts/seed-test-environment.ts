@@ -1,7 +1,12 @@
 import "dotenv/config";
 
-import { createDb, ensureMemberships, ensureSeedUsers, resolveSetupInstanceId } from "./seed-test-environment/db";
 import { SEED_USERS } from "./seed-test-environment/data";
+import {
+	createDb,
+	ensureMemberships,
+	ensureSeedUsers,
+	resolveSetupInstanceId,
+} from "./seed-test-environment/db";
 import { seedPosts } from "./seed-test-environment/posts";
 
 async function main() {

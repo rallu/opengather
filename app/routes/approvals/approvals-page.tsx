@@ -1,8 +1,8 @@
-import type { PendingApprovalRow } from "~/server/approval.service.server";
 import { Form, Link } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
 import { Container } from "~/components/ui/container";
+import type { PendingApprovalRow } from "~/server/approval.service.server";
 import type { ActionData, ApprovalsLoaderData } from "./route.server";
 
 function ApprovalSection(params: {
@@ -56,7 +56,11 @@ function ApprovalSection(params: {
 												value={row.requesterUserId}
 											/>
 											{row.groupId ? (
-												<input type="hidden" name="groupId" value={row.groupId} />
+												<input
+													type="hidden"
+													name="groupId"
+													value={row.groupId}
+												/>
 											) : null}
 											<Button
 												type="submit"
@@ -76,7 +80,11 @@ function ApprovalSection(params: {
 												value={row.requesterUserId}
 											/>
 											{row.groupId ? (
-												<input type="hidden" name="groupId" value={row.groupId} />
+												<input
+													type="hidden"
+													name="groupId"
+													value={row.groupId}
+												/>
 											) : null}
 											<Button
 												type="submit"

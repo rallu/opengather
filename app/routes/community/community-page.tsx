@@ -9,8 +9,8 @@ import {
 import { Container } from "~/components/ui/container";
 import { FeedContainer } from "~/components/ui/feed-container";
 import type { PostListItem } from "~/server/post-list.service.server";
-import type { CommunityLoaderData } from "./loader.server";
 import { CommunityFeedItem } from "./community-feed-item";
+import type { CommunityLoaderData } from "./loader.server";
 
 export function CommunityPage(params: {
 	data: CommunityLoaderData;
@@ -150,7 +150,9 @@ export function CommunityPage(params: {
 					sentinelTestId="feed-post-list-sentinel"
 					loadingTestId="feed-post-list-loading"
 					priorityItem={params.priorityPost}
-					emptyState={<p className="text-sm text-muted-foreground">No posts yet.</p>}
+					emptyState={
+						<p className="text-sm text-muted-foreground">No posts yet.</p>
+					}
 					renderItem={(post) => (
 						<CommunityFeedItem
 							key={post.id}

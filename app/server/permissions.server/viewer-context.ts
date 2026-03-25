@@ -1,7 +1,4 @@
-import {
-	resolveViewerRoleFromMembership,
-	type ViewerRole,
-} from "./shared.ts";
+import { resolveViewerRoleFromMembership, type ViewerRole } from "./shared.ts";
 
 export async function getInstanceViewerRole(params: {
 	instanceId: string;

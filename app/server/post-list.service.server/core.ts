@@ -1,11 +1,5 @@
-import {
-	loadPostAssetSummaries,
-	type PostAssetSummary,
-} from "../post-assets.server.ts";
-import {
-	loadPostAuthorSummaryMap,
-	type PostAuthorSummary,
-} from "../post-author.service.server.ts";
+import type { PostAssetSummary } from "../post-assets.server.ts";
+import type { PostAuthorSummary } from "../post-author.service.server.ts";
 
 export const POST_LIST_PAGE_SIZE = 10;
 
@@ -104,8 +98,14 @@ export function parsePostListSortMode(value?: string | null): PostListSortMode {
 }
 
 export function comparePostListItems(
-	left: Pick<PostListItem, "id" | "createdAt" | "commentCount" | "latestActivityAt">,
-	right: Pick<PostListItem, "id" | "createdAt" | "commentCount" | "latestActivityAt">,
+	left: Pick<
+		PostListItem,
+		"id" | "createdAt" | "commentCount" | "latestActivityAt"
+	>,
+	right: Pick<
+		PostListItem,
+		"id" | "createdAt" | "commentCount" | "latestActivityAt"
+	>,
 	sortMode: PostListSortMode,
 ): number {
 	if (sortMode === "activity") {
@@ -249,7 +249,9 @@ export function paginatePostListItems(params: {
 		items: pageItems,
 		hasMore,
 		nextCursor:
-			hasMore && lastItem ? encodePostListCursor({ item: lastItem }) : undefined,
+			hasMore && lastItem
+				? encodePostListCursor({ item: lastItem })
+				: undefined,
 		sortMode: params.sortMode,
 	};
 }

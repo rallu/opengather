@@ -1,6 +1,6 @@
 import { useActionData, useLoaderData, useNavigation } from "react-router";
 import { ApprovalsPage } from "./approvals/approvals-page";
-import { action, loader } from "./approvals/route.server";
+import type { action, loader } from "./approvals/route.server";
 
 export { action, loader } from "./approvals/route.server";
 

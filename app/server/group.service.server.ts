@@ -1,7 +1,3 @@
-export type {
-	GroupMemberSummary,
-	GroupSummary,
-} from "./group.service.server/shared.ts";
 export {
 	getFeedGroupIds,
 	getReadableGroupIds,
@@ -16,3 +12,7 @@ export {
 	updateGroupMembershipApproval,
 	updateGroupVisibility,
 } from "./group.service.server/mutations.ts";
+export type {
+	GroupMemberSummary,
+	GroupSummary,
+} from "./group.service.server/shared.ts";

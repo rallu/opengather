@@ -13,7 +13,7 @@ import {
 	type ViewerRole,
 } from "../permissions.server.ts";
 import { getSetupStatus } from "../setup.service.server.ts";
-import { getMembershipStatus, type AuthUser } from "./shared.ts";
+import { type AuthUser, getMembershipStatus } from "./shared.ts";
 
 export async function createGroup(params: {
 	authUser: NonNullable<AuthUser>;

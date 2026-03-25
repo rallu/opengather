@@ -7,14 +7,14 @@ import {
 	getAssetDirectoryPrefix,
 } from "../asset-storage.server.ts";
 import type { ParsedMultipartFile } from "../multipart-form.server.ts";
-import { writeFileToStorage } from "./storage.ts";
 import {
-	type PreparedDbAsset,
-	type PreparedDbVariant,
 	IMAGE_VARIANT_SPECS,
 	inferExtensionFromMimeType,
+	type PreparedDbAsset,
+	type PreparedDbVariant,
 	trimFilename,
 } from "./shared.ts";
+import { writeFileToStorage } from "./storage.ts";
 
 export async function createImageVariants(params: {
 	storage: AssetStorage;
@@ -59,7 +59,10 @@ export async function createImageVariants(params: {
 				position: spec.fit === "cover" ? "centre" : undefined,
 			});
 
-		const avifBuffer = await basePipeline.clone().avif({ quality: 60 }).toBuffer();
+		const avifBuffer = await basePipeline
+			.clone()
+			.avif({ quality: 60 })
+			.toBuffer();
 		const avifMeta = await sharp(avifBuffer).metadata();
 		const avifKey = `${prefix}/${spec.key}.avif`;
 		await params.storage.writeBuffer({ key: avifKey, buffer: avifBuffer });

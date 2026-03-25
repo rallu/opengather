@@ -39,7 +39,11 @@ export function ServerSettingsPage(params: {
 
 	if (!params.data.authUser) {
 		return (
-			<AppShell authUser={null} title="Server Settings" showServerSettings={false}>
+			<AppShell
+				authUser={null}
+				title="Server Settings"
+				showServerSettings={false}
+			>
 				<section className="space-y-3 rounded-md border border-border p-4">
 					<div className="flex gap-3">
 						<Button asChild>
@@ -216,7 +220,9 @@ export function ServerSettingsPage(params: {
 						<span className="font-medium">Storage driver</span>
 						<select
 							name="mediaStorageDriver"
-							defaultValue={params.data.hubConfig?.mediaStorageDriver ?? "local"}
+							defaultValue={
+								params.data.hubConfig?.mediaStorageDriver ?? "local"
+							}
 							className="w-full rounded-md border border-input bg-background px-3 py-2"
 						>
 							<option value="local">Local filesystem</option>
@@ -227,7 +233,9 @@ export function ServerSettingsPage(params: {
 						<input
 							name="mediaLocalRoot"
 							type="text"
-							defaultValue={params.data.hubConfig?.mediaLocalRoot ?? "./storage/media"}
+							defaultValue={
+								params.data.hubConfig?.mediaLocalRoot ?? "./storage/media"
+							}
 							className="w-full rounded-md border border-input bg-background px-3 py-2"
 						/>
 					</label>

@@ -133,10 +133,7 @@ async function loadGroupDetailData(params: {
 		};
 	}
 
-	if (
-		result.status === "pending_membership" ||
-		result.status === "forbidden"
-	) {
+	if (result.status === "pending_membership" || result.status === "forbidden") {
 		return {
 			...result,
 			...routeContext,

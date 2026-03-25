@@ -1,29 +1,36 @@
 import { randomUUID } from "node:crypto";
 
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
-import { getAssetDirectoryPrefix, getAssetStorage } from "../asset-storage.server.ts";
+import {
+	getAssetDirectoryPrefix,
+	getAssetStorage,
+} from "../asset-storage.server.ts";
 import { logInfo, logWarn } from "../logger.server.ts";
 import { recordMediaMetric } from "../metrics.server.ts";
 import type { ParsedMultipartFile } from "../multipart-form.server.ts";
 import { createImageVariants } from "./image-processing.ts";
 import {
-	type PreparedPostAssetPersistence,
 	IMAGE_MIME_TYPES,
 	MAX_IMAGE_BYTES,
 	MAX_IMAGES_PER_POST,
+	type PreparedPostAssetPersistence,
 	VIDEO_MIME_TYPES,
 } from "./shared.ts";
 import { stageVideoAsset } from "./video-processing.ts";
 
-function assertAcceptedMimeType(upload: ParsedMultipartFile): "image" | "video" {
+function assertAcceptedMimeType(
+	upload: ParsedMultipartFile,
+): "image" | "video" {
 	if (IMAGE_MIME_TYPES.has(upload.mimeType)) {
 		return "image";
 	}
 	if (VIDEO_MIME_TYPES.has(upload.mimeType)) {
 		return "video";
 	}
-	throw new Error(`Unsupported asset type: ${upload.mimeType || upload.filename}`);
+	throw new Error(
+		`Unsupported asset type: ${upload.mimeType || upload.filename}`,
+	);
 }
 
 export async function preparePostAssetsForCreate(params: {
@@ -52,11 +59,15 @@ export async function preparePostAssetsForCreate(params: {
 	const firstKind = uploadsWithKind[0]?.kind;
 	if (firstKind === "image") {
 		if (uploadsWithKind.length > MAX_IMAGES_PER_POST) {
-			throw new Error(`Posts can include at most ${MAX_IMAGES_PER_POST} images`);
+			throw new Error(
+				`Posts can include at most ${MAX_IMAGES_PER_POST} images`,
+			);
 		}
 		for (const item of uploadsWithKind) {
 			if (item.upload.byteSize > MAX_IMAGE_BYTES) {
-				throw new Error(`Image ${item.upload.filename} exceeds the 10 MB limit`);
+				throw new Error(
+					`Image ${item.upload.filename} exceeds the 10 MB limit`,
+				);
 			}
 		}
 	}
@@ -89,7 +100,14 @@ export async function preparePostAssetsForCreate(params: {
 				preparedAssets.push(prepared.asset);
 				preparedVariants.push(...prepared.variants);
 				recordMediaMetric({ event: "upload", outcome: "accepted" });
-				logInfo({ event: "media.upload.image_processed", data: { assetId, postId: params.postId, filename: item.upload.filename } });
+				logInfo({
+					event: "media.upload.image_processed",
+					data: {
+						assetId,
+						postId: params.postId,
+						filename: item.upload.filename,
+					},
+				});
 			}
 		} else if (firstKind === "video") {
 			const item = uploadsWithKind[0];
@@ -109,7 +127,14 @@ export async function preparePostAssetsForCreate(params: {
 			preparedAssets.push(prepared.asset);
 			preparedJobs.push(prepared.job as Prisma.ProcessingJobCreateInput);
 			recordMediaMetric({ event: "upload", outcome: "accepted" });
-			logInfo({ event: "media.upload.video_queued", data: { assetId, postId: params.postId, filename: item.upload.filename } });
+			logInfo({
+				event: "media.upload.video_queued",
+				data: {
+					assetId,
+					postId: params.postId,
+					filename: item.upload.filename,
+				},
+			});
 		}
 
 		return {
@@ -125,13 +150,23 @@ export async function preparePostAssetsForCreate(params: {
 				}
 			},
 			async cleanup() {
-				await Promise.all([...assetPrefixes].map((prefix) => storage.deletePrefix({ prefix })));
+				await Promise.all(
+					[...assetPrefixes].map((prefix) => storage.deletePrefix({ prefix })),
+				);
 			},
 		};
 	} catch (error) {
 		recordMediaMetric({ event: "upload", outcome: "rejected" });
-		logWarn({ event: "media.upload.rejected", data: { postId: params.postId, error: error instanceof Error ? error.message : "unknown error" } });
-		await Promise.all([...assetPrefixes].map((prefix) => storage.deletePrefix({ prefix })));
+		logWarn({
+			event: "media.upload.rejected",
+			data: {
+				postId: params.postId,
+				error: error instanceof Error ? error.message : "unknown error",
+			},
+		});
+		await Promise.all(
+			[...assetPrefixes].map((prefix) => storage.deletePrefix({ prefix })),
+		);
 		throw error;
 	}
 }

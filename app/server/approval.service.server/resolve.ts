@@ -2,9 +2,9 @@ import { getDb } from "../db.server.ts";
 import { markNotificationsReadByRelatedEntityId } from "../notification.service.server.ts";
 import { canManageGroup, type ViewerRole } from "../permissions.server.ts";
 import {
+	type ApprovalStatus,
 	buildGroupMembershipRequestKey,
 	buildInstanceMembershipRequestKey,
-	type ApprovalStatus,
 	toManagedGroupRole,
 } from "./shared";
 

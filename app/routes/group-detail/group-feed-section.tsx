@@ -7,8 +7,8 @@ import {
 } from "~/components/post/thread-feed-list";
 import { FeedContainer } from "~/components/ui/feed-container";
 import type { PostListItem } from "~/server/post-list.service.server";
-import type { GroupDetailOkData } from "./loader.server";
 import { GroupFeedItem } from "./group-feed-item";
+import type { GroupDetailOkData } from "./loader.server";
 
 export function GroupFeedSection(params: {
 	data: GroupDetailOkData;

@@ -1,11 +1,11 @@
+import { AppShell } from "~/components/app-shell";
 import { Badge } from "~/components/ui/badge";
 import { ContextBar } from "~/components/ui/context-bar";
-import { AppShell } from "~/components/app-shell";
 import type { PostListItem } from "~/server/post-list.service.server";
-import type { GroupDetailLoaderData } from "./loader.server";
 import { GroupFeedSection } from "./group-feed-section";
 import { GroupManagementPanels } from "./group-management-panels";
 import { GroupStateNotice } from "./group-state-notice";
+import type { GroupDetailLoaderData } from "./loader.server";
 
 export function GroupDetailPage(params: {
 	data: GroupDetailLoaderData;
@@ -48,7 +48,10 @@ export function GroupDetailPage(params: {
 			{group ? (
 				<ContextBar
 					backTo="/groups"
-					breadcrumbs={[{ label: "Groups", to: "/groups" }, { label: group.name }]}
+					breadcrumbs={[
+						{ label: "Groups", to: "/groups" },
+						{ label: group.name },
+					]}
 					actions={
 						<Badge variant="neutral" data-testid="group-visibility-mode">
 							{group.visibilityMode}

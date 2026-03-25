@@ -47,7 +47,8 @@ export async function loader({
 	request,
 }: LoaderFunctionArgs): Promise<ApprovalsLoaderData> {
 	const viewer = await getViewerContext({ request });
-	const focusedRequestKey = new URL(request.url).searchParams.get("request") ?? "";
+	const focusedRequestKey =
+		new URL(request.url).searchParams.get("request") ?? "";
 
 	if (!viewer.authUser) {
 		return {

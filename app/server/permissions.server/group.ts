@@ -1,9 +1,9 @@
 import {
 	type AuthAwareParams,
 	type GroupRole,
+	type GroupVisibilityMode,
 	groupManagerRoles,
 	groupMemberRoles,
-	type GroupVisibilityMode,
 	instanceMemberRoles,
 	type PermissionResult,
 	type ViewerRole,

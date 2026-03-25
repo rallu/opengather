@@ -1,7 +1,13 @@
 import { Prisma } from "@prisma/client";
 
 import { getDb } from "../db.server.ts";
-import { buildVariantUrl, type PostAssetSummary, stripFilenameExtension, toAssetKind, toProcessingStatus } from "./shared.ts";
+import {
+	buildVariantUrl,
+	type PostAssetSummary,
+	stripFilenameExtension,
+	toAssetKind,
+	toProcessingStatus,
+} from "./shared.ts";
 
 export async function loadPostAssetSummaries(params: {
 	postIds: string[];
@@ -12,7 +18,9 @@ export async function loadPostAssetSummaries(params: {
 
 	const assets = await getDb().postAsset.findMany({
 		where: { postId: { in: params.postIds } },
-		include: { variants: { orderBy: [{ variantKey: "asc" }, { format: "asc" }] } },
+		include: {
+			variants: { orderBy: [{ variantKey: "asc" }, { format: "asc" }] },
+		},
 		orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
 	});
 
@@ -22,7 +30,9 @@ export async function loadPostAssetSummaries(params: {
 			id: asset.id,
 			kind: toAssetKind(asset.kind),
 			processingStatus: toProcessingStatus(asset.processingStatus),
-			alt: asset.originalFilename ? stripFilenameExtension(asset.originalFilename) : undefined,
+			alt: asset.originalFilename
+				? stripFilenameExtension(asset.originalFilename)
+				: undefined,
 			albumTags: asset.albumTags,
 			width: asset.width ?? undefined,
 			height: asset.height ?? undefined,
@@ -30,12 +40,25 @@ export async function loadPostAssetSummaries(params: {
 			variants: {},
 		};
 
-		if (asset.variants.some((variant) => variant.variantKey === "image-large")) summary.variants.large = buildVariantUrl(asset.id, "image-large");
-		if (asset.variants.some((variant) => variant.variantKey === "image-small")) summary.variants.small = buildVariantUrl(asset.id, "image-small");
-		if (asset.variants.some((variant) => variant.variantKey === "image-thumbnail")) summary.variants.thumbnail = buildVariantUrl(asset.id, "image-thumbnail");
-		if (asset.variants.some((variant) => variant.variantKey === "video-playback")) summary.variants.playback = buildVariantUrl(asset.id, "video-playback");
-		if (asset.variants.some((variant) => variant.variantKey === "video-poster")) summary.variants.poster = buildVariantUrl(asset.id, "video-poster");
-		if (!summary.variants.thumbnail && asset.variants.some((variant) => variant.variantKey === "video-thumbnail")) summary.variants.thumbnail = buildVariantUrl(asset.id, "video-thumbnail");
+		if (asset.variants.some((variant) => variant.variantKey === "image-large"))
+			summary.variants.large = buildVariantUrl(asset.id, "image-large");
+		if (asset.variants.some((variant) => variant.variantKey === "image-small"))
+			summary.variants.small = buildVariantUrl(asset.id, "image-small");
+		if (
+			asset.variants.some((variant) => variant.variantKey === "image-thumbnail")
+		)
+			summary.variants.thumbnail = buildVariantUrl(asset.id, "image-thumbnail");
+		if (
+			asset.variants.some((variant) => variant.variantKey === "video-playback")
+		)
+			summary.variants.playback = buildVariantUrl(asset.id, "video-playback");
+		if (asset.variants.some((variant) => variant.variantKey === "video-poster"))
+			summary.variants.poster = buildVariantUrl(asset.id, "video-poster");
+		if (
+			!summary.variants.thumbnail &&
+			asset.variants.some((variant) => variant.variantKey === "video-thumbnail")
+		)
+			summary.variants.thumbnail = buildVariantUrl(asset.id, "video-thumbnail");
 
 		const current = byPostId.get(asset.postId) ?? [];
 		current.push(summary);
@@ -50,7 +73,9 @@ export async function loadUserAlbumTags(params: {
 	userId: string;
 	hubUserId?: string;
 }): Promise<string[]> {
-	const authorIds = [...new Set([params.userId, params.hubUserId].filter(Boolean))];
+	const authorIds = [
+		...new Set([params.userId, params.hubUserId].filter(Boolean)),
+	];
 	if (authorIds.length === 0) {
 		return [];
 	}

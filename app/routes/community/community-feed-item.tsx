@@ -76,7 +76,11 @@ export function CommunityFeedItem(params: {
 								<input type="hidden" name="_action" value="moderate" />
 								<input type="hidden" name="postId" value={params.post.id} />
 								<input type="hidden" name="status" value="approved" />
-								<Button type="submit" variant="outline" className="rounded-full">
+								<Button
+									type="submit"
+									variant="outline"
+									className="rounded-full"
+								>
 									Approve
 								</Button>
 							</Form>
@@ -84,14 +88,22 @@ export function CommunityFeedItem(params: {
 								<input type="hidden" name="_action" value="moderate" />
 								<input type="hidden" name="postId" value={params.post.id} />
 								<input type="hidden" name="status" value="rejected" />
-								<Button type="submit" variant="outline" className="rounded-full">
+								<Button
+									type="submit"
+									variant="outline"
+									className="rounded-full"
+								>
 									Hide
 								</Button>
 							</Form>
 							<Form method="post">
 								<input type="hidden" name="_action" value="delete" />
 								<input type="hidden" name="postId" value={params.post.id} />
-								<Button type="submit" variant="outline" className="rounded-full">
+								<Button
+									type="submit"
+									variant="outline"
+									className="rounded-full"
+								>
 									Delete
 								</Button>
 							</Form>

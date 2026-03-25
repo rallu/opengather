@@ -13,7 +13,9 @@ export function createDb() {
 	return new PrismaClient({ adapter });
 }
 
-export async function resolveSetupInstanceId(db: PrismaClient): Promise<string> {
+export async function resolveSetupInstanceId(
+	db: PrismaClient,
+): Promise<string> {
 	const rows = await db.config.findMany({
 		where: {
 			key: {

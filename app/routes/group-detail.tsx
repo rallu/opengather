@@ -4,12 +4,12 @@ import {
 	useLocation,
 	useNavigation,
 } from "react-router";
-import {
-	type GroupDetailPostSuccessAction,
+import type {
 	action,
+	GroupDetailPostSuccessAction,
 } from "./group-detail/action.server";
 import { GroupDetailPage } from "./group-detail/group-page";
-import { loader } from "./group-detail/loader.server";
+import type { loader } from "./group-detail/loader.server";
 
 export { action } from "./group-detail/action.server";
 export { loader } from "./group-detail/loader.server";
@@ -43,7 +43,9 @@ export default function GroupDetailRoute() {
 	return (
 		<GroupDetailPage
 			data={data}
-			errorMessage={actionData && "error" in actionData ? actionData.error : undefined}
+			errorMessage={
+				actionData && "error" in actionData ? actionData.error : undefined
+			}
 			loading={navigation.state === "submitting"}
 			message={
 				actionData &&

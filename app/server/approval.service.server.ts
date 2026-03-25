@@ -1,9 +1,4 @@
 export {
-	buildGroupMembershipRequestKey,
-	buildInstanceMembershipRequestKey,
-	type PendingApprovalRow,
-} from "./approval.service.server/shared.ts";
-export {
 	getApprovalAccess,
 	getPendingApprovalSummary,
 	listPendingApprovals,
@@ -16,3 +11,8 @@ export {
 	resolveGroupMembershipApproval,
 	resolveInstanceMembershipApproval,
 } from "./approval.service.server/resolve.ts";
+export {
+	buildGroupMembershipRequestKey,
+	buildInstanceMembershipRequestKey,
+	type PendingApprovalRow,
+} from "./approval.service.server/shared.ts";

@@ -10,7 +10,8 @@ export function GroupManagementPanels(params: {
 	return (
 		<>
 			{!params.data.canPost &&
-			(params.data.joinState === "join" || params.data.joinState === "request") ? (
+			(params.data.joinState === "join" ||
+				params.data.joinState === "request") ? (
 				<Container className="space-y-4 p-4">
 					<p className="text-sm text-muted-foreground">
 						Join this group to post and participate in member-only discussions.
@@ -22,7 +23,9 @@ export function GroupManagementPanels(params: {
 							disabled={params.loading}
 							data-testid="group-join-visible"
 						>
-							{params.data.joinState === "join" ? "Join group" : "Request access"}
+							{params.data.joinState === "join"
+								? "Join group"
+								: "Request access"}
 						</Button>
 					</Form>
 				</Container>
@@ -137,7 +140,11 @@ export function GroupManagementPanels(params: {
 											</Button>
 										</Form>
 										<Form method="post">
-											<input type="hidden" name="_action" value="remove-member" />
+											<input
+												type="hidden"
+												name="_action"
+												value="remove-member"
+											/>
 											<input
 												type="hidden"
 												name="targetUserId"

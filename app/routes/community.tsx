@@ -4,9 +4,12 @@ import {
 	useLocation,
 	useNavigation,
 } from "react-router";
-import { type CommunityPostSuccessAction, action } from "./community/action.server";
+import type {
+	action,
+	CommunityPostSuccessAction,
+} from "./community/action.server";
 import { CommunityPage } from "./community/community-page";
-import { loader } from "./community/loader.server";
+import type { loader } from "./community/loader.server";
 
 export { action } from "./community/action.server";
 export { loader } from "./community/loader.server";
@@ -40,7 +43,9 @@ export default function CommunityRoute() {
 	return (
 		<CommunityPage
 			data={data}
-			errorMessage={actionData && "error" in actionData ? actionData.error : undefined}
+			errorMessage={
+				actionData && "error" in actionData ? actionData.error : undefined
+			}
 			loading={navigation.state === "submitting"}
 			pathname={location.pathname}
 			priorityPost={priorityPost}

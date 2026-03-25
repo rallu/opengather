@@ -29,10 +29,7 @@ function toCommunityUser(params: {
 	};
 }
 
-async function loadLoaderData(params: {
-	request: Request;
-	postId: string;
-}) {
+async function loadLoaderData(params: { request: Request; postId: string }) {
 	const authUser = await getAuthUserFromRequest({ request: params.request });
 	const user = toCommunityUser({ authUser });
 	const result = await loadCommunityPostThread({ user, postId: params.postId });

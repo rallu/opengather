@@ -8,8 +8,8 @@ import {
 } from "../permissions.server.ts";
 import {
 	buildVisibleActivities,
-	type ProfileActivity,
 	listProfilePosts,
+	type ProfileActivity,
 	sanitizeProfileSummary,
 	toIsoString,
 } from "./shared.ts";

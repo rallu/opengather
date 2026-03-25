@@ -1,5 +1,9 @@
 import { cleanupParsedMultipartForm } from "../multipart-form.server.ts";
-import { MAX_IMAGES_PER_POST, MAX_VIDEO_BYTES, parseAlbumTagsInput } from "./shared.ts";
+import {
+	MAX_IMAGES_PER_POST,
+	MAX_VIDEO_BYTES,
+	parseAlbumTagsInput,
+} from "./shared.ts";
 
 export async function extractPostUploadsFromMultipartRequest(params: {
 	request: Request;
@@ -9,7 +13,9 @@ export async function extractPostUploadsFromMultipartRequest(params: {
 	bodyText: string;
 	parentPostId?: string;
 	albumTags: string[];
-	uploads: Awaited<ReturnType<typeof import("../multipart-form.server.ts").parseMultipartForm>>["files"];
+	uploads: Awaited<
+		ReturnType<typeof import("../multipart-form.server.ts").parseMultipartForm>
+	>["files"];
 	cleanup(): Promise<void>;
 }> {
 	const { parseMultipartForm } = await import("../multipart-form.server.ts");
@@ -21,7 +27,8 @@ export async function extractPostUploadsFromMultipartRequest(params: {
 	try {
 		const actionType = (parsed.fields.get("_action") ?? "").trim();
 		const bodyText = (parsed.fields.get("bodyText") ?? "").trim();
-		const parentPostId = (parsed.fields.get("parentPostId") ?? "").trim() || undefined;
+		const parentPostId =
+			(parsed.fields.get("parentPostId") ?? "").trim() || undefined;
 		const albumTags = parseAlbumTagsInput(parsed.fields.get("assetAlbums"));
 		const uploads = parsed.files.filter((file) => file.fieldName === "assets");
 		return {

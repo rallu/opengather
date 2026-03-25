@@ -11,12 +11,12 @@ import {
 } from "../permissions.server.ts";
 import { getSetupStatus } from "../setup.service.server.ts";
 import {
+	type AuthUser,
 	canDiscoverGroup,
 	deriveJoinState,
+	type GroupSummary,
 	getMembershipStatus,
 	isGroupSummary,
-	type AuthUser,
-	type GroupSummary,
 } from "./shared.ts";
 
 export async function listVisibleGroups(params: {

@@ -1,6 +1,6 @@
 import { useActionData, useLoaderData } from "react-router";
-import { ServerSettingsPage } from "./server-settings/server-settings-page";
 import type { action, loader } from "./server-settings/route.server";
+import { ServerSettingsPage } from "./server-settings/server-settings-page";
 
 export { action, loader } from "./server-settings/route.server";
 

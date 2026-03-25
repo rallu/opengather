@@ -29,7 +29,7 @@
 				"noExcessiveLinesPerFile": {
 					"level": "warn",
 					"options": {
-						"maxLines": 300,
+						"maxLines": 400,
 						"skipBlankLines": true
 					}
 				}

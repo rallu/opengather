@@ -9,12 +9,12 @@ import { PostHeader } from "~/components/post/post-header";
 import { Container } from "~/components/ui/container";
 import { ContextBar } from "~/components/ui/context-bar";
 import { FeedContainer } from "~/components/ui/feed-container";
-import type { PostDetailLoaderData } from "./route.server";
 import {
 	canReplyToThread,
 	countThreadReplies,
 	PostDetailComments,
 } from "./post-detail-comments";
+import type { PostDetailLoaderData } from "./route.server";
 
 function getPostTrailLabel(bodyText?: string | null) {
 	const compact = (bodyText ?? "").trim().replace(/\s+/g, " ");
@@ -30,7 +30,9 @@ export function PostDetailPage(params: {
 	loading: boolean;
 }) {
 	const post = params.data.status !== "not_found" ? params.data.post : null;
-	const replyResetKey = post ? `${post.id}:${countThreadReplies(post)}` : "post-detail";
+	const replyResetKey = post
+		? `${post.id}:${countThreadReplies(post)}`
+		: "post-detail";
 	const [activeReplyId, setActiveReplyId] = React.useState<string | null>(null);
 
 	React.useEffect(() => {

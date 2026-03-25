@@ -1,6 +1,6 @@
-import type { SetupActionData, SetupLoaderData } from "./route.server";
 import { Form, Link } from "react-router";
 import { Button } from "~/components/ui/button";
+import type { SetupActionData, SetupLoaderData } from "./route.server";
 
 export function SetupPage(params: {
 	actionData: SetupActionData;
@@ -73,7 +73,10 @@ export function SetupPage(params: {
 							/>
 						</div>
 						<div className="space-y-2">
-							<label htmlFor="setup-admin-email" className="text-sm font-medium">
+							<label
+								htmlFor="setup-admin-email"
+								className="text-sm font-medium"
+							>
 								Admin email
 							</label>
 							<input

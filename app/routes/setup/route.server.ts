@@ -98,7 +98,9 @@ export async function action({
 				oidcDiscoveryUrl: hubRegistration?.hubOidcDiscoveryUrl ?? "",
 				clientId: hubRegistration?.hubClientId ?? "",
 				clientSecret: hubRegistration?.hubClientSecret ?? "",
-				redirectUri: hubEnabled ? `${appOrigin}/api/auth/oauth2/callback/hub` : "",
+				redirectUri: hubEnabled
+					? `${appOrigin}/api/auth/oauth2/callback/hub`
+					: "",
 				instanceName: hubEnabled ? name : "",
 				instanceBaseUrl: hubEnabled ? appOrigin : "",
 			},

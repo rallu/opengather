@@ -1,15 +1,15 @@
 import { Prisma } from "@prisma/client";
 import { getDb } from "../db.server.ts";
-import { ensurePostRootIds } from "../post-root.server.ts";
 import { loadPostAssetSummaries } from "../post-assets.server.ts";
 import { loadPostAuthorSummaryMap } from "../post-author.service.server.ts";
+import { ensurePostRootIds } from "../post-root.server.ts";
 import {
 	decodePostListCursor,
 	encodePostListCursor,
 	mapPostListItem,
+	POST_LIST_PAGE_SIZE,
 	type PostListCursor,
 	type PostListPage,
-	POST_LIST_PAGE_SIZE,
 	type PostListRow,
 	type PostListScope,
 	type PostListSortMode,
@@ -205,7 +205,9 @@ export async function loadPostListPage(params: {
 		items,
 		hasMore,
 		nextCursor:
-			hasMore && lastItem ? encodePostListCursor({ item: lastItem }) : undefined,
+			hasMore && lastItem
+				? encodePostListCursor({ item: lastItem })
+				: undefined,
 		sortMode: params.sortMode,
 	};
 }

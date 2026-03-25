@@ -55,7 +55,8 @@ export function GroupStateNotice(params: {
 					? "Your membership request is still pending approval."
 					: "You do not have access to this group yet."}
 			</p>
-			{params.data.joinState === "join" || params.data.joinState === "request" ? (
+			{params.data.joinState === "join" ||
+			params.data.joinState === "request" ? (
 				<Form method="post" className="mt-4">
 					<input type="hidden" name="_action" value="request-access" />
 					<Button

@@ -1,8 +1,8 @@
-import {
+import type {
 	canJoinGroup,
 	canViewGroup,
-	type GroupRole,
-	type GroupVisibilityMode,
+	GroupRole,
+	GroupVisibilityMode,
 } from "../permissions.server.ts";
 
 export type AuthUser = {
@@ -12,7 +12,11 @@ export type AuthUser = {
 	email?: string;
 } | null;
 
-export type GroupMembershipStatus = "none" | "pending" | "approved" | "rejected";
+export type GroupMembershipStatus =
+	| "none"
+	| "pending"
+	| "approved"
+	| "rejected";
 
 export type GroupSummary = {
 	id: string;
@@ -30,7 +34,9 @@ export type GroupMemberSummary = {
 	role: GroupRole;
 };
 
-export function isGroupSummary(group: GroupSummary | null): group is GroupSummary {
+export function isGroupSummary(
+	group: GroupSummary | null,
+): group is GroupSummary {
 	return group !== null;
 }
 

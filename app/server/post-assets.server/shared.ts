@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 export const MAX_IMAGES_PER_POST = 10;
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -116,7 +116,12 @@ export function inferExtensionFromMimeType(mimeType: string): string {
 }
 
 export function trimFilename(filename: string): string {
-	return filename.trim().replace(/[^\w.-]+/g, "-").slice(0, 120) || "upload";
+	return (
+		filename
+			.trim()
+			.replace(/[^\w.-]+/g, "-")
+			.slice(0, 120) || "upload"
+	);
 }
 
 export function stripFilenameExtension(filename: string): string {
@@ -131,7 +136,9 @@ export function toAssetKind(value: string): AssetKind {
 	return value === "video" ? "video" : "image";
 }
 
-export function parseAlbumTagsInput(value: string | null | undefined): string[] {
+export function parseAlbumTagsInput(
+	value: string | null | undefined,
+): string[] {
 	const parsed = (value ?? "")
 		.split(/[\n,]+/)
 		.map((albumTag) => albumTag.trim().replace(/\s+/g, " "))

@@ -1,10 +1,10 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Form } from "react-router";
+import { PostAssetInput } from "~/components/post/post-asset-input";
 import {
 	type PostCommentData,
 	PostComments,
 } from "~/components/post/post-comments";
-import { PostAssetInput } from "~/components/post/post-asset-input";
 import { PostComposer } from "~/components/post/post-composer";
 import type { CommunityPost } from "~/server/community.service.server";
 

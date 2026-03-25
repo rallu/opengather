@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { getDb } from "../db.server.ts";
 import { toTextVector } from "../embedding.service.server.ts";
-import { getGroupMembership, resolveGroupRole } from "../group-membership.service.server.ts";
+import {
+	getGroupMembership,
+	resolveGroupRole,
+} from "../group-membership.service.server.ts";
 import { canPostToGroup } from "../permissions.server.ts";
 import {
 	loadPostAssetSummaries,
@@ -11,9 +14,9 @@ import { loadPostAuthorSummaryMap } from "../post-author.service.server.ts";
 import { ensurePostRootIds } from "../post-root.server.ts";
 import { getSetupStatus } from "../setup.service.server.ts";
 import { ensureCanPost } from "./access.ts";
-import { sendPostNotifications } from "./notifications.ts";
 import { resolveParentPostContext } from "./create-support.ts";
-import { type CommunityUser, type CreatedPostSummary } from "./shared.ts";
+import { sendPostNotifications } from "./notifications.ts";
+import type { CommunityUser, CreatedPostSummary } from "./shared.ts";
 
 export async function createPost(params: {
 	user: CommunityUser | null;

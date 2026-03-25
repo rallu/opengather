@@ -1,6 +1,6 @@
 import { useActionData, useLoaderData, useNavigation } from "react-router";
 import { PostDetailPage } from "./post-detail/post-detail-page";
-import { action, loader } from "./post-detail/route.server";
+import type { action, loader } from "./post-detail/route.server";
 
 export { action, loader } from "./post-detail/route.server";
 

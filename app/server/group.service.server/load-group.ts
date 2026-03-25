@@ -21,12 +21,12 @@ import {
 } from "../post-list.service.server.ts";
 import { getSetupStatus } from "../setup.service.server.ts";
 import {
-	deriveJoinState,
-	getMembershipStatus,
 	type AuthUser,
+	deriveJoinState,
 	type GroupMemberSummary,
 	type GroupMembershipStatus,
 	type GroupSummary,
+	getMembershipStatus,
 } from "./shared.ts";
 
 export async function loadGroup(params: {

@@ -1,6 +1,6 @@
 import { useLoaderData } from "react-router";
 import { RegisterPage } from "./register/register-page";
-import { loader } from "./register/route.server";
+import type { loader } from "./register/route.server";
 
 export { loader } from "./register/route.server";
 

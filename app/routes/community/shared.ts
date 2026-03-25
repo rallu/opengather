@@ -3,7 +3,7 @@ import type {
 	CreatedPostSummary,
 } from "~/server/community.service.server";
 import type { PostListItem } from "~/server/post-list.service.server";
-import { getAuthUserFromRequest } from "~/server/session.server";
+import type { getAuthUserFromRequest } from "~/server/session.server";
 
 export function toCommunityUser(params: {
 	authUser: Awaited<ReturnType<typeof getAuthUserFromRequest>>;

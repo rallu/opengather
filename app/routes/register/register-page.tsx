@@ -1,5 +1,5 @@
-import type { RegisterLoaderData } from "./route.server";
 import { RegisterForm } from "./register-form";
+import type { RegisterLoaderData } from "./route.server";
 import { useRegisterActions } from "./use-register-actions";
 
 export function RegisterPage(props: { data: RegisterLoaderData }) {

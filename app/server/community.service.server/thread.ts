@@ -1,6 +1,9 @@
 import { getDb } from "../db.server.ts";
 import { getReadableGroupIds } from "../group.service.server.ts";
-import { getGroupMembership, resolveGroupRole } from "../group-membership.service.server.ts";
+import {
+	getGroupMembership,
+	resolveGroupRole,
+} from "../group-membership.service.server.ts";
 import { canPostToGroup } from "../permissions.server.ts";
 import { loadPostAssetSummaries } from "../post-assets.server.ts";
 import { loadPostAuthorSummaryMap } from "../post-author.service.server.ts";
@@ -16,7 +19,7 @@ import {
 	ensureInstanceMembershipForUser,
 	isAdmin,
 } from "./access.ts";
-import { mapPost, type CommunityPost, type CommunityUser } from "./shared.ts";
+import { type CommunityPost, type CommunityUser, mapPost } from "./shared.ts";
 
 function findPostInThread(params: {
 	posts: CommunityPost[];
