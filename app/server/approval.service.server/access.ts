@@ -6,7 +6,7 @@ import {
 	canManageManagedGroup,
 	formatUserLabel,
 	type PendingApprovalRow,
-} from "./shared";
+} from "./shared.ts";
 
 async function getManagedGroupIds(params: {
 	instanceId: string;

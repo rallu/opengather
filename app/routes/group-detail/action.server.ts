@@ -15,7 +15,10 @@ import type { PostListItem } from "~/server/post-list.service.server";
 import { parsePostListSortMode } from "~/server/post-list.service.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
-import { toCommunityUser, toPriorityPostListItem } from "../community/shared";
+import {
+	toCommunityUser,
+	toPriorityPostListItem,
+} from "../community/shared.ts";
 
 export type GroupDetailPostSuccessAction = {
 	ok: true;

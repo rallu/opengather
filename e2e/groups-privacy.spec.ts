@@ -152,6 +152,28 @@ async function getPostIdByBodyText(bodyText: string): Promise<string> {
 	});
 }
 
+async function getMaxPostCreatedAt(): Promise<Date> {
+	return withDb(async (client) => {
+		const result = await client.query<{ created_at: Date | string | null }>(
+			"select max(created_at) as created_at from post",
+		);
+		const value = result.rows[0]?.created_at;
+		return value ? new Date(value) : new Date();
+	});
+}
+
+async function updatePostCreatedAt(params: {
+	postId: string;
+	createdAt: Date;
+}): Promise<void> {
+	await withDb(async (client) => {
+		await client.query(
+			"update post set created_at = $2, updated_at = $2 where id = $1",
+			[params.postId, params.createdAt],
+		);
+	});
+}
+
 async function promoteUserToAdmin(email: string): Promise<void> {
 	await withDb(async (client) => {
 		const userResult = await client.query<{ id: string }>(
@@ -415,19 +437,17 @@ test.describe("group privacy", () => {
 		await expect(page.getByTestId("group-post-list")).toContainText(
 			memberFollowUp,
 		);
-		await page.goto("/feed");
+		const memberFollowUpPostId = await getPostIdByBodyText(memberFollowUp);
+		const maxPostCreatedAt = await getMaxPostCreatedAt();
+		await updatePostCreatedAt({
+			postId: memberFollowUpPostId,
+			createdAt: new Date(maxPostCreatedAt.getTime() + 60_000),
+		});
+		await page.goto("/feed?sort=newest");
 		const memberFeedItems = page
 			.getByTestId("feed-post-list")
 			.locator("[data-testid^='feed-post-']")
 			.filter({ hasText: memberFollowUp });
-		for (let index = 0; index < 6; index += 1) {
-			if ((await memberFeedItems.count()) > 0) {
-				break;
-			}
-			await page
-				.getByTestId("feed-post-list-sentinel")
-				.scrollIntoViewIfNeeded();
-		}
 		await expect(memberFeedItems).toHaveCount(1);
 	});
 
@@ -454,7 +474,8 @@ test.describe("group privacy", () => {
 		const secretPostText = `Secret group ping ${Date.now()} ${outsiderUser.email}`;
 		await page.goto(`/groups/${privateGroupId}`);
 		await page.getByTestId("group-post-body").fill(secretPostText);
-		await page.getByTestId("group-post-submit").click();
+		await expect(page.getByTestId("group-post-body")).toHaveValue(secretPostText);
+		await page.getByTestId("group-post-body").press("Control+Enter");
 		await expect(page.getByTestId("group-post-list")).toContainText(
 			secretPostText,
 		);

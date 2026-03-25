@@ -23,7 +23,7 @@ import {
 	getRequestIp,
 } from "~/server/rate-limit.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
-import { toCommunityUser, toPriorityPostListItem } from "./shared";
+import { toCommunityUser, toPriorityPostListItem } from "./shared.ts";
 
 export type CommunityPostSuccessAction = {
 	ok: true;

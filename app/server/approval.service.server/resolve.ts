@@ -6,7 +6,7 @@ import {
 	buildGroupMembershipRequestKey,
 	buildInstanceMembershipRequestKey,
 	toManagedGroupRole,
-} from "./shared";
+} from "./shared.ts";
 
 export async function resolveInstanceMembershipApproval(params: {
 	instanceId: string;

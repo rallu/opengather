@@ -4,7 +4,7 @@ import {
 	buildGroupMembershipRequestKey,
 	buildInstanceMembershipRequestKey,
 	formatUserLabel,
-} from "./shared";
+} from "./shared.ts";
 
 export async function notifyPendingInstanceMembershipApprovers(params: {
 	instanceId: string;

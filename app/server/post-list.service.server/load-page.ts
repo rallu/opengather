@@ -13,7 +13,7 @@ import {
 	type PostListRow,
 	type PostListScope,
 	type PostListSortMode,
-} from "./core";
+} from "./core.ts";
 
 function getScopeCondition(scope: PostListScope) {
 	if (scope.kind === "group") {

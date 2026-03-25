@@ -11,7 +11,7 @@ import {
 } from "~/server/post-list.service.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
-import { toCommunityUser } from "../community/shared";
+import { toCommunityUser } from "../community/shared.ts";
 
 type GroupLoadResult = Awaited<ReturnType<typeof loadGroup>>;
 type AuthUser = Awaited<ReturnType<typeof getAuthUserFromRequest>>;

@@ -15,8 +15,22 @@ import {
 	getRequestIp,
 } from "~/server/rate-limit.server";
 
-const AUTH_RATE_LIMIT_WINDOW_MS = 60_000;
-const AUTH_RATE_LIMIT_MAX_REQUESTS = 30;
+function parsePositiveInteger(
+	value: string | undefined,
+	fallback: number,
+): number {
+	const parsed = Number.parseInt(value ?? "", 10);
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const AUTH_RATE_LIMIT_WINDOW_MS = parsePositiveInteger(
+	process.env.AUTH_RATE_LIMIT_WINDOW_MS,
+	60_000,
+);
+const AUTH_RATE_LIMIT_MAX_REQUESTS = parsePositiveInteger(
+	process.env.AUTH_RATE_LIMIT_MAX_REQUESTS,
+	30,
+);
 
 function requiresHubOAuthHandler(request: Request): boolean {
 	const url = new URL(request.url);

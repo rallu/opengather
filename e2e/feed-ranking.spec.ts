@@ -88,6 +88,16 @@ async function updateConfig(key: string, value: string): Promise<void> {
 	});
 }
 
+async function getMaxPostCreatedAt(): Promise<Date> {
+	return withDb(async (client) => {
+		const result = await client.query<{ created_at: Date | string | null }>(
+			"select max(created_at) as created_at from post",
+		);
+		const value = result.rows[0]?.created_at;
+		return value ? new Date(value) : new Date();
+	});
+}
+
 async function insertPost(params: {
 	bodyText: string;
 	createdAt: Date;
@@ -269,20 +279,21 @@ test.describe("thread-aware feed ranking", () => {
 		await updateConfig("server_approval_mode", "automatic");
 
 		const now = Date.now();
+		const baseCreatedAt = await getMaxPostCreatedAt();
 		const activeRootBody = `activity-root-${now}`;
 		const newerRootBody = `newest-root-${now}`;
 		const activeRootId = await insertPost({
 			bodyText: activeRootBody,
-			createdAt: new Date("2026-12-10T08:00:00.000Z"),
+			createdAt: new Date(baseCreatedAt.getTime() + 60_000),
 		});
 		await insertPost({
 			bodyText: newerRootBody,
-			createdAt: new Date("2026-12-11T08:00:00.000Z"),
+			createdAt: new Date(baseCreatedAt.getTime() + 120_000),
 		});
 		await insertPost({
 			bodyText: `activity-reply-${now}`,
 			parentPostId: activeRootId,
-			createdAt: new Date("2026-12-12T08:00:00.000Z"),
+			createdAt: new Date(baseCreatedAt.getTime() + 180_000),
 		});
 
 		await page.goto("/feed");
@@ -328,12 +339,13 @@ test.describe("thread-aware feed ranking", () => {
 		await updateConfig("server_approval_mode", "automatic");
 
 		const now = Date.now();
+		const feedBaseCreatedAt = await getMaxPostCreatedAt();
 		const feedPrefix = `feed-scroll-${now}`;
 		for (let index = 0; index < 12; index += 1) {
 			await insertPost({
 				bodyText: `${feedPrefix}-${index}`,
 				createdAt: new Date(
-					`2027-01-13T${String(index).padStart(2, "0")}:00:00.000Z`,
+					feedBaseCreatedAt.getTime() + (index + 1) * 60_000,
 				),
 			});
 		}
@@ -347,13 +359,14 @@ test.describe("thread-aware feed ranking", () => {
 		await expect(feedItems).toHaveCount(12);
 
 		const groupId = await createPublicGroup(`Scroll Group ${now}`);
+		const groupBaseCreatedAt = await getMaxPostCreatedAt();
 		const groupPrefix = `group-scroll-${now}`;
 		for (let index = 0; index < 12; index += 1) {
 			await insertPost({
 				bodyText: `${groupPrefix}-${index}`,
 				groupId,
 				createdAt: new Date(
-					`2027-01-14T${String(index).padStart(2, "0")}:00:00.000Z`,
+					groupBaseCreatedAt.getTime() + (index + 1) * 60_000,
 				),
 			});
 		}

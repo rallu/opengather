@@ -5,7 +5,7 @@ import { loadUserAlbumTags } from "~/server/post-assets.server";
 import { parsePostListSortMode } from "~/server/post-list.service.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
-import { toCommunityUser } from "./shared";
+import { toCommunityUser } from "./shared.ts";
 
 async function loadCommunityData(params: { request: Request }) {
 	const url = new URL(params.request.url);
