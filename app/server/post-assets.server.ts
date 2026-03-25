@@ -193,7 +193,7 @@ export function parseAlbumTagsInput(
 			);
 		}
 
-		const normalizedKey = albumTag.toLocaleLowerCase();
+		const normalizedKey = albumTag.toLowerCase();
 		if (seen.has(normalizedKey)) {
 			continue;
 		}

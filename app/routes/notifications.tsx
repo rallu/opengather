@@ -3,6 +3,7 @@ import { Form, Link, useLoaderData, useNavigation } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
 import { Container } from "~/components/ui/container";
+import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
 import {
 	listNotifications,
 	markAllNotificationsRead,
@@ -154,9 +155,10 @@ export default function NotificationsPage() {
 									) : null}
 								</div>
 								<div className="flex flex-col items-end gap-2">
-									<p className="text-xs text-muted-foreground">
-										{new Date(notification.createdAt).toLocaleString()}
-									</p>
+									<LocalizedTimestamp
+										value={notification.createdAt}
+										className="text-xs text-muted-foreground"
+									/>
 									{!notification.readAt ? (
 										<Form method="post">
 											<input type="hidden" name="_action" value="mark_one" />

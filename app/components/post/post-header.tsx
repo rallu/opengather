@@ -1,4 +1,5 @@
 import { ProfileImage } from "~/components/profile/profile-image";
+import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
 import { PostHeading } from "./post-heading";
 import { PostLabels } from "./post-labels";
 
@@ -54,9 +55,11 @@ export function PostHeader({
 				</span>
 			}
 			subtitle={
-				createdAt
-					? new Date(createdAt).toLocaleString()
-					: "Unknown publish time"
+				createdAt ? (
+					<LocalizedTimestamp value={createdAt} />
+				) : (
+					"Unknown publish time"
+				)
 			}
 		/>
 	);

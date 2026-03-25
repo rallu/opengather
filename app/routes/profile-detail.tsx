@@ -3,6 +3,7 @@ import { Link, useLoaderData } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { ProfileImage } from "~/components/profile/profile-image";
 import { Button } from "~/components/ui/button";
+import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
 import { loadVisibleProfile } from "~/server/profile.service.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
@@ -163,9 +164,10 @@ export default function ProfileDetailPage() {
 						>
 							<div className="flex items-center justify-between gap-3">
 								<p className="text-sm font-medium">{activity.label}</p>
-								<p className="text-xs text-muted-foreground">
-									{new Date(activity.createdAt).toLocaleString()}
-								</p>
+								<LocalizedTimestamp
+									value={activity.createdAt}
+									className="text-xs text-muted-foreground"
+								/>
 							</div>
 							<p className="mt-2 text-sm">
 								{activity.body?.trim() || "No text preview available"}

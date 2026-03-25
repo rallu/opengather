@@ -43,7 +43,7 @@ function collectAlbumTags(assets: PostAssetSummary[]): string[] {
 		}
 
 		for (const albumTag of asset.albumTags) {
-			const normalizedKey = albumTag.toLocaleLowerCase();
+			const normalizedKey = albumTag.toLowerCase();
 			if (seen.has(normalizedKey)) {
 				continue;
 			}

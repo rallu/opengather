@@ -2,6 +2,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import { Link, useLoaderData } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
+import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
 import { getDb } from "~/server/db.server";
 import {
 	canAccessAuditLogs,
@@ -145,7 +146,7 @@ export default function AuditLogsPage() {
 										className="border-b border-border/60 align-top"
 									>
 										<td className="px-2 py-2 whitespace-nowrap">
-											{new Date(row.createdAt).toLocaleString()}
+											<LocalizedTimestamp value={row.createdAt} />
 										</td>
 										<td className="px-2 py-2">
 											<code>{row.action}</code>

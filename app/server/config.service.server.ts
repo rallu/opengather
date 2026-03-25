@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import type { RenderIntlConfig } from "../lib/render-intl.ts";
 import {
 	type ConfigKey,
 	type ConfigValueByKey,
@@ -97,6 +98,8 @@ export async function getServerConfig(): Promise<{
 	hubRedirectUri: string;
 	hubInstanceName: string;
 	hubInstanceBaseUrl: string;
+	renderLocale: string;
+	renderTimeZone: string;
 	mediaStorageDriver: "local";
 	mediaLocalRoot: string;
 }> {
@@ -111,6 +114,8 @@ export async function getServerConfig(): Promise<{
 		hubRedirectUri,
 		hubInstanceName,
 		hubInstanceBaseUrl,
+		renderLocale,
+		renderTimeZone,
 		mediaStorageDriver,
 		mediaLocalRoot,
 	] = await Promise.all([
@@ -124,6 +129,8 @@ export async function getServerConfig(): Promise<{
 		getConfig("hub_redirect_uri"),
 		getConfig("hub_instance_name"),
 		getConfig("hub_instance_base_url"),
+		getConfig("render_locale"),
+		getConfig("render_time_zone"),
 		getConfig("media_storage_driver"),
 		getConfig("media_local_root"),
 	]);
@@ -148,7 +155,21 @@ export async function getServerConfig(): Promise<{
 		hubRedirectUri,
 		hubInstanceName,
 		hubInstanceBaseUrl,
+		renderLocale,
+		renderTimeZone,
 		mediaStorageDriver,
 		mediaLocalRoot,
+	};
+}
+
+export async function getRenderIntlConfig(): Promise<RenderIntlConfig> {
+	const [locale, timeZone] = await Promise.all([
+		getConfig("render_locale"),
+		getConfig("render_time_zone"),
+	]);
+
+	return {
+		locale,
+		timeZone,
 	};
 }

@@ -2,6 +2,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Form, Link, useActionData, useLoaderData } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
+import { parseRenderLocale, parseRenderTimeZone } from "~/lib/render-intl";
 import { writeAuditLogSafely } from "~/server/audit-log.service.server";
 import { getServerConfig, setConfig } from "~/server/config.service.server";
 import { getAppEnv } from "~/server/env.server.ts";
@@ -26,7 +27,13 @@ async function resolveViewerRole(params: { request: Request }): Promise<{
 	return getPermissionsViewerContext({ request: params.request });
 }
 
+type ActionData =
+	| { ok: true; section: "hub" | "media" | "rendering" }
+	| { error: string; section?: "hub" | "media" | "rendering" };
+
 export async function action({ request }: ActionFunctionArgs) {
+	let actionSection: ActionData["section"] | undefined;
+
 	try {
 		const { authUser, viewerRole, setup } = await resolveViewerRole({
 			request,
@@ -40,9 +47,56 @@ export async function action({ request }: ActionFunctionArgs) {
 
 		const formData = await request.formData();
 		const actionType = String(formData.get("_action") ?? "save-hub");
+		actionSection =
+			actionType === "save-rendering"
+				? "rendering"
+				: actionType === "save-media"
+					? "media"
+					: "hub";
 		const hubEnabled = String(formData.get("hubEnabled") ?? "") === "on";
 		const appOrigin = getPublicOrigin(request);
 		const currentConfig = await getServerConfig();
+
+		if (actionType === "save-rendering") {
+			const renderLocale = parseRenderLocale(formData.get("renderLocale"));
+			const renderTimeZone = parseRenderTimeZone(
+				formData.get("renderTimeZone"),
+			);
+
+			if (!renderLocale) {
+				return {
+					error: "Enter a valid locale like en-US or fi-FI.",
+					section: "rendering",
+				} satisfies ActionData;
+			}
+
+			if (!renderTimeZone) {
+				return {
+					error: "Enter a valid IANA time zone like UTC or Europe/Helsinki.",
+					section: "rendering",
+				} satisfies ActionData;
+			}
+
+			await Promise.all([
+				setConfig("render_locale", renderLocale),
+				setConfig("render_time_zone", renderTimeZone),
+			]);
+			await writeAuditLogSafely({
+				action: "server_settings.rendering_updated",
+				actor: {
+					type: "user",
+					id: authUser.id,
+				},
+				resourceType: "server_settings",
+				resourceId: "rendering",
+				request,
+				payload: {
+					renderLocale,
+					renderTimeZone,
+				},
+			});
+			return { ok: true, section: "rendering" } satisfies ActionData;
+		}
 
 		if (actionType === "save-media") {
 			const mediaStorageDriver =
@@ -70,7 +124,7 @@ export async function action({ request }: ActionFunctionArgs) {
 					mediaLocalRoot,
 				},
 			});
-			return { ok: true };
+			return { ok: true, section: "media" } satisfies ActionData;
 		}
 
 		if (hubEnabled) {
@@ -150,10 +204,13 @@ export async function action({ request }: ActionFunctionArgs) {
 			});
 		}
 
-		return { ok: true };
+		return { ok: true, section: "hub" } satisfies ActionData;
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "unknown error";
-		return { error: `Failed to save server settings: ${message}` };
+		return {
+			error: `Failed to save server settings: ${message}`,
+			section: actionSection,
+		} satisfies ActionData;
 	}
 }
 
@@ -198,6 +255,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export default function ServerSettingsPage() {
 	const data = useLoaderData<typeof loader>();
 	const actionData = useActionData<typeof action>();
+	const actionSection =
+		actionData && "section" in actionData ? actionData.section : undefined;
 
 	if (!data.authUser) {
 		return (
@@ -301,12 +360,12 @@ export default function ServerSettingsPage() {
 			{data.hubConfig?.hubAvailable ? (
 				<section className="rounded-md border border-border p-4">
 					<h2 className="mb-3 text-base font-semibold">Hub Connection</h2>
-					{actionData && "error" in actionData ? (
+					{actionData && "error" in actionData && actionSection === "hub" ? (
 						<div className="mb-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
 							{actionData.error}
 						</div>
 					) : null}
-					{actionData && "ok" in actionData ? (
+					{actionData && "ok" in actionData && actionSection === "hub" ? (
 						<div className="mb-3 rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700">
 							Saved.
 						</div>
@@ -356,6 +415,16 @@ export default function ServerSettingsPage() {
 					Assets are always served through this app. The storage driver controls
 					where processed files are kept.
 				</p>
+				{actionData && "error" in actionData && actionSection === "media" ? (
+					<div className="mb-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+						{actionData.error}
+					</div>
+				) : null}
+				{actionData && "ok" in actionData && actionSection === "media" ? (
+					<div className="mb-3 rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700">
+						Saved.
+					</div>
+				) : null}
 				<Form method="post" className="space-y-4">
 					<input type="hidden" name="_action" value="save-media" />
 					<label className="block space-y-2 text-sm">
@@ -382,6 +451,55 @@ export default function ServerSettingsPage() {
 						process.
 					</p>
 					<Button type="submit">Save media settings</Button>
+				</Form>
+			</section>
+
+			<section className="rounded-md border border-border p-4">
+				<h2 className="mb-3 text-base font-semibold">Rendering Locale</h2>
+				<p className="mb-3 text-sm text-muted-foreground">
+					Server rendering and client hydration both use these values when
+					formatting dates. Set them explicitly so timestamps do not reformat
+					after hydration.
+				</p>
+				{actionData &&
+				"error" in actionData &&
+				actionSection === "rendering" ? (
+					<div className="mb-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+						{actionData.error}
+					</div>
+				) : null}
+				{actionData && "ok" in actionData && actionSection === "rendering" ? (
+					<div className="mb-3 rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700">
+						Saved.
+					</div>
+				) : null}
+				<Form method="post" className="space-y-4">
+					<input type="hidden" name="_action" value="save-rendering" />
+					<label className="block space-y-2 text-sm">
+						<span className="font-medium">Locale</span>
+						<input
+							name="renderLocale"
+							type="text"
+							defaultValue={data.hubConfig?.renderLocale ?? "en-US"}
+							placeholder="en-US"
+							className="w-full rounded-md border border-input bg-background px-3 py-2"
+						/>
+					</label>
+					<label className="block space-y-2 text-sm">
+						<span className="font-medium">Time zone</span>
+						<input
+							name="renderTimeZone"
+							type="text"
+							defaultValue={data.hubConfig?.renderTimeZone ?? "UTC"}
+							placeholder="UTC"
+							className="w-full rounded-md border border-input bg-background px-3 py-2"
+						/>
+					</label>
+					<p className="text-sm text-muted-foreground">
+						Use a BCP 47 locale like `en-US` and an IANA time zone like `UTC` or
+						`Europe/Helsinki`.
+					</p>
+					<Button type="submit">Save rendering settings</Button>
 				</Form>
 			</section>
 

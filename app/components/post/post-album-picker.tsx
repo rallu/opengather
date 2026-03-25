@@ -15,9 +15,9 @@ function normalizeAlbumName(value: string): string {
 }
 
 function hasAlbum(albums: string[], candidate: string): boolean {
-	const normalizedCandidate = candidate.toLocaleLowerCase();
+	const normalizedCandidate = candidate.toLowerCase();
 	return albums.some(
-		(albumName) => albumName.toLocaleLowerCase() === normalizedCandidate,
+		(albumName) => albumName.toLowerCase() === normalizedCandidate,
 	);
 }
 
@@ -102,8 +102,7 @@ export function PostAlbumPicker({
 									onSelectedAlbumsChange(
 										selectedAlbums.filter(
 											(value) =>
-												value.toLocaleLowerCase() !==
-												albumName.toLocaleLowerCase(),
+												value.toLowerCase() !== albumName.toLowerCase(),
 										),
 									);
 								}}

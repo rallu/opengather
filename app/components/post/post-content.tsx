@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
+import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
 import { cn } from "~/lib/utils";
 import type { PostActionData } from "./post-actions";
 import { PostActionItem, PostActions } from "./post-actions";
@@ -37,9 +38,10 @@ export function PostContent({
 						isDeleted={isDeleted}
 					/>
 					{createdAt ? (
-						<span className="text-muted-foreground">
-							{new Date(createdAt).toLocaleString()}
-						</span>
+						<LocalizedTimestamp
+							value={createdAt}
+							className="text-muted-foreground"
+						/>
 					) : null}
 				</div>
 			) : null}
