@@ -12,6 +12,9 @@ function buildItem(
 ): PostListItem {
 	return {
 		threadDepth: 0,
+		author: {
+			name: "Member",
+		},
 		assets: [],
 		moderationStatus: "approved",
 		isHidden: false,

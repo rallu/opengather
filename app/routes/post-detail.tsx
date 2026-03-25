@@ -17,6 +17,7 @@ import {
 } from "~/components/post/post-comments";
 import { PostComposer } from "~/components/post/post-composer";
 import { PostContent } from "~/components/post/post-content";
+import { PostHeader } from "~/components/post/post-header";
 import { Container } from "~/components/ui/container";
 import { ContextBar } from "~/components/ui/context-bar";
 import { FeedContainer } from "~/components/ui/feed-container";
@@ -79,11 +80,11 @@ function mapComment(params: {
 		id: post.id,
 		testId: `post-detail-comment-${post.id}`,
 		threadDepth: post.threadDepth,
-		author: "Member",
-		fallback: "M",
+		author: post.author.name,
 		body: post.bodyText ?? "",
 		assets: post.assets,
 		createdAt: post.createdAt,
+		imageSrc: post.author.imageSrc,
 		moderationStatus: post.moderationStatus,
 		isHidden: post.isHidden,
 		isDeleted: post.isDeleted,
@@ -278,12 +279,15 @@ export default function PostDetailPage() {
 				) : null}
 
 				<Container data-testid="post-detail-root" className="p-4">
-					<PostContent
+					<PostHeader
+						authorName={post.author.name}
+						authorImageSrc={post.author.imageSrc}
 						createdAt={post.createdAt}
 						moderationStatus={post.moderationStatus}
 						isHidden={post.isHidden}
 						isDeleted={post.isDeleted}
-					>
+					/>
+					<PostContent className="mt-4">
 						<p>{post.bodyText}</p>
 						<PostAssetDisplay assets={post.assets} />
 					</PostContent>

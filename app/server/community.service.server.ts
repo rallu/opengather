@@ -32,6 +32,10 @@ import {
 	preparePostAssetsForCreate,
 } from "./post-assets.server.ts";
 import {
+	loadPostAuthorSummaryMap,
+	type PostAuthorSummary,
+} from "./post-author.service.server.ts";
+import {
 	loadPostListPage,
 	type PostListPage,
 	type PostListSortMode,
@@ -54,6 +58,7 @@ export type CommunityPost = {
 	id: string;
 	parentPostId?: string;
 	threadDepth: number;
+	author: PostAuthorSummary;
 	bodyText?: string;
 	assets: PostAssetSummary[];
 	group?: {
@@ -70,6 +75,7 @@ export type CommunityPost = {
 export type CreatedPostSummary = {
 	id: string;
 	parentPostId?: string;
+	author: PostAuthorSummary;
 	bodyText?: string;
 	assets: PostAssetSummary[];
 	group?: {
@@ -309,6 +315,7 @@ function mapPost(params: {
 		id: string;
 		parentPostId: string | null;
 		threadDepth?: number;
+		author: PostAuthorSummary;
 		bodyText: string | null;
 		assets?: PostAssetSummary[];
 		groupId?: string | null;
@@ -326,6 +333,7 @@ function mapPost(params: {
 		id: params.row.id,
 		parentPostId: params.row.parentPostId ?? undefined,
 		threadDepth: params.row.threadDepth ?? 0,
+		author: params.row.author,
 		bodyText: params.row.bodyText ?? undefined,
 		assets: params.row.assets ?? [],
 		group:
@@ -580,6 +588,7 @@ export async function loadCommunityPostThread(params: {
 		select: {
 			id: true,
 			parentPostId: true,
+			authorId: true,
 			bodyText: true,
 			groupId: true,
 			moderationStatus: true,
@@ -606,11 +615,15 @@ export async function loadCommunityPostThread(params: {
 	const assetMap = await loadPostAssetSummaries({
 		postIds: visible.map((row) => row.id),
 	});
+	const authorMap = await loadPostAuthorSummaryMap({
+		authorIds: visible.map((row) => row.authorId),
+	});
 	const threadedPosts = buildThreadTree({
 		rows: normalizeThreadDepths({ rows: visible }).map((row) =>
 			mapPost({
 				row: {
 					...row,
+					author: authorMap.get(row.authorId) ?? { name: "Member" },
 					assets: assetMap.get(row.id) ?? [],
 				},
 			}),
@@ -847,9 +860,14 @@ export async function createPost(params: {
 	const assetMap = await loadPostAssetSummaries({
 		postIds: [created.id],
 	});
+	const authorId = postingUser.hubUserId ?? postingUser.id;
+	const authorMap = await loadPostAuthorSummaryMap({
+		authorIds: [authorId],
+	});
 	const createdPost: CreatedPostSummary = {
 		id: created.id,
 		parentPostId: params.parentPostId ?? undefined,
+		author: authorMap.get(authorId) ?? { name: "Member" },
 		bodyText: text,
 		assets: assetMap.get(created.id) ?? [],
 		group: effectiveGroupId

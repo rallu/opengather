@@ -4,6 +4,10 @@ import {
 	loadPostAssetSummaries,
 	type PostAssetSummary,
 } from "./post-assets.server.ts";
+import {
+	loadPostAuthorSummaryMap,
+	type PostAuthorSummary,
+} from "./post-author.service.server.ts";
 import { ensurePostRootIds } from "./post-root.server.ts";
 
 export const POST_LIST_PAGE_SIZE = 10;
@@ -26,6 +30,7 @@ export type PostListItem = {
 	id: string;
 	parentPostId?: string;
 	threadDepth: number;
+	author: PostAuthorSummary;
 	bodyText?: string;
 	assets: PostAssetSummary[];
 	group?: {
@@ -67,6 +72,7 @@ type PostListCursor = ActivityCursor | NewestCursor;
 type PostListRow = {
 	id: string;
 	parentPostId: string | null;
+	authorId: string;
 	bodyText: string | null;
 	groupId: string | null;
 	groupName: string | null;
@@ -339,11 +345,13 @@ function getOrderBy(sortMode: PostListSortMode) {
 function mapPostListItem(
 	row: PostListRow,
 	sortMode: PostListSortMode,
+	author: PostAuthorSummary,
 ): PostListItem {
 	return {
 		id: row.id,
 		parentPostId: row.parentPostId ?? undefined,
 		threadDepth: 0,
+		author,
 		bodyText: row.bodyText ?? undefined,
 		assets: [],
 		group:
@@ -393,6 +401,7 @@ export async function loadPostListPage(params: {
 			SELECT
 				p.id,
 				p.parent_post_id,
+				p.author_id,
 				p.body_text,
 				p.group_id,
 				p.moderation_status,
@@ -418,6 +427,7 @@ export async function loadPostListPage(params: {
 			SELECT
 				v.id,
 				v.parent_post_id,
+				v.author_id,
 				v.body_text,
 				v.group_id,
 				g.name AS group_name,
@@ -435,6 +445,7 @@ export async function loadPostListPage(params: {
 		SELECT
 			root_posts.id,
 			root_posts.parent_post_id AS "parentPostId",
+			root_posts.author_id AS "authorId",
 			root_posts.body_text AS "bodyText",
 			root_posts.group_id AS "groupId",
 			root_posts.group_name AS "groupName",
@@ -455,8 +466,15 @@ export async function loadPostListPage(params: {
 	const assetMap = await loadPostAssetSummaries({
 		postIds: pageRows.map((row) => row.id),
 	});
+	const authorMap = await loadPostAuthorSummaryMap({
+		authorIds: pageRows.map((row) => row.authorId),
+	});
 	const items = pageRows.map((row) => ({
-		...mapPostListItem(row, params.sortMode),
+		...mapPostListItem(
+			row,
+			params.sortMode,
+			authorMap.get(row.authorId) ?? { name: "Member" },
+		),
 		assets: assetMap.get(row.id) ?? [],
 	}));
 	const lastItem = items.at(-1);

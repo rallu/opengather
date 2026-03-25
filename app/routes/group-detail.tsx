@@ -13,6 +13,7 @@ import { PostAssetDisplay } from "~/components/post/post-asset-display";
 import { PostAssetInput } from "~/components/post/post-asset-input";
 import { PostComposer } from "~/components/post/post-composer";
 import { PostContent } from "~/components/post/post-content";
+import { PostHeader } from "~/components/post/post-header";
 import {
 	PostListSortToggle,
 	ThreadFeedList,
@@ -78,6 +79,7 @@ function toPriorityPostListItem(params: {
 		id: params.post.id,
 		parentPostId: params.post.parentPostId,
 		threadDepth: 0,
+		author: params.post.author,
 		bodyText: params.post.bodyText,
 		assets: params.post.assets,
 		group: params.post.group,
@@ -123,13 +125,15 @@ function GroupFeedItem(params: { post: PostListItem }) {
 					className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4"
 					data-testid={`group-thread-link-${post.id}`}
 				>
-					<PostContent
+					<PostHeader
+						authorName={post.author.name}
+						authorImageSrc={post.author.imageSrc}
 						createdAt={post.createdAt}
 						moderationStatus={post.moderationStatus}
 						isHidden={post.isHidden}
 						isDeleted={post.isDeleted}
-						className="space-y-4"
-					>
+					/>
+					<PostContent className="mt-4 space-y-4">
 						<p className="text-[15px] leading-8">{post.bodyText}</p>
 						<PostAssetDisplay assets={post.assets} playableVideo={false} />
 					</PostContent>
