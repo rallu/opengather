@@ -1,13 +1,12 @@
 import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent } from "~/components/ui/card";
 import { styleGuideGroups } from "./data";
 import { DesignTokensSection } from "./design-tokens-section";
 import { FormsControlsSection } from "./forms-controls-section";
 import { FormsFeedbackSection } from "./forms-feedback-section";
 import { FoundationsSection } from "./foundations-section";
 import { IdentityAndMediaSection } from "./identity-and-media-section";
-import { GuideGroup, SectionHeader } from "./layout";
+import { GuideGroup } from "./layout";
 import { LayoutsSection } from "./layouts-section";
 import { NavigationSection } from "./navigation-section";
 import { PostsFoundationsSection } from "./posts-foundations-section";
@@ -88,39 +87,6 @@ export function StyleGuidePage() {
 							<PostsFoundationsSection />
 							<PostsMediaSection />
 						</GuideGroup>
-						<section
-							className="space-y-4"
-							data-testid="style-guide-coming-next"
-						>
-							<SectionHeader
-								title="Coming Next"
-								description="Additional shared building blocks that surfaced while expanding the first guide page."
-							/>
-							<Card>
-								<CardContent className="pt-6">
-									<ul className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
-										<li className="rounded-lg border border-dashed border-border p-4">
-											Field wrappers with labels, help text, and validation
-											messaging.
-										</li>
-										<li className="rounded-lg border border-dashed border-border p-4">
-											Composer patterns for post creation and reply actions.
-										</li>
-										<li className="rounded-lg border border-dashed border-border p-4">
-											Gallery, media grid, and richer image grouping patterns.
-										</li>
-										<li className="rounded-lg border border-dashed border-border p-4">
-											Empty-state, section-heading, and inline feedback
-											patterns.
-										</li>
-										<li className="rounded-lg border border-dashed border-border p-4">
-											State-aware profile actions like follow, invite, and
-											message.
-										</li>
-									</ul>
-								</CardContent>
-							</Card>
-						</section>
 					</div>
 				</div>
 			</div>

@@ -25,7 +25,6 @@ type PostComposerProps = Omit<
 	footer?: React.ReactNode;
 	submitClassName?: string;
 	resetKey?: string | number | null;
-	shortcutHint?: string;
 };
 
 const PostComposer = React.forwardRef<HTMLDivElement, PostComposerProps>(
@@ -46,12 +45,14 @@ const PostComposer = React.forwardRef<HTMLDivElement, PostComposerProps>(
 			footer,
 			submitClassName,
 			resetKey,
-			shortcutHint,
 			...props
 		},
 		ref,
 	) => {
 		const [value, setValue] = React.useState(defaultValue ?? "");
+		const [isExpanded, setIsExpanded] = React.useState(
+			variant === "reply" || (defaultValue ?? "").trim().length > 0,
+		);
 		const resolvedPlaceholder =
 			placeholder ??
 			(variant === "post"
@@ -61,8 +62,9 @@ const PostComposer = React.forwardRef<HTMLDivElement, PostComposerProps>(
 			submitLabel ?? (variant === "post" ? "Post" : "Reply");
 		const resolvedSubmittingLabel =
 			submittingLabel ?? (variant === "post" ? "Posting" : resolvedSubmitLabel);
-		const resolvedShortcutHint =
-			shortcutHint ?? "Send with Cmd+Enter or Ctrl+Enter";
+		const isCollapsible = variant === "post";
+		const resolvedRows =
+			isCollapsible && !isExpanded ? 1 : rows ?? (variant === "post" ? 4 : 3);
 
 		React.useEffect(() => {
 			setValue(defaultValue ?? "");
@@ -75,12 +77,45 @@ const PostComposer = React.forwardRef<HTMLDivElement, PostComposerProps>(
 			setValue(defaultValue ?? "");
 		}, [defaultValue, resetKey]);
 
+		React.useEffect(() => {
+			setIsExpanded(
+				variant === "reply" || (defaultValue ?? "").trim().length > 0,
+			);
+		}, [defaultValue, variant]);
+
+		React.useEffect(() => {
+			if (resetKey === undefined || !isCollapsible) {
+				return;
+			}
+
+			setIsExpanded(false);
+		}, [isCollapsible, resetKey]);
+
 		return (
-			<div ref={ref} className={cn("min-w-0", className)} {...props}>
-				<div className="overflow-hidden rounded-xl border border-input/80 bg-background">
+			<div
+				ref={ref}
+				className={cn("min-w-0", className)}
+				onFocusCapture={() => {
+					if (isCollapsible) {
+						setIsExpanded(true);
+					}
+				}}
+				onBlurCapture={(event) => {
+					if (
+						!isCollapsible ||
+						event.currentTarget.contains(event.relatedTarget as Node | null)
+					) {
+						return;
+					}
+
+					setIsExpanded(false);
+				}}
+				{...props}
+			>
+				<div className="overflow-hidden rounded-xl border border-input/80 bg-background transition-[border-color,box-shadow] duration-150">
 					<Textarea
 						name={name}
-						rows={rows}
+						rows={resolvedRows}
 						value={value}
 						placeholder={resolvedPlaceholder}
 						disabled={disabled}
@@ -102,24 +137,28 @@ const PostComposer = React.forwardRef<HTMLDivElement, PostComposerProps>(
 
 							event.currentTarget.form?.requestSubmit();
 						}}
-						className={cn(
-							"resize-none border-0 bg-transparent text-[15px] leading-7 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
-							variant === "post"
-								? "min-h-32 px-4 py-4 sm:min-h-36"
-								: "min-h-28 px-4 py-4",
-						)}
-					/>
+							className={cn(
+								"resize-none overflow-hidden border-0 bg-transparent text-[15px] leading-7 shadow-none transition-[min-height,padding] duration-150 focus-visible:ring-0 focus-visible:ring-offset-0",
+								variant === "post"
+									? isExpanded
+										? "min-h-32 px-4 py-4 sm:min-h-36"
+										: "min-h-0 px-4 py-3 leading-6"
+									: "min-h-28 px-4 py-4",
+							)}
+						/>
 					<div
 						className={cn(
-							"flex flex-wrap items-center justify-between gap-2 border-t border-border/70 bg-muted/20 px-3 py-2",
+							"flex flex-wrap items-center justify-between gap-2 overflow-hidden border-border/70 bg-muted/20 transition-all duration-150",
 							variant === "reply" ? "min-h-12" : "min-h-13",
+							isCollapsible &&
+								(!isExpanded
+									? "max-h-0 border-t-0 px-3 py-0 opacity-0 pointer-events-none"
+									: "max-h-24 border-t px-3 py-2 opacity-100"),
+							!isCollapsible && "border-t px-3 py-2",
 						)}
 					>
 						<div className="min-w-0 flex flex-1 flex-wrap items-center gap-2">
 							{footer}
-							<span className="text-xs leading-5 text-muted-foreground">
-								{resolvedShortcutHint}
-							</span>
 						</div>
 						<IconButton
 							type="submit"

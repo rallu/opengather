@@ -22,43 +22,16 @@ export function CommunityPage(params: {
 	const buildSortHref = (sortMode: "activity" | "newest") =>
 		`${params.pathname}?sort=${sortMode}`;
 	const communityAside = (
-		<>
-			<Container className="rounded-lg border-border/50 bg-card">
-				<div className="grid grid-cols-2 gap-3 p-5 text-sm">
-					<div className="rounded-xl bg-muted/50 p-3">
-						<p className="text-sm text-muted-foreground">Loaded threads</p>
-						<p className="mt-2 text-2xl font-semibold text-foreground">
-							{params.data.page.items.length}
-						</p>
-					</div>
-					<div className="rounded-xl bg-muted/50 p-3">
-						<p className="text-sm text-muted-foreground">Active sort</p>
-						<p className="mt-2 text-2xl font-semibold text-foreground">
-							{params.data.sortMode}
-						</p>
-					</div>
-					<div className="col-span-2 rounded-xl border border-border/70 p-3 text-muted-foreground">
-						<p className="font-medium text-foreground">
-							Threads are ranked by recent activity or by root-post recency.
-						</p>
-						<p className="mt-1 text-sm">
-							{params.data.authUser
-								? "You can start a new thread from the composer above."
-								: "Sign in to start discussions and reply to existing threads."}
-						</p>
-					</div>
-				</div>
-			</Container>
-			<Container className="rounded-lg border-border/50 bg-card">
-				<div className="space-y-2 p-5 text-sm text-muted-foreground">
-					<p>Click the post body or heading area to open the full thread.</p>
-					<p>
-						New replies can bump older threads in `activity` mode without
-						changing `newest` ordering.
-					</p>
-				</div>
-			</Container>
-		</>
+		<Container className="rounded-lg border-border/50 bg-card">
+			<div className="space-y-3 p-5">
+				<p className="text-sm font-medium text-foreground">Sort threads</p>
+				<PostListSortToggle
+					sortMode={params.data.sortMode}
+					buildHref={buildSortHref}
+					prefix="feed"
+				/>
+			</div>
+		</Container>
 	);
 
 	return (
@@ -102,14 +75,6 @@ export function CommunityPage(params: {
 			) : null}
 
 			<FeedContainer className="space-y-4">
-				<div className="flex items-center justify-end">
-					<PostListSortToggle
-						sortMode={params.data.sortMode}
-						buildHref={buildSortHref}
-						prefix="feed"
-					/>
-				</div>
-
 				{params.data.authUser && params.data.status === "ok" ? (
 					<section>
 						<Form method="post" encType="multipart/form-data">

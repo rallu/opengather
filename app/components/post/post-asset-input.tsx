@@ -244,11 +244,7 @@ export function PostAssetInput({
 				<span className="truncate text-xs leading-5 text-muted-foreground">
 					{summary}
 				</span>
-			) : (
-				<span className="text-xs leading-5 text-muted-foreground">
-					Add up to 10 images or 1 video
-				</span>
-			)}
+			) : null}
 		</div>
 	);
 }

@@ -1,7 +1,16 @@
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Form, Link, useFetcher, useLocation } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Container } from "~/components/ui/container";
+import {
+	Dialog,
+	DialogBody,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "~/components/ui/dialog";
 import { Icon } from "~/components/ui/icon";
 import { Input } from "~/components/ui/input";
 import { signOut } from "~/lib/auth-client";
@@ -67,6 +76,9 @@ export function AppShell(props: AppShellProps) {
 	const notificationSummaryFetcher = useFetcher<NotificationSummaryData>();
 	const notificationRefreshKey = `${location.pathname}:${location.search}`;
 	const lastNotificationRefreshKeyRef = useRef<string | null>(null);
+	const lastRouteKeyRef = useRef(notificationRefreshKey);
+	const [mobileNavOpen, setMobileNavOpen] = useState(false);
+	const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
 
 	useEffect(() => {
 		if (!props.authUser) {
@@ -81,6 +93,15 @@ export function AppShell(props: AppShellProps) {
 			notificationSummaryFetcher.load("/api/notifications/summary");
 		}
 	}, [notificationRefreshKey, notificationSummaryFetcher, props.authUser]);
+
+	useEffect(() => {
+		if (lastRouteKeyRef.current === notificationRefreshKey) {
+			return;
+		}
+		lastRouteKeyRef.current = notificationRefreshKey;
+		setMobileNavOpen(false);
+		setMobileDetailsOpen(false);
+	}, [notificationRefreshKey]);
 
 	const notificationSummary = notificationSummaryFetcher.data;
 	const navItems = props.authUser
@@ -105,10 +126,7 @@ export function AppShell(props: AppShellProps) {
 						]
 					: []),
 			]
-		: baseNavItems.filter(
-				(item) =>
-					item.testId === "shell-nav-feed",
-			);
+		: baseNavItems.filter((item) => item.testId === "shell-nav-feed");
 
 	const activeItem = navItems.find((item) =>
 		location.pathname.startsWith(item.to),
@@ -138,116 +156,254 @@ export function AppShell(props: AppShellProps) {
 			</ShellPanel>
 		</>
 	);
+	const asideContent = props.aside ?? defaultAside;
+
+	const searchForm = (testId: string) => (
+		<Form method="get" action="/feed" className="min-w-0 flex-1">
+			<Input
+				name="q"
+				data-testid={testId}
+				defaultValue={searchQuery}
+				placeholder="Search"
+				className="h-10"
+				inputClassName="text-sm"
+				leadingAccessory={<Icon name="search" size={14} />}
+			/>
+		</Form>
+	);
+
+	const authControls = (variant: "desktop" | "mobile") =>
+		props.authUser ? (
+			<Button
+				variant="ghost"
+				className={cn(
+					"justify-center",
+					variant === "desktop" ? "shrink-0 px-2 sm:px-3" : "w-full",
+				)}
+				size={variant === "desktop" ? "sm" : "default"}
+				onClick={() => signOut()}
+				data-testid={
+					variant === "desktop" ? "shell-sign-out" : "shell-sign-out-mobile"
+				}
+			>
+				Sign Out
+			</Button>
+		) : (
+			<div
+				className={cn(
+					variant === "desktop"
+						? "flex shrink-0 items-center gap-2"
+						: "grid gap-2",
+				)}
+			>
+				<Button
+					variant="ghost"
+					size={variant === "desktop" ? "sm" : "default"}
+					className={cn(
+						"justify-center",
+						variant === "desktop" ? "px-2 sm:px-3" : "w-full",
+					)}
+					asChild
+				>
+					<Link
+						to="/login"
+						data-testid={
+							variant === "desktop"
+								? "shell-sign-in-link"
+								: "shell-sign-in-link-mobile"
+						}
+					>
+						Sign In
+					</Link>
+				</Button>
+				<Button
+					size={variant === "desktop" ? "sm" : "default"}
+					className={cn(
+						"justify-center",
+						variant === "desktop" ? "" : "w-full",
+					)}
+					asChild
+				>
+					<Link
+						to="/register"
+						data-testid={
+							variant === "desktop"
+								? "shell-register-link"
+								: "shell-register-link-mobile"
+						}
+					>
+						Register
+					</Link>
+				</Button>
+			</div>
+		);
+
+	const mobileNavUtilityContent = (
+		<>
+			{searchForm("shell-search-mobile")}
+			{authControls("mobile")}
+		</>
+	);
+
+	const navContent = (variant: "desktop" | "mobile") => (
+		<nav className="space-y-1">
+			{navItems.map((item) => (
+				<Link
+					key={item.to}
+					to={item.to}
+					data-testid={
+						variant === "desktop" ? item.testId : `${item.testId}-mobile`
+					}
+					className={cn(
+						"flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+						activeItem === item.to
+							? "bg-primary text-primary-foreground"
+							: "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+					)}
+				>
+					<span>{item.label}</span>
+					{item.to === "/notifications" &&
+					notificationSummary &&
+					notificationSummary.unreadCount > 0 ? (
+						<NavBadge
+							count={notificationSummary.unreadCount}
+							testId={
+								variant === "desktop"
+									? "shell-nav-notifications-badge"
+									: "shell-nav-notifications-badge-mobile"
+							}
+						/>
+					) : null}
+					{item.to === "/approvals" &&
+					notificationSummary &&
+					notificationSummary.pendingApprovalCount > 0 ? (
+						<NavBadge
+							count={notificationSummary.pendingApprovalCount}
+							testId={
+								variant === "desktop"
+									? "shell-nav-approvals-badge"
+									: "shell-nav-approvals-badge-mobile"
+							}
+						/>
+					) : null}
+				</Link>
+			))}
+		</nav>
+	);
 
 	return (
 		<div className="min-h-screen bg-background">
-			<header className="border-b border-border/80 bg-background/90 backdrop-blur-xl">
-				<div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-4 sm:px-6">
-					<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-						<div className="flex min-w-0 flex-col gap-1">
-							<Link
-								to="/feed"
-								className="flex items-center gap-2 font-semibold tracking-tight text-foreground"
-							>
-								<img src="/logo.svg" alt="OpenGather" className="h-8" />
-								OpenGather
-							</Link>
+			<header className="fixed inset-x-0 top-0 z-50 border-b border-border/80 bg-background/90 backdrop-blur-xl">
+				<div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon"
+						className="h-9 w-9 shrink-0 rounded-full lg:hidden"
+						onClick={() => setMobileNavOpen(true)}
+						data-testid="shell-mobile-nav-trigger"
+						aria-label="Open navigation"
+					>
+						<Icon name="menu" size={18} />
+					</Button>
+
+					<Link
+						to="/feed"
+						className="flex min-w-0 flex-1 items-center gap-2 font-semibold tracking-tight text-foreground lg:flex-none"
+					>
+						<img src="/logo.svg" alt="OpenGather" className="h-8" />
+						<span className="text-sm sm:text-base">OpenGather</span>
+					</Link>
+
+					<div className="hidden min-w-0 flex-1 items-center justify-end gap-3 lg:flex">
+						<div className="min-w-0 max-w-md flex-1">
+							{searchForm("shell-search")}
 						</div>
-						<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
-							<Form
-								method="get"
-								action="/feed"
-								className="relative flex-1 sm:min-w-80"
-							>
-								<Input
-									name="q"
-									data-testid="shell-search"
-									defaultValue={searchQuery}
-									placeholder="Search"
-									leadingAccessory={<Icon name="search" />}
-								/>
-							</Form>
-							{props.authUser ? (
-								<div className="flex items-center justify-end gap-2">
-									<span className="hidden rounded-full bg-muted px-3 py-2 text-sm text-muted-foreground md:inline">
-										{props.authUser.name}
-									</span>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() => signOut()}
-										data-testid="shell-sign-out"
-									>
-										Sign Out
-									</Button>
-								</div>
-							) : (
-								<div className="flex items-center justify-end gap-2">
-									<Button variant="ghost" size="sm" asChild>
-										<Link to="/login" data-testid="shell-sign-in-link">
-											Sign In
-										</Link>
-									</Button>
-									<Button size="sm" asChild>
-										<Link to="/register" data-testid="shell-register-link">
-											Register
-										</Link>
-									</Button>
-								</div>
-							)}
-						</div>
+						{authControls("desktop")}
 					</div>
+
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						className="shrink-0 px-2 lg:hidden"
+						onClick={() => setMobileDetailsOpen(true)}
+						data-testid="shell-mobile-details-trigger"
+					>
+						Details
+					</Button>
 				</div>
 			</header>
 
-			<main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
+			<Dialog open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+				{mobileNavOpen ? (
+					<DialogContent
+						className="top-0 right-auto bottom-0 left-0 m-0 h-dvh max-h-none w-[min(20rem,calc(100%-3rem))] rounded-none rounded-r-3xl border-r border-border/80 p-0 backdrop:bg-black/40 lg:hidden"
+						data-testid="shell-mobile-nav-drawer"
+						data-dialog-motion="from-left"
+					>
+						<DialogHeader className="border-b border-border/80 bg-background/95">
+							<div className="flex items-start justify-between gap-3">
+								<div className="space-y-1">
+									<DialogTitle>Navigation</DialogTitle>
+									<DialogDescription>
+										Move between the main sections of the app.
+									</DialogDescription>
+								</div>
+								<DialogClose
+									className="h-8 w-8 rounded-full p-0"
+									aria-label="Close navigation"
+								>
+									<Icon name="x" size={16} />
+								</DialogClose>
+							</div>
+						</DialogHeader>
+						<DialogBody className="space-y-4 overflow-y-auto">
+							<ShellPanel>{mobileNavUtilityContent}</ShellPanel>
+							<ShellPanel>{navContent("mobile")}</ShellPanel>
+						</DialogBody>
+					</DialogContent>
+				) : null}
+			</Dialog>
+
+			<Dialog open={mobileDetailsOpen} onOpenChange={setMobileDetailsOpen}>
+				{mobileDetailsOpen ? (
+					<DialogContent
+						className="top-0 right-0 bottom-0 left-auto m-0 h-dvh max-h-none w-[min(22rem,calc(100%-2rem))] rounded-none rounded-l-3xl border-l border-border/80 p-0 backdrop:bg-black/40 lg:hidden"
+						data-testid="shell-mobile-details-drawer"
+						data-dialog-motion="from-right"
+					>
+						<DialogHeader className="border-b border-border/80 bg-background/95">
+							<div className="flex items-start justify-between gap-3">
+								<div className="space-y-1">
+									<DialogTitle>Details</DialogTitle>
+									<DialogDescription>
+										Secondary context and route-specific tools.
+									</DialogDescription>
+								</div>
+								<DialogClose
+									className="h-8 w-8 rounded-full p-0"
+									aria-label="Close details"
+								>
+									<Icon name="x" size={16} />
+								</DialogClose>
+							</div>
+						</DialogHeader>
+						<DialogBody className="space-y-4 overflow-y-auto">
+							{asideContent}
+						</DialogBody>
+					</DialogContent>
+				) : null}
+			</Dialog>
+
+			<main className="mx-auto w-full max-w-7xl px-4 pt-24 pb-8 sm:px-6">
 				<div
 					className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)_300px] xl:grid-cols-[260px_minmax(0,1fr)_320px]"
 					data-testid="shell-main"
 				>
-					<aside className="order-2 min-w-0 lg:order-1">
+					<aside className="order-2 hidden min-w-0 lg:order-1 lg:block">
 						<div className="space-y-4 lg:sticky lg:top-24">
-							<ShellPanel>
-								<nav className="space-y-1">
-									{navItems.map((item) => (
-										<Link
-											key={item.to}
-											to={item.to}
-											data-testid={item.testId}
-											className={cn(
-												"flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-												activeItem === item.to
-													? "bg-primary text-primary-foreground"
-													: "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-											)}
-										>
-											<span>{item.label}</span>
-											{item.to === "/notifications" &&
-											notificationSummary &&
-											notificationSummary.unreadCount > 0 ? (
-												<NavBadge
-													count={notificationSummary.unreadCount}
-													testId="shell-nav-notifications-badge"
-												/>
-											) : null}
-											{item.to === "/approvals" &&
-											notificationSummary &&
-											notificationSummary.pendingApprovalCount > 0 ? (
-												<NavBadge
-													count={notificationSummary.pendingApprovalCount}
-													testId="shell-nav-approvals-badge"
-												/>
-											) : null}
-										</Link>
-									))}
-								</nav>
-							</ShellPanel>
-							<ShellPanel>
-								<p className="text-sm text-muted-foreground">
-									Search always returns to the feed so results stay in one
-									place.
-								</p>
-							</ShellPanel>
+							<ShellPanel>{navContent("desktop")}</ShellPanel>
 						</div>
 					</aside>
 
@@ -255,10 +411,8 @@ export function AppShell(props: AppShellProps) {
 						{props.children}
 					</section>
 
-					<aside className="order-3 min-w-0">
-						<div className="space-y-4 lg:sticky lg:top-24">
-							{props.aside ?? defaultAside}
-						</div>
+					<aside className="order-3 hidden min-w-0 lg:block">
+						<div className="space-y-4 lg:sticky lg:top-24">{asideContent}</div>
 					</aside>
 				</div>
 			</main>

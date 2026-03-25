@@ -113,4 +113,36 @@ test.describe("home", () => {
 			await expectGuestShell(page);
 		}
 	});
+
+	test("mobile shell exposes navigation and details drawers", async ({
+		page,
+	}) => {
+		await ensureConfiguredInstance(page);
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto("/feed");
+
+		await expect(page.getByTestId("shell-mobile-nav-trigger")).toBeVisible();
+		await expect(page.getByTestId("shell-mobile-details-trigger")).toBeVisible();
+
+		await page.getByTestId("shell-mobile-nav-trigger").click();
+		await expect(page.getByTestId("shell-mobile-nav-drawer")).toBeVisible();
+		await expect(page.getByTestId("shell-search-mobile")).toBeVisible();
+		await expect(page.getByTestId("shell-sign-in-link-mobile")).toBeVisible();
+		await expect(
+			page
+				.getByTestId("shell-mobile-nav-drawer")
+				.getByTestId("shell-nav-feed-mobile"),
+		).toBeVisible();
+
+		await page.getByLabel("Close navigation").click();
+		await expect(page.getByTestId("shell-mobile-nav-drawer")).not.toBeVisible();
+
+		await page.getByTestId("shell-mobile-details-trigger").click();
+		await expect(page.getByTestId("shell-mobile-details-drawer")).toBeVisible();
+		await expect(
+			page
+				.getByTestId("shell-mobile-details-drawer")
+				.getByTestId("feed-sort-activity"),
+		).toBeVisible();
+	});
 });
