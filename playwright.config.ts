@@ -23,6 +23,8 @@ export default defineConfig({
 			BETTER_AUTH_SECRET:
 				process.env.BETTER_AUTH_SECRET ?? "opengather-dev-secret",
 			HUB_BASE_URL: process.env.HUB_BASE_URL ?? "http://127.0.0.1:9000",
+			AUTH_RATE_LIMIT_MAX_REQUESTS:
+				process.env.AUTH_RATE_LIMIT_MAX_REQUESTS ?? "500",
 		},
 	},
 	projects: [

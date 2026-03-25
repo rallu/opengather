@@ -1,0 +1,174 @@
+import { PostComposer } from "~/components/post/post-composer";
+import { PostContent } from "~/components/post/post-content";
+import { PostHeading } from "~/components/post/post-heading";
+import { PostLabels } from "~/components/post/post-labels";
+import { PostRichTextContent } from "~/components/post/post-rich-text-content";
+import { ProfileImage } from "~/components/profile/profile-image";
+import { Card, CardContent } from "~/components/ui/card";
+import { RichTextContent } from "~/components/ui/rich-text-content";
+import { ainoImage, heroImage, richTextExample } from "./data";
+import { SectionHeader } from "./layout";
+
+export function PostsFoundationsSection() {
+	return (
+		<>
+			<section className="space-y-4" data-testid="style-guide-post-heading">
+				<SectionHeader
+					title="Post Heading"
+					description="Composed heading block for posts. It pairs media with a two-line heading stack so person posts and group posts can share the same layout grammar."
+				/>
+				<Card>
+					<CardContent className="grid gap-4 pt-6 lg:grid-cols-2">
+						<div className="rounded-lg border border-border p-4">
+							<PostHeading
+								media={
+									<ProfileImage
+										src={ainoImage}
+										alt="Aino Moderator"
+										fallback="AM"
+										size="md"
+									/>
+								}
+								title={
+									<span className="flex flex-wrap items-center gap-2">
+										<span>Aino Moderator</span>
+										<PostLabels moderationStatus="approved" />
+									</span>
+								}
+								subtitle={new Date("2026-03-14T08:30:00.000Z").toLocaleString()}
+							/>
+						</div>
+						<div className="rounded-lg border border-border p-4">
+							<PostHeading
+								media={
+									<ProfileImage
+										src={heroImage}
+										alt="Neighborhood group"
+										fallback="NG"
+										size="md"
+										className="rounded-md"
+									/>
+								}
+								title={
+									<span className="flex flex-wrap items-center gap-2">
+										<span>Neighborhood Organizers</span>
+										<PostLabels moderationStatus="flagged" isHidden />
+									</span>
+								}
+								subtitle={`Posted by Sara Admin • ${new Date("2026-03-14T11:15:00.000Z").toLocaleString()}`}
+							/>
+						</div>
+					</CardContent>
+				</Card>
+			</section>
+			<section className="space-y-4" data-testid="style-guide-post-composer">
+				<SectionHeader
+					title="Post Composer"
+					description="Composed input surface for creating new posts and writing replies. The large variant is for new content, while the compact variant keeps reply flows light."
+				/>
+				<Card>
+					<CardContent className="space-y-4 pt-6">
+						<PostComposer
+							variant="post"
+							defaultValue="We have enough volunteers for setup. What we still need is one person to document the route changes before Saturday."
+							footer={null}
+						/>
+						<PostComposer
+							variant="reply"
+							placeholder="Add a reply to the thread"
+							submitLabel="Reply"
+						/>
+					</CardContent>
+				</Card>
+			</section>
+			<section className="space-y-4" data-testid="style-guide-post-content">
+				<SectionHeader
+					title="Post Content"
+					description="Display-only content block for a post body and its metadata. This is the base visual unit for posts before route migrations begin."
+				/>
+				<Card>
+					<CardContent className="space-y-6 pt-6">
+						<div className="rounded-lg border border-border p-4">
+							<PostHeading
+								media={
+									<ProfileImage
+										src={ainoImage}
+										alt="Aino Moderator"
+										fallback="AM"
+										size="md"
+									/>
+								}
+								title={
+									<span className="flex flex-wrap items-center gap-2">
+										<span>Aino Moderator</span>
+										<PostLabels moderationStatus="approved" />
+									</span>
+								}
+								subtitle={new Date("2026-03-14T08:30:00.000Z").toLocaleString()}
+							/>
+							<PostContent
+								className="mt-4"
+								actions={[{ label: "Comment" }, { label: "Share" }]}
+							>
+								<PostRichTextContent document={richTextExample} />
+							</PostContent>
+						</div>
+						<div className="rounded-lg border border-border p-4">
+							<PostHeading
+								media={
+									<ProfileImage
+										src={heroImage}
+										alt="Neighborhood group"
+										fallback="NG"
+										size="md"
+										className="rounded-md"
+									/>
+								}
+								title={
+									<span className="flex flex-wrap items-center gap-2">
+										<span>Neighborhood Organizers</span>
+										<PostLabels moderationStatus="flagged" isHidden />
+									</span>
+								}
+								subtitle={`Posted by Sara Admin • ${new Date("2026-03-14T08:42:00.000Z").toLocaleString()}`}
+							/>
+							<PostContent
+								className="mt-4"
+								actions={[{ label: "Comment" }, { label: "Share" }]}
+							>
+								<PostRichTextContent document={richTextExample} />
+							</PostContent>
+						</div>
+					</CardContent>
+				</Card>
+			</section>
+			<section
+				className="space-y-4"
+				data-testid="style-guide-rich-text-content"
+			>
+				<SectionHeader
+					title="Rich Text Content"
+					description="Structured rich text format intended for storage. It keeps content explicit as blocks and inline nodes, so internal and external links stay typed instead of being stored as raw HTML."
+				/>
+				<Card>
+					<CardContent className="grid gap-4 pt-6 lg:grid-cols-2">
+						<div className="space-y-3 rounded-lg border border-border p-4">
+							<h3 className="text-base font-semibold tracking-tight">
+								Document model
+							</h3>
+							<pre className="overflow-x-auto rounded-md bg-muted/60 p-4 text-xs leading-6 text-muted-foreground">
+								<code>{JSON.stringify(richTextExample, null, 2)}</code>
+							</pre>
+						</div>
+						<div className="space-y-3 rounded-lg border border-border p-4">
+							<h3 className="text-base font-semibold tracking-tight">
+								Rendered output
+							</h3>
+							<RichTextContent document={richTextExample} />
+						</div>
+					</CardContent>
+				</Card>
+			</section>
+		</>
+	);
+}

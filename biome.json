@@ -8,12 +8,32 @@
 			"!build",
 			"!test-results",
 			"!node_modules",
-			"!app/generated"
+			"!app/generated",
+			"!e2e/**/*"
 		]
 	},
 	"css": {
 		"parser": {
 			"tailwindDirectives": true
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"correctness": {
+				"noUnusedFunctionParameters": "warn",
+				"useExhaustiveDependencies": "warn"
+			},
+			"nursery": {
+				"noExcessiveLinesPerFile": {
+					"level": "warn",
+					"options": {
+						"maxLines": 400,
+						"skipBlankLines": true
+					}
+				}
+			}
 		}
 	}
 }

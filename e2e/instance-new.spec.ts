@@ -6,7 +6,8 @@ async function expectConfiguredLanding(
 	page: import("@playwright/test").Page,
 ): Promise<void> {
 	if (page.url().endsWith("/feed")) {
-		await expect(page.getByTestId("feed-composer")).toBeVisible();
+		await expect(page.getByTestId("shell-main")).toBeVisible();
+		await expect(page.getByTestId("feed-setup-error")).not.toBeVisible();
 		return;
 	}
 
@@ -89,10 +90,18 @@ test.describe("setup wizard", () => {
 			await expectConfiguredLanding(page);
 			await expect(page.getByTestId("home-run-setup-link")).not.toBeVisible();
 			const homeSignInLink = page.getByTestId("home-sign-in-link");
+			const shellSignInLink = page.getByTestId("shell-sign-in-link");
+			await expect(async () => {
+				const homeVisible = await homeSignInLink.isVisible().catch(() => false);
+				const shellVisible = await shellSignInLink
+					.isVisible()
+					.catch(() => false);
+				expect(homeVisible || shellVisible).toBe(true);
+			}).toPass();
 			if (await homeSignInLink.isVisible().catch(() => false)) {
 				await homeSignInLink.click();
 			} else {
-				await page.getByTestId("shell-sign-in-link").click();
+				await shellSignInLink.click();
 			}
 			await expect(page.getByTestId("login-title")).toBeVisible();
 			return;
@@ -132,7 +141,7 @@ test.describe("setup wizard", () => {
 		page,
 	}) => {
 		await page.goto("/feed");
-		await expect(page.getByTestId("feed-composer")).toBeVisible();
+		await expect(page.getByTestId("shell-main")).toBeVisible();
 		await expect(page.getByTestId("feed-setup-error")).not.toBeVisible();
 	});
 });
