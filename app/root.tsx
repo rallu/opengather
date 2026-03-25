@@ -33,11 +33,16 @@ export async function loader(_args: LoaderFunctionArgs) {
 	}
 }
 
-export function Layout({ children }: { children: ReactNode }) {
+function useRootRenderIntl() {
 	const data = useLoaderData<typeof loader>();
+	return data?.renderIntl ?? DEFAULT_RENDER_INTL_CONFIG;
+}
+
+export function Layout({ children }: { children: ReactNode }) {
+	const renderIntl = useRootRenderIntl();
 
 	return (
-		<html lang={data.renderIntl.locale}>
+		<html lang={renderIntl.locale}>
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -46,7 +51,7 @@ export function Layout({ children }: { children: ReactNode }) {
 			</head>
 			<body
 				className="min-h-screen bg-background font-sans antialiased"
-				data-render-time-zone={data.renderIntl.timeZone}
+				data-render-time-zone={renderIntl.timeZone}
 			>
 				{children}
 				<ScrollRestoration />
@@ -57,10 +62,10 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-	const data = useLoaderData<typeof loader>();
+	const renderIntl = useRootRenderIntl();
 
 	return (
-		<RenderIntlProvider value={data.renderIntl}>
+		<RenderIntlProvider value={renderIntl}>
 			<Outlet />
 		</RenderIntlProvider>
 	);

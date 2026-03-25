@@ -4,8 +4,8 @@ import { AppShell } from "~/components/app-shell";
 import { ProfileImage } from "~/components/profile/profile-image";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { Textarea } from "~/components/ui/textarea";
 import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
+import { Textarea } from "~/components/ui/textarea";
 import { getInstanceViewerRole } from "~/server/permissions.server";
 import {
 	loadOwnProfile,
