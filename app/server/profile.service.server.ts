@@ -36,6 +36,67 @@ export function parseProfileVisibilityMode(
 	return "public";
 }
 
+function sanitizeProfileSummary(raw: string | null | undefined): string | null {
+	const summary = (raw ?? "").trim();
+	if (!summary) {
+		return null;
+	}
+	if (summary.length <= 300) {
+		return summary;
+	}
+	return summary.slice(0, 300);
+}
+
+export function parseProfileUpdateInput(params: {
+	name: string | null | undefined;
+	image: string | null | undefined;
+	summary: string | null | undefined;
+}):
+	| {
+			ok: true;
+			value: {
+				name: string;
+				image: string | null;
+				summary: string | null;
+			};
+	  }
+	| { ok: false; error: string } {
+	const name = (params.name ?? "").trim();
+	if (name.length < 2 || name.length > 80) {
+		return { ok: false, error: "Name must be between 2 and 80 characters." };
+	}
+
+	const rawImage = (params.image ?? "").trim();
+	let image: string | null = null;
+	if (rawImage) {
+		if (rawImage.length > 1000) {
+			return { ok: false, error: "Image URL is too long." };
+		}
+		try {
+			const parsed = new URL(rawImage);
+			if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+				return {
+					ok: false,
+					error: "Image URL must start with http:// or https://.",
+				};
+			}
+			image = parsed.toString();
+		} catch {
+			return { ok: false, error: "Image URL is invalid." };
+		}
+	}
+
+	const summary = sanitizeProfileSummary(params.summary);
+	return {
+		ok: true,
+		value: {
+			name,
+			image,
+			summary,
+		},
+	};
+}
+
 export async function getProfileVisibility(params: {
 	userId: string;
 }): Promise<ProfileVisibilityMode> {
@@ -68,6 +129,7 @@ export async function setProfileVisibility(params: {
 			id: randomUUID(),
 			userId: params.userId,
 			visibilityMode,
+			summary: null,
 			createdAt: now,
 			updatedAt: now,
 		},
@@ -76,6 +138,40 @@ export async function setProfileVisibility(params: {
 			updatedAt: now,
 		},
 	});
+}
+
+export async function updateOwnProfile(params: {
+	userId: string;
+	name: string;
+	image: string | null;
+	summary: string | null;
+}): Promise<void> {
+	const now = new Date();
+	await getDb().$transaction([
+		getDb().user.update({
+			where: { id: params.userId },
+			data: {
+				name: params.name,
+				image: params.image,
+				updatedAt: now,
+			},
+		}),
+		getDb().profilePreference.upsert({
+			where: { userId: params.userId },
+			create: {
+				id: randomUUID(),
+				userId: params.userId,
+				visibilityMode: "public",
+				summary: params.summary,
+				createdAt: now,
+				updatedAt: now,
+			},
+			update: {
+				summary: params.summary,
+				updatedAt: now,
+			},
+		}),
+	]);
 }
 
 export function listProfileVisibilityOptions(params: {
@@ -212,7 +308,6 @@ export async function loadOwnProfile(params: {
 	instanceId: string;
 	instanceName: string;
 	viewerRole: ViewerRole;
-	name: string;
 }): Promise<
 	| {
 			status: "not_found";
@@ -231,9 +326,28 @@ export async function loadOwnProfile(params: {
 			instanceName: string;
 			viewerRole: ViewerRole;
 			name: string;
+			image: string | null;
+			summary: string | null;
 	  }
 > {
 	const db = getDb();
+	const [userRow, preferenceRow] = await Promise.all([
+		db.user.findUnique({
+			where: { id: params.userId },
+			select: {
+				name: true,
+				image: true,
+			},
+		}),
+		db.profilePreference.findUnique({
+			where: { userId: params.userId },
+			select: { summary: true },
+		}),
+	]);
+	if (!userRow) {
+		return { status: "not_found" };
+	}
+
 	const authorIds = [params.userId, params.hubUserId].filter(
 		(value): value is string => Boolean(value),
 	);
@@ -322,7 +436,11 @@ export async function loadOwnProfile(params: {
 		publicProfilePath: `/profiles/${params.userId}`,
 		instanceName: params.instanceName,
 		viewerRole: params.viewerRole,
-		name: params.name,
+		name: userRow.name,
+		image: userRow.image,
+		summary: preferenceRow?.summary
+			? sanitizeProfileSummary(preferenceRow.summary)
+			: null,
 	};
 }
 
@@ -337,6 +455,8 @@ export async function loadVisibleProfile(params: {
 	| {
 			status: "ok";
 			name: string;
+			image: string | null;
+			summary: string | null;
 			profileVisibility: ProfileVisibilityMode;
 			activities: ProfileActivity[];
 			stats: {
@@ -348,13 +468,20 @@ export async function loadVisibleProfile(params: {
 	  }
 > {
 	const db = getDb();
-	const profileUser = await db.user.findUnique({
-		where: { id: params.profileUserId },
-		select: {
-			id: true,
-			name: true,
-		},
-	});
+	const [profileUser, preferenceRow] = await Promise.all([
+		db.user.findUnique({
+			where: { id: params.profileUserId },
+			select: {
+				id: true,
+				name: true,
+				image: true,
+			},
+		}),
+		db.profilePreference.findUnique({
+			where: { userId: params.profileUserId },
+			select: { summary: true },
+		}),
+	]);
 	if (!profileUser) {
 		return { status: "not_found" };
 	}
@@ -400,6 +527,10 @@ export async function loadVisibleProfile(params: {
 	return {
 		status: "ok",
 		name: profileUser.name,
+		image: profileUser.image,
+		summary: preferenceRow?.summary
+			? sanitizeProfileSummary(preferenceRow.summary)
+			: null,
 		profileVisibility,
 		activities: buildVisibleActivities({ rows: postRows }),
 		stats: {

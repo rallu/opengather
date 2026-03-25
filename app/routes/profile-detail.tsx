@@ -1,6 +1,7 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { Link, useLoaderData } from "react-router";
 import { AppShell } from "~/components/app-shell";
+import { ProfileImage } from "~/components/profile/profile-image";
 import { Button } from "~/components/ui/button";
 import { loadVisibleProfile } from "~/server/profile.service.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
@@ -97,10 +98,30 @@ export default function ProfileDetailPage() {
 		);
 	}
 
+	const fallback = data.name.trim().slice(0, 1).toUpperCase() || "?";
+
 	return (
 		<AppShell authUser={data.authUser} title={data.name}>
-			<div className="rounded-md border border-border p-4 text-sm">
-				<p className="font-medium">{data.name}</p>
+			<div
+				className="rounded-md border border-border p-4 text-sm"
+				data-testid="profile-detail-header"
+			>
+				<div className="flex items-center gap-3">
+					<ProfileImage
+						src={data.image ?? undefined}
+						alt={`${data.name} profile image`}
+						fallback={fallback}
+						size="lg"
+					/>
+					<p className="font-medium" data-testid="profile-detail-name">
+						{data.name}
+					</p>
+				</div>
+				{data.summary ? (
+					<p className="mt-3 text-sm" data-testid="profile-detail-summary">
+						{data.summary}
+					</p>
+				) : null}
 				<p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">
 					Profile visibility: {data.profileVisibility}
 				</p>
