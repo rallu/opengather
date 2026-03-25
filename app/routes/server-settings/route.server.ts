@@ -17,6 +17,7 @@ import {
 import { getPublicOrigin } from "~/server/request-origin.server.ts";
 
 type ViewerContext = Awaited<ReturnType<typeof getPermissionsViewerContext>>;
+type ServerSettingsSection = "hub" | "media" | "rendering";
 
 export type ServerSettingsLoaderData = {
 	authUser: ViewerContext["authUser"];
@@ -31,8 +32,8 @@ export type ServerSettingsLoaderData = {
 };
 
 export type ServerSettingsActionData =
-	| { ok: true; section: "hub" | "media" | "rendering" }
-	| { error: string; section?: "hub" | "media" | "rendering" }
+	| { ok: true; section: ServerSettingsSection }
+	| { error: string; section?: ServerSettingsSection }
 	| undefined;
 
 async function resolveViewerRole(params: { request: Request }): Promise<{
@@ -46,7 +47,7 @@ async function resolveViewerRole(params: { request: Request }): Promise<{
 export async function action({
 	request,
 }: ActionFunctionArgs): Promise<ServerSettingsActionData> {
-	let actionSection: ServerSettingsActionData["section"] | undefined;
+	let actionSection: ServerSettingsSection | undefined;
 
 	try {
 		const { authUser, viewerRole, setup } = await resolveViewerRole({
