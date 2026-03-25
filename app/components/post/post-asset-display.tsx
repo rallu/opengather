@@ -1,3 +1,4 @@
+import { Badge } from "~/components/ui/badge";
 import { cn } from "~/lib/utils";
 import type { PostAssetSummary } from "~/server/post-assets.server";
 import { PostImageContent } from "./post-image-content";
@@ -32,6 +33,48 @@ function AssetPlaceholder(props: {
 	);
 }
 
+function collectAlbumTags(assets: PostAssetSummary[]): string[] {
+	const seen = new Set<string>();
+	const albumTags: string[] = [];
+
+	for (const asset of assets) {
+		if (asset.kind !== "image") {
+			continue;
+		}
+
+		for (const albumTag of asset.albumTags) {
+			const normalizedKey = albumTag.toLocaleLowerCase();
+			if (seen.has(normalizedKey)) {
+				continue;
+			}
+
+			seen.add(normalizedKey);
+			albumTags.push(albumTag);
+		}
+	}
+
+	return albumTags;
+}
+
+function AssetAlbumTags(props: { albumTags: string[] }) {
+	if (props.albumTags.length === 0) {
+		return null;
+	}
+
+	return (
+		<div className="flex flex-wrap items-center gap-2">
+			<span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+				Albums
+			</span>
+			{props.albumTags.map((albumTag) => (
+				<Badge key={albumTag} variant="neutral">
+					{albumTag}
+				</Badge>
+			))}
+		</div>
+	);
+}
+
 export function PostAssetDisplay(props: {
 	assets: PostAssetSummary[];
 	playableVideo?: boolean;
@@ -50,6 +93,7 @@ export function PostAssetDisplay(props: {
 		const readyImages = props.assets.filter(
 			(asset) => asset.kind === "image" && asset.processingStatus === "ready",
 		);
+		const albumTags = collectAlbumTags(readyImages);
 		if (readyImages.length === 0) {
 			return (
 				<AssetPlaceholder
@@ -62,7 +106,7 @@ export function PostAssetDisplay(props: {
 
 		if (readyImages.length === 1) {
 			const image = readyImages[0];
-			return (
+			const content = (
 				<PostImageContent
 					src={
 						image.variants.large ??
@@ -72,12 +116,20 @@ export function PostAssetDisplay(props: {
 					}
 					alt={image.alt ?? "Post image"}
 					caption={image.alt}
-					className={props.className}
 				/>
+			);
+			if (albumTags.length === 0) {
+				return <div className={props.className}>{content}</div>;
+			}
+			return (
+				<div className={cn("space-y-3", props.className)}>
+					{content}
+					<AssetAlbumTags albumTags={albumTags} />
+				</div>
 			);
 		}
 
-		return (
+		const content = (
 			<PostImageGalleryContent
 				images={readyImages.map((asset) => ({
 					src:
@@ -87,8 +139,16 @@ export function PostAssetDisplay(props: {
 						"",
 					alt: asset.alt ?? "Post image",
 				}))}
-				className={props.className}
 			/>
+		);
+		if (albumTags.length === 0) {
+			return <div className={props.className}>{content}</div>;
+		}
+		return (
+			<div className={cn("space-y-3", props.className)}>
+				{content}
+				<AssetAlbumTags albumTags={albumTags} />
+			</div>
 		);
 	}
 

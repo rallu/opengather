@@ -1,6 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 
+import { Icon } from "~/components/ui/icon";
 import { cn } from "~/lib/utils";
 
 const badgeVariants = cva(
@@ -25,11 +26,64 @@ const badgeVariants = cva(
 
 export interface BadgeProps
 	extends React.HTMLAttributes<HTMLSpanElement>,
-		VariantProps<typeof badgeVariants> {}
+		VariantProps<typeof badgeVariants> {
+	closeLabel?: string;
+	onClose?: () => void;
+}
 
-export function Badge({ className, variant, ...props }: BadgeProps) {
+export function Badge({
+	children,
+	className,
+	closeLabel = "Remove",
+	onClick,
+	onClose,
+	variant,
+	...props
+}: BadgeProps) {
+	const interactive = typeof onClick === "function";
+
+	if (interactive && !onClose) {
+		return (
+			<button
+				type="button"
+				className={cn(
+					badgeVariants({ variant }),
+					"cursor-pointer hover:border-primary/40 hover:text-foreground",
+					className,
+				)}
+				onClick={onClick as React.MouseEventHandler<HTMLButtonElement>}
+				{...(props as React.ButtonHTMLAttributes<HTMLButtonElement>)}
+			>
+				{children}
+			</button>
+		);
+	}
+
 	return (
-		<span className={cn(badgeVariants({ variant }), className)} {...props} />
+		<span
+			className={cn(
+				badgeVariants({ variant }),
+				onClose && "gap-1 pr-1",
+				className,
+			)}
+			{...props}
+		>
+			{children}
+			{onClose ? (
+				<button
+					type="button"
+					aria-label={closeLabel}
+					className="inline-flex h-4 w-4 items-center justify-center rounded-full text-current/70 transition-colors hover:bg-foreground/10 hover:text-current"
+					onClick={(event) => {
+						event.preventDefault();
+						event.stopPropagation();
+						onClose();
+					}}
+				>
+					<Icon name="x" size={12} />
+				</button>
+			) : null}
+		</span>
 	);
 }
 

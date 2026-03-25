@@ -383,12 +383,20 @@ test.describe("group privacy", () => {
 			email: adminUser.email,
 			password: adminUser.password,
 		});
+		await page.goto(`/groups/${privateGroupId}`);
+		const memberUserId = await getUserIdByEmail(memberUser.email);
+		const requestKey = `group:${privateGroupId}:${memberUserId}`;
 		await expect(
 			page.getByTestId(`group-pending-request-${memberUserId}`),
 		).toContainText(memberUser.email);
-		await page.getByTestId(`group-pending-approve-${memberUserId}`).click();
-		await expect(page.getByTestId("group-action-message")).toContainText(
-			"Membership approved.",
+		await page.getByTestId(`group-pending-open-${memberUserId}`).click();
+		await expect(page).toHaveURL(/\/approvals\?request=/);
+		await expect(page.getByTestId(`approvals-row-${requestKey}`)).toContainText(
+			memberUser.email,
+		);
+		await page.getByTestId(`approvals-approve-${requestKey}`).click();
+		await expect(page.getByTestId("approvals-action-message")).toContainText(
+			"Group membership approved.",
 		);
 		await signOutIfNeeded(page);
 

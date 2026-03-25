@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { Form, Link, useFetcher, useLocation } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Container } from "~/components/ui/container";
@@ -66,13 +66,18 @@ export function AppShell(props: AppShellProps) {
 	const location = useLocation();
 	const notificationSummaryFetcher = useFetcher<NotificationSummaryData>();
 	const notificationRefreshKey = `${location.pathname}:${location.search}`;
+	const lastNotificationRefreshKeyRef = useRef<string | null>(null);
 
 	useEffect(() => {
-		void notificationRefreshKey;
 		if (!props.authUser) {
+			lastNotificationRefreshKeyRef.current = null;
+			return;
+		}
+		if (lastNotificationRefreshKeyRef.current === notificationRefreshKey) {
 			return;
 		}
 		if (notificationSummaryFetcher.state === "idle") {
+			lastNotificationRefreshKeyRef.current = notificationRefreshKey;
 			notificationSummaryFetcher.load("/api/notifications/summary");
 		}
 	}, [notificationRefreshKey, notificationSummaryFetcher, props.authUser]);

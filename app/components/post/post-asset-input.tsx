@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { PostAlbumPicker } from "~/components/post/post-album-picker";
 import {
 	Dialog,
 	DialogBody,
@@ -17,7 +18,10 @@ import { cn } from "~/lib/utils";
 
 type PostAssetInputProps = {
 	name?: string;
+	albumFieldName?: string;
+	previousAlbums?: string[];
 	inputTestId?: string;
+	albumInputTestId?: string;
 	imageInputTestId?: string;
 	videoInputTestId?: string;
 	imageButtonTestId?: string;
@@ -48,7 +52,10 @@ function summarizeSelection(selection: FileSelection) {
 
 export function PostAssetInput({
 	name = "assets",
+	albumFieldName = "assetAlbums",
+	previousAlbums = [],
 	inputTestId,
+	albumInputTestId,
 	imageInputTestId,
 	videoInputTestId,
 	imageButtonTestId,
@@ -59,10 +66,12 @@ export function PostAssetInput({
 	const videoInputRef = React.useRef<HTMLInputElement>(null);
 	const [imageDialogOpen, setImageDialogOpen] = React.useState(false);
 	const [videoDialogOpen, setVideoDialogOpen] = React.useState(false);
+	const [albumPickerResetKey, setAlbumPickerResetKey] = React.useState(0);
 	const [selection, setSelection] = React.useState<FileSelection>({
 		imageFiles: [],
 		videoFiles: [],
 	});
+	const [selectedAlbums, setSelectedAlbums] = React.useState<string[]>([]);
 	const summary = summarizeSelection(selection);
 	const resolvedImageInputTestId = imageInputTestId ?? inputTestId;
 
@@ -77,6 +86,8 @@ export function PostAssetInput({
 			imageFiles: [],
 			videoFiles: [],
 		});
+		setSelectedAlbums([]);
+		setAlbumPickerResetKey((value) => value + 1);
 		if (imageInputRef.current) {
 			imageInputRef.current.value = "";
 		}
@@ -87,6 +98,12 @@ export function PostAssetInput({
 
 	return (
 		<div className="flex min-w-0 flex-wrap items-center gap-2">
+			<input
+				type="hidden"
+				name={albumFieldName}
+				value={selectedAlbums.join(", ")}
+			/>
+
 			<Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
 				<DialogTrigger
 					asChild
@@ -139,6 +156,13 @@ export function PostAssetInput({
 						<p className="text-xs leading-5 text-muted-foreground">
 							Images are limited to 10 MB each.
 						</p>
+						<PostAlbumPicker
+							key={albumPickerResetKey}
+							previousAlbums={previousAlbums}
+							selectedAlbums={selectedAlbums}
+							inputTestId={albumInputTestId}
+							onSelectedAlbumsChange={setSelectedAlbums}
+						/>
 						{selection.imageFiles.length > 0 ? (
 							<p className="text-xs leading-5 text-muted-foreground">
 								{selection.imageFiles.join(", ")}
@@ -192,6 +216,8 @@ export function PostAssetInput({
 									imageFiles: [],
 									videoFiles,
 								});
+								setSelectedAlbums([]);
+								setAlbumPickerResetKey((value) => value + 1);
 								if (imageInputRef.current) {
 									imageInputRef.current.value = "";
 								}

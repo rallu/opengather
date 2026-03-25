@@ -64,13 +64,24 @@ async function uploadImageToComposer(params: {
 	bodyTestId: string;
 	imageButtonTestId: string;
 	inputTestId: string;
+	albumInputTestId?: string;
 	submitTestId: string;
 	text: string;
 	filename: string;
+	albums?: string;
 }) {
 	const pngBuffer = await buildPngBuffer();
 	await params.page.getByTestId(params.bodyTestId).fill(params.text);
 	await params.page.getByTestId(params.imageButtonTestId).click();
+	if (params.albumInputTestId && params.albums) {
+		for (const albumName of params.albums
+			.split(",")
+			.map((value) => value.trim())
+			.filter(Boolean)) {
+			await params.page.getByTestId(params.albumInputTestId).fill(albumName);
+			await params.page.getByTestId(params.albumInputTestId).press("Enter");
+		}
+	}
 	await params.page.getByTestId(params.inputTestId).setInputFiles({
 		name: params.filename,
 		mimeType: "image/png",
@@ -168,4 +179,57 @@ test("media endpoint keeps public images public and private group images private
 
 	const authorizedPrivateResponse = await page.request.get(privateImageSrc);
 	expect(authorizedPrivateResponse.status()).toBe(200);
+});
+
+test("image uploads can be tagged into albums", async ({ page }) => {
+	await ensureConfiguredInstance(page);
+	await signInLocal({
+		page,
+		email: adminUser.email,
+		password: adminUser.password,
+	});
+
+	const postText = `Album image post ${Date.now()}`;
+	await page.goto("/feed");
+	await uploadImageToComposer({
+		page,
+		bodyTestId: "feed-composer",
+		imageButtonTestId: "feed-image-button",
+		inputTestId: "feed-assets-input",
+		albumInputTestId: "feed-albums-input",
+		submitTestId: "feed-post-button",
+		text: postText,
+		filename: "album-image.png",
+		albums: "Summer Trip, Volunteers",
+	});
+
+	const post = page
+		.getByTestId("feed-post-list")
+		.locator("[data-testid^='feed-post-']")
+		.filter({ hasText: postText })
+		.first();
+	await expect(post).toContainText("Albums");
+	await expect(post).toContainText("Summer Trip");
+	await expect(post).toContainText("Volunteers");
+
+	const followUpPostText = `Album suggestion post ${Date.now()}`;
+	await page.getByTestId("feed-composer").fill(followUpPostText);
+	await page.getByTestId("feed-image-button").click();
+	await expect(
+		page.getByText("Your previous albums", { exact: true }),
+	).toBeVisible();
+	await page.getByRole("button", { name: "Summer Trip" }).click();
+	await page.getByTestId("feed-assets-input").setInputFiles({
+		name: "album-suggestion-image.png",
+		mimeType: "image/png",
+		buffer: await buildPngBuffer(),
+	});
+	await page.getByTestId("feed-post-button").click();
+
+	const followUpPost = page
+		.getByTestId("feed-post-list")
+		.locator("[data-testid^='feed-post-']")
+		.filter({ hasText: followUpPostText })
+		.first();
+	await expect(followUpPost).toContainText("Summer Trip");
 });

@@ -58,6 +58,47 @@ function isLocalHostname(hostname: string): boolean {
 	);
 }
 
+export function getLoopbackOriginRedirect(
+	request: Request,
+	configuredOrigin: string,
+): string | null {
+	if (!configuredOrigin) {
+		return null;
+	}
+
+	try {
+		const requestUrl = new URL(request.url);
+		const configuredUrl = new URL(configuredOrigin);
+
+		if (
+			!isLocalHostname(requestUrl.hostname) ||
+			!isLocalHostname(configuredUrl.hostname)
+		) {
+			return null;
+		}
+
+		if (
+			requestUrl.protocol === configuredUrl.protocol &&
+			requestUrl.host === configuredUrl.host
+		) {
+			return null;
+		}
+
+		if (
+			requestUrl.protocol !== configuredUrl.protocol ||
+			requestUrl.port !== configuredUrl.port
+		) {
+			return null;
+		}
+
+		requestUrl.protocol = configuredUrl.protocol;
+		requestUrl.host = configuredUrl.host;
+		return requestUrl.toString();
+	} catch {
+		return null;
+	}
+}
+
 export function getPublicOrigin(request: Request): string {
 	const appEnv = getAppEnv();
 	if (appEnv.APP_BASE_URL) {

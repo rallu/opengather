@@ -39,7 +39,10 @@ import {
 } from "~/server/group.service.server";
 import { parseGroupVisibilityMode } from "~/server/group-membership.service.server";
 import { getInstanceViewerRole } from "~/server/permissions.server";
-import { extractPostUploadsFromMultipartRequest } from "~/server/post-assets.server";
+import {
+	extractPostUploadsFromMultipartRequest,
+	loadUserAlbumTags,
+} from "~/server/post-assets.server";
 import {
 	type PostListItem,
 	parsePostListSortMode,
@@ -185,11 +188,19 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		instanceViewerRole: viewerRole,
 		sortMode,
 	});
+	const previousAlbums = authUser
+		? await loadUserAlbumTags({
+				instanceId: setup.instance.id,
+				userId: authUser.id,
+				hubUserId: authUser.hubUserId ?? undefined,
+			})
+		: [];
 
 	return {
 		...result,
 		authUser,
 		viewerRole,
+		previousAlbums,
 		sortMode,
 		apiPath: `/api/post-list?scope=group&groupId=${groupId}&sort=${sortMode}`,
 	};
@@ -286,6 +297,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			const result = await createPost({
 				user,
 				text,
+				albumTags: multipart?.albumTags ?? [],
 				parentPostId,
 				groupId,
 				uploads: multipart?.uploads ?? [],
@@ -641,7 +653,9 @@ export default function GroupDetailPage() {
 								resetKey={composerResetKey}
 								footer={
 									<PostAssetInput
+										previousAlbums={data.previousAlbums}
 										inputTestId="group-assets-input"
+										albumInputTestId="group-albums-input"
 										videoInputTestId="group-video-input"
 										imageButtonTestId="group-image-button"
 										videoButtonTestId="group-video-button"

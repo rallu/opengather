@@ -26,8 +26,12 @@ import {
 	createPost,
 	loadCommunityPostThread,
 } from "~/server/community.service.server";
-import { extractPostUploadsFromMultipartRequest } from "~/server/post-assets.server";
+import {
+	extractPostUploadsFromMultipartRequest,
+	loadUserAlbumTags,
+} from "~/server/post-assets.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
+import { getSetupStatus } from "~/server/setup.service.server";
 
 function toCommunityUser(params: {
 	authUser: Awaited<ReturnType<typeof getAuthUserFromRequest>>;
@@ -119,6 +123,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	const authUser = await getAuthUserFromRequest({ request });
 	const user = toCommunityUser({ authUser });
 	const result = await loadCommunityPostThread({ user, postId });
+	const setup = await getSetupStatus();
 
 	if (result.status === "requires_registration") {
 		const nextPath = new URL(request.url).pathname;
@@ -129,9 +134,19 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		return redirect(`/register?${search.toString()}`);
 	}
 
+	const previousAlbums =
+		authUser && setup.isSetup && setup.instance
+			? await loadUserAlbumTags({
+					instanceId: setup.instance.id,
+					userId: authUser.id,
+					hubUserId: authUser.hubUserId ?? undefined,
+				})
+			: [];
+
 	return {
 		...result,
 		authUser,
+		previousAlbums,
 	};
 }
 
@@ -172,6 +187,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		const result = await createPost({
 			user,
 			text,
+			albumTags: multipart?.albumTags ?? [],
 			parentPostId,
 			uploads: multipart?.uploads ?? [],
 		});
@@ -289,7 +305,9 @@ export default function PostDetailPage() {
 							resetKey={replyResetKey}
 							footer={
 								<PostAssetInput
+									previousAlbums={data.previousAlbums}
 									inputTestId="post-detail-assets-input"
+									albumInputTestId="post-detail-albums-input"
 									videoInputTestId="post-detail-video-input"
 									imageButtonTestId="post-detail-image-button"
 									videoButtonTestId="post-detail-video-button"
@@ -321,7 +339,9 @@ export default function PostDetailPage() {
 										resetKey={replyResetKey}
 										footer={
 											<PostAssetInput
+												previousAlbums={data.previousAlbums}
 												inputTestId={`post-detail-inline-assets-input-${comment.id}`}
+												albumInputTestId={`post-detail-inline-albums-input-${comment.id}`}
 												videoInputTestId={`post-detail-inline-video-input-${comment.id}`}
 												imageButtonTestId={`post-detail-inline-image-button-${comment.id}`}
 												videoButtonTestId={`post-detail-inline-video-button-${comment.id}`}

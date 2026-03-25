@@ -119,7 +119,7 @@ export const DialogContent = React.forwardRef<
 			aria-describedby={descriptionId}
 			aria-labelledby={titleId}
 			className={cn(
-				"elevation-high w-[min(34rem,calc(100%-2rem))] rounded-lg border border-border bg-card p-0 text-card-foreground",
+				"elevation-high fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[min(34rem,calc(100%-2rem))] overflow-hidden rounded-lg border border-border bg-card p-0 text-card-foreground",
 				className,
 			)}
 			onCancel={(event) => {

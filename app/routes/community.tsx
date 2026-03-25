@@ -39,7 +39,10 @@ import {
 	logWarn,
 } from "~/server/logger.server";
 import { recordPostMetric } from "~/server/metrics.server";
-import { extractPostUploadsFromMultipartRequest } from "~/server/post-assets.server";
+import {
+	extractPostUploadsFromMultipartRequest,
+	loadUserAlbumTags,
+} from "~/server/post-assets.server";
 import {
 	type PostListItem,
 	parsePostListSortMode,
@@ -50,6 +53,7 @@ import {
 	getRequestIp,
 } from "~/server/rate-limit.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
+import { getSetupStatus } from "~/server/setup.service.server";
 
 function toCommunityUser(params: {
 	authUser: Awaited<ReturnType<typeof getAuthUserFromRequest>>;
@@ -202,6 +206,7 @@ function CommunityFeedItem(params: { post: PostListItem; isAdmin: boolean }) {
 export async function loader({ request }: LoaderFunctionArgs) {
 	const url = new URL(request.url);
 	const sortMode = parsePostListSortMode(url.searchParams.get("sort"));
+	const setup = await getSetupStatus();
 
 	try {
 		const authUser = await getAuthUserFromRequest({ request });
@@ -216,11 +221,21 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			return redirect(`/register?${params.toString()}`);
 		}
 
+		const previousAlbums =
+			authUser && setup.isSetup && setup.instance
+				? await loadUserAlbumTags({
+						instanceId: setup.instance.id,
+						userId: authUser.id,
+						hubUserId: authUser.hubUserId ?? undefined,
+					})
+				: [];
+
 		return {
 			...data,
 			sortMode,
 			apiPath: `/api/post-list?scope=community&sort=${sortMode}`,
 			authUser,
+			previousAlbums,
 		};
 	} catch {
 		return {
@@ -234,6 +249,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			sortMode,
 			apiPath: `/api/post-list?scope=community&sort=${sortMode}`,
 			authUser: null,
+			previousAlbums: [],
 		};
 	}
 }
@@ -312,6 +328,7 @@ export async function action({ request }: ActionFunctionArgs) {
 			const result = await createPost({
 				user,
 				text,
+				albumTags: multipart?.albumTags ?? [],
 				parentPostId,
 				uploads: multipart?.uploads ?? [],
 			});
@@ -549,7 +566,9 @@ export default function CommunityPage() {
 								footer={
 									<div className="px-1">
 										<PostAssetInput
+											previousAlbums={data.previousAlbums}
 											inputTestId="feed-assets-input"
+											albumInputTestId="feed-albums-input"
 											videoInputTestId="feed-video-input"
 											imageButtonTestId="feed-image-button"
 											videoButtonTestId="feed-video-button"

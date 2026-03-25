@@ -250,6 +250,7 @@ model PostAsset {
   originalFilename String?            @map("original_filename") @db.Text
   sourceMimeType   String?            @map("source_mime_type") @db.Text
   sourceByteSize   Int?               @map("source_byte_size")
+  albumTags        String[]           @default([]) @map("album_tags")
   width            Int?
   height           Int?
   durationSeconds  Float?             @map("duration_seconds")

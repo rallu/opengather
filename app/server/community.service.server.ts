@@ -651,6 +651,7 @@ export async function createPost(params: {
 	text: string;
 	parentPostId?: string;
 	groupId?: string;
+	albumTags?: string[];
 	uploads?: Array<{
 		fieldName: string;
 		filename: string;
@@ -764,6 +765,7 @@ export async function createPost(params: {
 		assetPersistence = await preparePostAssetsForCreate({
 			instanceId,
 			postId,
+			albumTags: params.albumTags,
 			uploads: params.uploads ?? [],
 		});
 	} catch (error) {

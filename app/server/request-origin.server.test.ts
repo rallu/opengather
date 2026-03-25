@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { setRuntimeEnv } from "./env.server.ts";
-import { getPublicOrigin } from "./request-origin.server.ts";
+import {
+	getLoopbackOriginRedirect,
+	getPublicOrigin,
+} from "./request-origin.server.ts";
 
 test.afterEach(() => {
 	setRuntimeEnv({});
@@ -51,4 +54,31 @@ test("keeps http for local hosts", () => {
 	const request = new Request("http://localhost:5173/setup");
 
 	assert.equal(getPublicOrigin(request), "http://localhost:5173");
+});
+
+test("redirects loopback requests to the configured auth origin", () => {
+	const request = new Request("http://localhost:5173/login?next=%2Ffeed");
+
+	assert.equal(
+		getLoopbackOriginRedirect(request, "http://127.0.0.1:5173"),
+		"http://127.0.0.1:5173/login?next=%2Ffeed",
+	);
+});
+
+test("does not redirect when the loopback origin already matches", () => {
+	const request = new Request("http://localhost:5173/login?next=%2Ffeed");
+
+	assert.equal(
+		getLoopbackOriginRedirect(request, "http://localhost:5173"),
+		null,
+	);
+});
+
+test("does not redirect when the configured port differs", () => {
+	const request = new Request("http://localhost:5173/login?next=%2Ffeed");
+
+	assert.equal(
+		getLoopbackOriginRedirect(request, "http://127.0.0.1:4173"),
+		null,
+	);
 });

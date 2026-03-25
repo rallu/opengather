@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
 
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import sharp from "sharp";
 
 import {
@@ -40,6 +40,8 @@ export const MAX_IMAGES_PER_POST = 10;
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 export const MAX_VIDEO_DURATION_SECONDS = 60;
+export const MAX_ALBUM_TAGS_PER_ASSET = 8;
+export const MAX_ALBUM_TAG_LENGTH = 48;
 
 const IMAGE_MIME_TYPES = new Set([
 	"image/avif",
@@ -68,6 +70,7 @@ export type PostAssetSummary = {
 	kind: AssetKind;
 	processingStatus: AssetProcessingStatus;
 	alt?: string;
+	albumTags: string[];
 	width?: number;
 	height?: number;
 	durationSeconds?: number;
@@ -89,6 +92,7 @@ type PreparedDbAsset = {
 	originalFilename: string | null;
 	sourceMimeType: string | null;
 	sourceByteSize: number | null;
+	albumTags: string[];
 	width: number | null;
 	height: number | null;
 	durationSeconds: number | null;
@@ -166,6 +170,45 @@ function toProcessingStatus(value: string): AssetProcessingStatus {
 
 function toAssetKind(value: string): AssetKind {
 	return value === "video" ? "video" : "image";
+}
+
+export function parseAlbumTagsInput(
+	value: string | null | undefined,
+): string[] {
+	const parsed = (value ?? "")
+		.split(/[\n,]+/)
+		.map((albumTag) => albumTag.trim().replace(/\s+/g, " "))
+		.filter(Boolean);
+
+	if (parsed.length === 0) {
+		return [];
+	}
+
+	const deduped: string[] = [];
+	const seen = new Set<string>();
+	for (const albumTag of parsed) {
+		if (albumTag.length > MAX_ALBUM_TAG_LENGTH) {
+			throw new Error(
+				`Album names must be ${MAX_ALBUM_TAG_LENGTH} characters or shorter`,
+			);
+		}
+
+		const normalizedKey = albumTag.toLocaleLowerCase();
+		if (seen.has(normalizedKey)) {
+			continue;
+		}
+
+		seen.add(normalizedKey);
+		deduped.push(albumTag);
+	}
+
+	if (deduped.length > MAX_ALBUM_TAGS_PER_ASSET) {
+		throw new Error(
+			`Images can be tagged into at most ${MAX_ALBUM_TAGS_PER_ASSET} albums`,
+		);
+	}
+
+	return deduped;
 }
 
 async function runCommand(command: string, args: string[]): Promise<void> {
@@ -279,6 +322,7 @@ async function createImageVariants(params: {
 	storage: AssetStorage;
 	assetId: string;
 	upload: ParsedMultipartFile;
+	albumTags: string[];
 	sortOrder: number;
 	postId: string;
 	instanceId: string;
@@ -371,6 +415,7 @@ async function createImageVariants(params: {
 			originalFilename,
 			sourceMimeType: params.upload.mimeType,
 			sourceByteSize: params.upload.byteSize,
+			albumTags: params.albumTags,
 			width: metadata.width,
 			height: metadata.height,
 			durationSeconds: null,
@@ -433,6 +478,7 @@ async function stageVideoAsset(params: {
 			originalFilename,
 			sourceMimeType: params.upload.mimeType,
 			sourceByteSize: params.upload.byteSize,
+			albumTags: [],
 			width: probed.width,
 			height: probed.height,
 			durationSeconds: probed.durationSeconds,
@@ -477,6 +523,7 @@ export async function preparePostAssetsForCreate(params: {
 	instanceId: string;
 	postId: string;
 	uploads: ParsedMultipartFile[];
+	albumTags?: string[];
 }): Promise<PreparedPostAssetPersistence> {
 	if (params.uploads.length === 0) {
 		return {
@@ -487,6 +534,7 @@ export async function preparePostAssetsForCreate(params: {
 
 	const storage = await getAssetStorage();
 	const assetPrefixes = new Set<string>();
+	const albumTags = params.albumTags ?? [];
 	const uploadsWithKind = params.uploads.map((upload, sortOrder) => ({
 		upload,
 		sortOrder,
@@ -517,6 +565,10 @@ export async function preparePostAssetsForCreate(params: {
 		throw new Error("Posts can include only one video");
 	}
 
+	if (firstKind === "video" && albumTags.length > 0) {
+		throw new Error("Albums can only be assigned to image uploads");
+	}
+
 	const preparedAssets: PreparedDbAsset[] = [];
 	const preparedVariants: PreparedDbVariant[] = [];
 	const preparedJobs: Array<{
@@ -542,6 +594,7 @@ export async function preparePostAssetsForCreate(params: {
 					storage,
 					assetId,
 					upload: item.upload,
+					albumTags,
 					sortOrder: item.sortOrder,
 					postId: params.postId,
 					instanceId: params.instanceId,
@@ -825,6 +878,7 @@ export async function loadPostAssetSummaries(params: {
 			alt: asset.originalFilename
 				? stripFilenameExtension(asset.originalFilename)
 				: undefined,
+			albumTags: asset.albumTags,
 			width: asset.width ?? undefined,
 			height: asset.height ?? undefined,
 			durationSeconds: asset.durationSeconds ?? undefined,
@@ -869,6 +923,34 @@ export async function loadPostAssetSummaries(params: {
 	}
 
 	return byPostId;
+}
+
+export async function loadUserAlbumTags(params: {
+	instanceId: string;
+	userId: string;
+	hubUserId?: string;
+}): Promise<string[]> {
+	const authorIds = [
+		...new Set([params.userId, params.hubUserId].filter(Boolean)),
+	];
+	if (authorIds.length === 0) {
+		return [];
+	}
+
+	const rows = await getDb().$queryRaw<Array<{ tag: string }>>(Prisma.sql`
+		SELECT album_tag AS tag
+		FROM "post_asset" pa
+		INNER JOIN "post" p ON p.id = pa.post_id
+		CROSS JOIN LATERAL unnest(pa.album_tags) AS album_tag
+		WHERE pa.instance_id = ${params.instanceId}
+			AND pa.kind = 'image'
+			AND p.author_id IN (${Prisma.join(authorIds)})
+		GROUP BY album_tag
+		ORDER BY MAX(pa.created_at) DESC, album_tag ASC
+		LIMIT 24
+	`);
+
+	return rows.map((row) => row.tag);
 }
 
 async function writeGeneratedFile(params: {
@@ -1207,6 +1289,7 @@ export async function extractPostUploadsFromMultipartRequest(params: {
 	actionType: string;
 	bodyText: string;
 	parentPostId?: string;
+	albumTags: string[];
 	uploads: ParsedMultipartFile[];
 	cleanup(): Promise<void>;
 }> {
@@ -1216,18 +1299,25 @@ export async function extractPostUploadsFromMultipartRequest(params: {
 		maxFiles: params.maxFiles ?? MAX_IMAGES_PER_POST,
 		maxFileSizeBytes: MAX_VIDEO_BYTES,
 	});
-	const actionType = (parsed.fields.get("_action") ?? "").trim();
-	const bodyText = (parsed.fields.get("bodyText") ?? "").trim();
-	const parentPostId =
-		(parsed.fields.get("parentPostId") ?? "").trim() || undefined;
-	const uploads = parsed.files.filter((file) => file.fieldName === "assets");
-	return {
-		actionType,
-		bodyText,
-		parentPostId,
-		uploads,
-		async cleanup() {
-			await cleanupParsedMultipartForm(parsed);
-		},
-	};
+	try {
+		const actionType = (parsed.fields.get("_action") ?? "").trim();
+		const bodyText = (parsed.fields.get("bodyText") ?? "").trim();
+		const parentPostId =
+			(parsed.fields.get("parentPostId") ?? "").trim() || undefined;
+		const albumTags = parseAlbumTagsInput(parsed.fields.get("assetAlbums"));
+		const uploads = parsed.files.filter((file) => file.fieldName === "assets");
+		return {
+			actionType,
+			bodyText,
+			parentPostId,
+			albumTags,
+			uploads,
+			async cleanup() {
+				await cleanupParsedMultipartForm(parsed);
+			},
+		};
+	} catch (error) {
+		await cleanupParsedMultipartForm(parsed);
+		throw error;
+	}
 }

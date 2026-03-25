@@ -6,6 +6,7 @@ import { signIn } from "~/lib/auth-client";
 import { formatAuthErrorMessage } from "~/lib/auth-error";
 import { getServerConfig } from "~/server/config.service.server";
 import { isHubUiEnabled } from "~/server/hub-config.server";
+import { getLoopbackOriginRedirect } from "~/server/request-origin.server";
 import {
 	getSetupStatus,
 	isSetupCompleteForRequest,
@@ -26,6 +27,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 	const url = new URL(request.url);
 	const config = await getServerConfig();
+	const authOriginRedirect = getLoopbackOriginRedirect(
+		request,
+		config.betterAuthUrl,
+	);
+	if (authOriginRedirect) {
+		return redirect(authOriginRedirect);
+	}
 	const setup = await getSetupStatus();
 	return {
 		hubAuthEnabled: isHubUiEnabled({
