@@ -66,6 +66,7 @@ import {
 	LayoutSidebar,
 	RightSidebarLayout,
 } from "~/components/ui/layouts";
+import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
 import { Navigation, SubNavigation } from "~/components/ui/navigation";
 import { NavigationList } from "~/components/ui/navigation-list";
 import {
@@ -1812,9 +1813,9 @@ export default function StyleGuidePage() {
 														<PostLabels moderationStatus="approved" />
 													</span>
 												}
-												subtitle={new Date(
-													"2026-03-14T08:30:00.000Z",
-												).toLocaleString()}
+												subtitle={
+													<LocalizedTimestamp value="2026-03-14T08:30:00.000Z" />
+												}
 											/>
 										</div>
 										<div className="rounded-lg border border-border p-4">
@@ -1834,7 +1835,12 @@ export default function StyleGuidePage() {
 														<PostLabels moderationStatus="flagged" isHidden />
 													</span>
 												}
-												subtitle={`Posted by Sara Admin • ${new Date("2026-03-14T11:15:00.000Z").toLocaleString()}`}
+												subtitle={
+													<>
+														Posted by Sara Admin •{" "}
+														<LocalizedTimestamp value="2026-03-14T11:15:00.000Z" />
+													</>
+												}
 											/>
 										</div>
 									</CardContent>
@@ -1892,9 +1898,9 @@ export default function StyleGuidePage() {
 														<PostLabels moderationStatus="approved" />
 													</span>
 												}
-												subtitle={new Date(
-													"2026-03-14T08:30:00.000Z",
-												).toLocaleString()}
+												subtitle={
+													<LocalizedTimestamp value="2026-03-14T08:30:00.000Z" />
+												}
 											/>
 											<PostContent
 												className="mt-4"
@@ -1920,7 +1926,12 @@ export default function StyleGuidePage() {
 														<PostLabels moderationStatus="flagged" isHidden />
 													</span>
 												}
-												subtitle={`Posted by Sara Admin • ${new Date("2026-03-14T08:42:00.000Z").toLocaleString()}`}
+												subtitle={
+													<>
+														Posted by Sara Admin •{" "}
+														<LocalizedTimestamp value="2026-03-14T08:42:00.000Z" />
+													</>
+												}
 											/>
 											<PostContent
 												className="mt-4"

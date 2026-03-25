@@ -14,6 +14,8 @@ import {
 } from "~/components/ui/chat-bubble";
 import { Icon } from "~/components/ui/icon";
 import { IconButton } from "~/components/ui/icon-button";
+import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
+import { useFormatDateTime } from "~/lib/render-intl-context";
 import { cn } from "~/lib/utils";
 import type { PostAssetSummary } from "~/server/post-assets.server";
 import {
@@ -54,8 +56,9 @@ export function PostComment({
 }: PostCommentProps) {
 	const author = comment.author?.trim() || "Member";
 	const hasChildren = Boolean(children);
+	const formatDateTime = useFormatDateTime();
 	const [isOpen, setIsOpen] = useState(true);
-	const metaLabel = new Date(comment.createdAt).toLocaleString();
+	const metaLabel = formatDateTime(comment.createdAt);
 
 	return (
 		<article
@@ -92,7 +95,9 @@ export function PostComment({
 										isDeleted={comment.isDeleted}
 									/>
 								</ChatBubbleTitle>
-								<ChatBubbleMeta>{metaLabel}</ChatBubbleMeta>
+								<ChatBubbleMeta>
+									<LocalizedTimestamp value={comment.createdAt} />
+								</ChatBubbleMeta>
 							</ChatBubbleHeading>
 						</ChatBubbleHeader>
 					</div>

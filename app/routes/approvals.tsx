@@ -9,6 +9,7 @@ import {
 import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
 import { Container } from "~/components/ui/container";
+import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
 import {
 	listPendingApprovals,
 	type PendingApprovalRow,
@@ -61,7 +62,7 @@ function ApprovalSection(params: {
 												: `Access request for ${row.groupName ?? "group"}`}
 										</p>
 										<p className="text-xs text-muted-foreground">
-											Requested {new Date(row.createdAt).toLocaleString()}
+											Requested <LocalizedTimestamp value={row.createdAt} />
 										</p>
 									</div>
 									<div className="flex flex-wrap gap-2">

@@ -4,6 +4,7 @@ import { AppShell } from "~/components/app-shell";
 import { ProfileImage } from "~/components/profile/profile-image";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
 import { Textarea } from "~/components/ui/textarea";
 import { getInstanceViewerRole } from "~/server/permissions.server";
 import {
@@ -253,9 +254,10 @@ export default function ProfilePage() {
 						>
 							<div className="flex items-center justify-between gap-3">
 								<p className="text-sm font-medium">{activity.label}</p>
-								<p className="text-xs text-muted-foreground">
-									{new Date(activity.createdAt).toLocaleString()}
-								</p>
+								<LocalizedTimestamp
+									value={activity.createdAt}
+									className="text-xs text-muted-foreground"
+								/>
 							</div>
 							<p className="mt-2 text-sm">
 								{activity.body?.trim() || "No text preview available"}

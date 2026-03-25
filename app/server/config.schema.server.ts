@@ -1,3 +1,8 @@
+import {
+	canonicalizeRenderLocale,
+	canonicalizeRenderTimeZone,
+	DEFAULT_RENDER_INTL_CONFIG,
+} from "../lib/render-intl.ts";
 import { getAppEnv, getHubEnv } from "./env.server.ts";
 import { buildHubOidcDiscoveryUrl } from "./hub-config.server.ts";
 
@@ -16,6 +21,8 @@ export type ConfigValueByKey = {
 	server_description: string;
 	server_visibility_mode: "public" | "registered" | "approval";
 	server_approval_mode: "automatic" | "manual";
+	render_locale: string;
+	render_time_zone: string;
 	media_storage_driver: "local";
 	media_local_root: string;
 	setup_completed: boolean;
@@ -180,6 +187,16 @@ export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
 	server_approval_mode: {
 		defaultValue: "automatic",
 		parse: (raw) => parseApprovalMode(raw),
+	},
+	render_locale: {
+		defaultValue: DEFAULT_RENDER_INTL_CONFIG.locale,
+		parse: (raw) =>
+			canonicalizeRenderLocale(raw, DEFAULT_RENDER_INTL_CONFIG.locale),
+	},
+	render_time_zone: {
+		defaultValue: DEFAULT_RENDER_INTL_CONFIG.timeZone,
+		parse: (raw) =>
+			canonicalizeRenderTimeZone(raw, DEFAULT_RENDER_INTL_CONFIG.timeZone),
 	},
 	media_storage_driver: {
 		defaultValue: "local",
