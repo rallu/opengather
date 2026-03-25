@@ -91,6 +91,31 @@ nvm use
 
 5. Open [http://localhost:5173](http://localhost:5173).
 
+
+## Seeded Test Environment
+
+You can populate a local OpenGather instance with predictable demo data using:
+
+```bash
+npm run seed:test-environment
+```
+
+This script assumes setup is already complete at `/setup`, then creates/ensures:
+
+- 5 predefined users
+- 10 root posts
+- per-post reply threads ranging from 0 to 20 replies
+
+All seeded accounts use password `OpenGather123!`:
+
+- `alex@opengather.test`
+- `jordan@opengather.test`
+- `sam@opengather.test`
+- `taylor@opengather.test`
+- `morgan@opengather.test`
+
+The script is idempotent for its own records, so you can rerun it to refresh seeded posts/replies without affecting unrelated data.
+
 ## Development
 
 Chrome DevTools automatic workspaces are available in local development at `/.well-known/appspecific/com.chrome.devtools.json`, so DevTools can offer a workspace connection when you open the app on `localhost`.

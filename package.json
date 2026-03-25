@@ -23,7 +23,8 @@
 		"prisma:reset": "prisma db push --force-reset --accept-data-loss",
 		"prisma:sync": "npm run prisma:push && npm run prisma:generate",
 		"biome:check": "biome check .",
-		"biome:fix": "biome check --write ."
+		"biome:fix": "biome check --write .",
+		"seed:test-environment": "node --experimental-strip-types scripts/seed-test-environment.ts"
 	},
 	"dependencies": {
 		"@prisma/adapter-pg": "^7.4.2",
