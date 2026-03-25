@@ -35,7 +35,6 @@ async function expectGuestShell(
 	page: import("@playwright/test").Page,
 ): Promise<void> {
 	await expect(page.getByTestId("shell-nav-feed")).toBeVisible();
-	await expect(page.getByTestId("shell-nav-style-guide")).toBeVisible();
 	await expect(page.getByTestId("shell-nav-notifications")).toHaveCount(0);
 	await expect(page.getByTestId("shell-nav-profile")).toHaveCount(0);
 	await expect(page.getByTestId("shell-nav-settings")).toHaveCount(0);

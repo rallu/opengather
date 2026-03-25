@@ -29,7 +29,6 @@ type AppShellProps = {
 
 const baseNavItems = [
 	{ to: "/feed", label: "Feed", testId: "shell-nav-feed" },
-	{ to: "/style-guide", label: "Style Guide", testId: "shell-nav-style-guide" },
 	{ to: "/groups", label: "Groups", testId: "shell-nav-groups" },
 	{
 		to: "/notifications",
@@ -108,8 +107,7 @@ export function AppShell(props: AppShellProps) {
 			]
 		: baseNavItems.filter(
 				(item) =>
-					item.testId === "shell-nav-feed" ||
-					item.testId === "shell-nav-style-guide",
+					item.testId === "shell-nav-feed",
 			);
 
 	const activeItem = navItems.find((item) =>
@@ -144,13 +142,14 @@ export function AppShell(props: AppShellProps) {
 	return (
 		<div className="min-h-screen bg-background">
 			<header className="border-b border-border/80 bg-background/90 backdrop-blur-xl">
-				<div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-4 sm:px-6">
+				<div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-4 sm:px-6">
 					<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
 						<div className="flex min-w-0 flex-col gap-1">
 							<Link
 								to="/feed"
-								className="text-[1.8rem] font-semibold tracking-tight text-foreground"
+								className="flex items-center gap-2 font-semibold tracking-tight text-foreground"
 							>
+								<img src="/logo.svg" alt="OpenGather" className="h-8" />
 								OpenGather
 							</Link>
 						</div>
