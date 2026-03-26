@@ -15,6 +15,33 @@ const sizeStyles = {
 	xl: "h-28 w-28 text-2xl",
 } as const;
 
+function resolveProfileImageSrcForSize(
+	src: string,
+	size: "sm" | "md" | "lg" | "xl",
+): string {
+	const targetSize = size === "sm" ? "64" : size === "md" ? "128" : "256";
+
+	try {
+		const parsed =
+			src.startsWith("http://") || src.startsWith("https://")
+				? new URL(src)
+				: new URL(src, "http://localhost");
+		const segments = parsed.pathname.split("/").filter(Boolean);
+		if (segments[0] !== "profile-images" || !segments[1]) {
+			return src;
+		}
+
+		const pathname = `/profile-images/${segments[1]}/${targetSize}`;
+		const rewritten = `${pathname}${parsed.search}`;
+		if (src.startsWith("http://") || src.startsWith("https://")) {
+			return `${parsed.origin}${rewritten}`;
+		}
+		return rewritten;
+	} catch {
+		return src;
+	}
+}
+
 export function ProfileImage({
 	src,
 	alt,
@@ -22,6 +49,10 @@ export function ProfileImage({
 	size = "md",
 	className,
 }: ProfileImageProps) {
+	const resolvedSrc = src
+		? resolveProfileImageSrcForSize(src, size)
+		: undefined;
+
 	return (
 		<div
 			className={cn(
@@ -30,8 +61,12 @@ export function ProfileImage({
 				className,
 			)}
 		>
-			{src ? (
-				<img src={src} alt={alt} className="h-full w-full object-cover" />
+			{resolvedSrc ? (
+				<img
+					src={resolvedSrc}
+					alt={alt}
+					className="h-full w-full object-cover"
+				/>
 			) : (
 				<div className="flex h-full w-full items-center justify-center bg-primary/10 font-medium text-primary">
 					{fallback}

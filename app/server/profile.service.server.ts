@@ -6,8 +6,10 @@ export type { ProfileActivity } from "./profile.service.server/shared.ts";
 export {
 	getProfileVisibility,
 	listProfileVisibilityOptions,
-	parseProfileUpdateInput,
+	parseProfileDetailsInput,
+	parseProfileImageOverrideInput,
 	parseProfileVisibilityMode,
+	setProfileImageOverride,
 	setProfileVisibility,
-	updateOwnProfile,
+	updateOwnProfileDetails,
 } from "./profile.service.server/visibility.ts";

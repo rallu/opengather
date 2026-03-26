@@ -1,4 +1,5 @@
 import { getDb } from "./db.server.ts";
+import { resolveEffectiveProfileImage } from "./profile-image.server.ts";
 
 export type PostAuthorSummary = {
 	id: string;
@@ -43,6 +44,7 @@ export async function loadPostAuthorSummaryMap(params: {
 			id: true,
 			name: true,
 			image: true,
+			imageOverride: true,
 			accounts: {
 				where: {
 					providerId: "hub",
@@ -61,7 +63,7 @@ export async function loadPostAuthorSummaryMap(params: {
 		const summary = {
 			id: user.id,
 			name: user.name.trim() || FALLBACK_AUTHOR_NAME,
-			imageSrc: user.image ?? undefined,
+			imageSrc: resolveEffectiveProfileImage(user) ?? undefined,
 			profilePath: `/profiles/${user.id}`,
 		} satisfies PostAuthorSummary;
 

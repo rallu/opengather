@@ -46,6 +46,14 @@ const routes: RouteConfig = [
 		file: "routes/media-asset.ts",
 	},
 	{
+		path: "/profile-images/:userId",
+		file: "routes/profile-image.ts",
+	},
+	{
+		path: "/profile-images/:userId/:size",
+		file: "routes/profile-image-size.ts",
+	},
+	{
 		path: "/metrics",
 		file: "routes/metrics.tsx",
 	},

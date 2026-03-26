@@ -7,6 +7,7 @@ import {
 	type ProfileVisibilityMode,
 	resolveEffectiveProfileVisibility,
 } from "../permissions.server.ts";
+import { parseProfileImageOverrideInput } from "../profile-image.server.ts";
 import { sanitizeProfileSummary } from "./shared.ts";
 
 export function parseProfileVisibilityMode(
@@ -18,16 +19,14 @@ export function parseProfileVisibilityMode(
 	return "public";
 }
 
-export function parseProfileUpdateInput(params: {
+export function parseProfileDetailsInput(params: {
 	name: string | null | undefined;
-	image: string | null | undefined;
 	summary: string | null | undefined;
 }):
 	| {
 			ok: true;
 			value: {
 				name: string;
-				image: string | null;
 				summary: string | null;
 			};
 	  }
@@ -37,36 +36,17 @@ export function parseProfileUpdateInput(params: {
 		return { ok: false, error: "Name must be between 2 and 80 characters." };
 	}
 
-	const rawImage = (params.image ?? "").trim();
-	let image: string | null = null;
-	if (rawImage) {
-		if (rawImage.length > 1000) {
-			return { ok: false, error: "Image URL is too long." };
-		}
-		try {
-			const parsed = new URL(rawImage);
-			if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-				return {
-					ok: false,
-					error: "Image URL must start with http:// or https://.",
-				};
-			}
-			image = parsed.toString();
-		} catch {
-			return { ok: false, error: "Image URL is invalid." };
-		}
-	}
-
 	const summary = sanitizeProfileSummary(params.summary);
 	return {
 		ok: true,
 		value: {
 			name,
-			image,
 			summary,
 		},
 	};
 }
+
+export { parseProfileImageOverrideInput };
 
 export async function getProfileVisibility(params: {
 	userId: string;
@@ -111,10 +91,9 @@ export async function setProfileVisibility(params: {
 	});
 }
 
-export async function updateOwnProfile(params: {
+export async function updateOwnProfileDetails(params: {
 	userId: string;
 	name: string;
-	image: string | null;
 	summary: string | null;
 }): Promise<void> {
 	const now = new Date();
@@ -123,7 +102,6 @@ export async function updateOwnProfile(params: {
 			where: { id: params.userId },
 			data: {
 				name: params.name,
-				image: params.image,
 				updatedAt: now,
 			},
 		}),
@@ -143,6 +121,19 @@ export async function updateOwnProfile(params: {
 			},
 		}),
 	]);
+}
+
+export async function setProfileImageOverride(params: {
+	userId: string;
+	imageOverride: string | null;
+}): Promise<void> {
+	await getDb().user.update({
+		where: { id: params.userId },
+		data: {
+			imageOverride: params.imageOverride,
+			updatedAt: new Date(),
+		},
+	});
 }
 
 export function listProfileVisibilityOptions(params: {

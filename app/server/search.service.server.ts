@@ -16,6 +16,7 @@ import {
 import { loadPostAuthorSummaryMap } from "./post-author.service.server.ts";
 import { sanitizeProfileSummary } from "./profile.service.server/shared.ts";
 import { parseProfileVisibilityMode } from "./profile.service.server/visibility.ts";
+import { resolveEffectiveProfileImage } from "./profile-image.server.ts";
 
 type SearchAuthUser = {
 	id: string;
@@ -70,6 +71,7 @@ export async function searchProfiles(params: {
 			id: true,
 			name: true,
 			image: true,
+			imageOverride: true,
 		},
 	});
 
@@ -134,7 +136,7 @@ export async function searchProfiles(params: {
 		results.push({
 			id: user.id,
 			name: user.name.trim() || "Member",
-			imageSrc: user.image ?? undefined,
+			imageSrc: resolveEffectiveProfileImage(user) ?? undefined,
 			summary: sanitizeProfileSummary(preference?.summary) ?? undefined,
 			profilePath: `/profiles/${user.id}`,
 			rank: getProfileMatchRank(

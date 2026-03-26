@@ -352,6 +352,7 @@ model User {
   email         String        @unique @db.Text
   emailVerified Boolean       @default(false) @map("emailVerified")
   image         String?       @db.Text
+  imageOverride String?       @map("image_override") @db.Text
   createdAt     DateTime      @default(now()) @map("createdAt") @db.Timestamptz(6)
   updatedAt     DateTime      @default(now()) @map("updatedAt") @db.Timestamptz(6)
   sessions      Session[]

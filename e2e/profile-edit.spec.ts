@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { Client } from "pg";
+import sharp from "sharp";
 
 const databaseUrl =
 	process.env.DATABASE_URL ??
@@ -54,6 +55,17 @@ async function registerUser(params: {
 	await params.page.getByTestId("register-email").fill(params.email);
 	await params.page.getByTestId("register-password").fill(params.password);
 	await params.page.getByTestId("register-submit").click();
+	if (
+		!(await params.page
+			.getByTestId("shell-sign-out")
+			.isVisible()
+			.catch(() => false))
+	) {
+		await params.page.goto("/login");
+		await params.page.getByTestId("login-email").fill(params.email);
+		await params.page.getByTestId("login-password").fill(params.password);
+		await params.page.getByTestId("login-submit").click();
+	}
 	await expect(params.page.getByTestId("shell-sign-out")).toBeVisible();
 }
 
@@ -70,7 +82,23 @@ async function getUserIdByEmail(email: string): Promise<string> {
 	});
 }
 
-test("profile details can be edited from profile route", async ({ page }) => {
+async function buildPngBuffer() {
+	return sharp({
+		create: {
+			width: 16,
+			height: 16,
+			channels: 3,
+			background: { r: 32, g: 128, b: 96 },
+		},
+	})
+		.png()
+		.toBuffer();
+}
+
+test("profile details and image overrides can be edited from profile route", async ({
+	page,
+	request,
+}) => {
 	await ensureConfiguredInstance(page);
 
 	const stamp = Date.now();
@@ -95,8 +123,10 @@ test("profile details can be edited from profile route", async ({ page }) => {
 		.getByTestId("profile-name-input")
 		.fill(`Updated Profile Owner ${stamp}`);
 	await page
-		.getByTestId("profile-image-input")
+		.getByTestId("profile-image-url-input")
 		.fill("https://example.com/avatar.png");
+	await page.getByTestId("profile-image-url-save-button").click();
+	await expect(page.getByTestId("profile-image-save-success")).toBeVisible();
 	await page
 		.getByTestId("profile-summary-input")
 		.fill("This is my updated profile summary for route verification.");
@@ -111,6 +141,34 @@ test("profile details can be edited from profile route", async ({ page }) => {
 	await expect(detailHeader.getByTestId("profile-detail-summary")).toHaveText(
 		"This is my updated profile summary for route verification.",
 	);
+
+	const uploadedImage = await buildPngBuffer();
+	await page.goto("/profile");
+	await page.getByTestId("profile-image-upload-input").setInputFiles({
+		name: "profile-image.png",
+		mimeType: "image/png",
+		buffer: uploadedImage,
+	});
+	await page.getByTestId("profile-image-upload-button").click();
+	await expect(page.getByTestId("profile-image-save-success")).toBeVisible();
+	await expect(page.getByTestId("profile-image-source")).toContainText(
+		"uploaded image stored on this instance",
+	);
+
+	await page.goto(`/profiles/${userId}`);
+	const imageSrc = await page
+		.getByTestId("profile-detail-header")
+		.locator("img")
+		.first()
+		.getAttribute("src");
+	expect(imageSrc).toBeTruthy();
+	expect(imageSrc).toMatch(new RegExp(`/profile-images/${userId}\\?v=`));
+	if (!imageSrc) {
+		throw new Error("Expected uploaded profile image src");
+	}
+	const imageResponse = await request.get(imageSrc);
+	expect(imageResponse.status()).toBe(200);
+	expect(imageResponse.headers()["content-type"]).toMatch(/^image\//);
 });
 
 test("feed post menu links to the author's public profile", async ({ page }) => {

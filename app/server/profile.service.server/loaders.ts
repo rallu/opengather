@@ -16,6 +16,10 @@ import {
 } from "../post-list.service.server.ts";
 import { ensurePostRootIds } from "../post-root.server.ts";
 import {
+	isUploadedProfileImageOverride,
+	resolveEffectiveProfileImage,
+} from "../profile-image.server.ts";
+import {
 	buildVisibleActivities,
 	getProfileAuthorIds,
 	listProfilePosts,
@@ -172,6 +176,8 @@ export async function loadOwnProfile(params: {
 			viewerRole: ViewerRole;
 			name: string;
 			image: string | null;
+			imageOverride: string | null;
+			imageSource: "hub" | "local_upload" | "local_url" | "default" | "none";
 			summary: string | null;
 	  }
 > {
@@ -182,6 +188,7 @@ export async function loadOwnProfile(params: {
 			select: {
 				name: true,
 				image: true,
+				imageOverride: true,
 			},
 		}),
 		db.profilePreference.findUnique({
@@ -268,6 +275,20 @@ export async function loadOwnProfile(params: {
 	);
 
 	const replies = postRows.filter((post) => Boolean(post.parentPostId)).length;
+	const effectiveImage = resolveEffectiveProfileImage(userRow);
+	const hasUploadedOverride = isUploadedProfileImageOverride(
+		userRow.imageOverride,
+	);
+	const hasImageOverride = Boolean(userRow.imageOverride?.trim());
+	const imageSource = hasUploadedOverride
+		? "local_upload"
+		: hasImageOverride
+			? "local_url"
+			: params.hubUserId && userRow.image
+				? "hub"
+				: userRow.image
+					? "default"
+					: "none";
 
 	return {
 		status: "ok",
@@ -283,7 +304,9 @@ export async function loadOwnProfile(params: {
 		instanceName: params.instanceName,
 		viewerRole: params.viewerRole,
 		name: userRow.name,
-		image: userRow.image,
+		image: effectiveImage,
+		imageOverride: userRow.imageOverride ?? null,
+		imageSource,
 		summary: preferenceRow?.summary
 			? sanitizeProfileSummary(preferenceRow.summary)
 			: null,
@@ -322,6 +345,7 @@ export async function loadVisibleProfile(params: {
 				id: true,
 				name: true,
 				image: true,
+				imageOverride: true,
 			},
 		}),
 		db.profilePreference.findUnique({
@@ -381,7 +405,7 @@ export async function loadVisibleProfile(params: {
 	return {
 		status: "ok",
 		name: profileUser.name,
-		image: profileUser.image,
+		image: resolveEffectiveProfileImage(profileUser),
 		summary: preferenceRow?.summary
 			? sanitizeProfileSummary(preferenceRow.summary)
 			: null,

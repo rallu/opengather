@@ -3,21 +3,41 @@ import { Form, Link, useActionData, useLoaderData } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { ProfileImage } from "~/components/profile/profile-image";
 import { Button } from "~/components/ui/button";
+import {
+	Dialog,
+	DialogBody,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "~/components/ui/dialog";
+import { Icon } from "~/components/ui/icon";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
+import {
+	cleanupParsedMultipartForm,
+	parseMultipartForm,
+} from "~/server/multipart-form.server";
 import {
 	getNotificationChannels,
 	setNotificationChannels,
 } from "~/server/notification.service.server";
 import { getViewerContext } from "~/server/permissions.server";
+import { MAX_IMAGE_BYTES } from "~/server/post-assets.server";
 import {
 	listProfileVisibilityOptions,
 	loadOwnProfile,
-	parseProfileUpdateInput,
+	parseProfileDetailsInput,
 	parseProfileVisibilityMode,
+	setProfileImageOverride,
 	setProfileVisibility,
-	updateOwnProfile,
+	updateOwnProfileDetails,
 } from "~/server/profile.service.server";
+import {
+	deleteUploadedProfileImage,
+	saveUploadedProfileImage,
+} from "~/server/profile-image.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -28,6 +48,57 @@ export async function action({ request }: ActionFunctionArgs) {
 			error: "Sign in required.",
 			section: "details",
 		};
+	}
+
+	const contentType = request.headers.get("content-type") ?? "";
+	if (contentType.toLowerCase().includes("multipart/form-data")) {
+		const parsed = await parseMultipartForm({
+			request,
+			maxFiles: 1,
+			maxFileSizeBytes: MAX_IMAGE_BYTES,
+		});
+		try {
+			const actionType = (parsed.fields.get("_action") ?? "").trim();
+			if (actionType !== "upload-profile-image") {
+				return {
+					ok: false as const,
+					error: "Unsupported profile image upload request.",
+					section: "image" as const,
+				};
+			}
+
+			const upload = parsed.files.find(
+				(file) => file.fieldName === "imageFile",
+			);
+			if (!upload) {
+				return {
+					ok: false as const,
+					error: "Choose an image file to upload.",
+					section: "image" as const,
+				};
+			}
+
+			const imageOverride = await saveUploadedProfileImage({
+				userId: authUser.id,
+				upload,
+			});
+			await setProfileImageOverride({
+				userId: authUser.id,
+				imageOverride,
+			});
+			return { ok: true as const, section: "image" as const };
+		} catch (error) {
+			return {
+				ok: false as const,
+				error:
+					error instanceof Error
+						? error.message
+						: "Failed to upload profile image.",
+				section: "image" as const,
+			};
+		} finally {
+			await cleanupParsedMultipartForm(parsed);
+		}
 	}
 
 	const formData = await request.formData();
@@ -57,9 +128,17 @@ export async function action({ request }: ActionFunctionArgs) {
 		return { ok: true as const, section: "notifications" as const };
 	}
 
-	const parsed = parseProfileUpdateInput({
+	if (actionType === "clear-profile-image-override") {
+		await setProfileImageOverride({
+			userId: authUser.id,
+			imageOverride: null,
+		});
+		await deleteUploadedProfileImage({ userId: authUser.id });
+		return { ok: true as const, section: "image" as const };
+	}
+
+	const parsed = parseProfileDetailsInput({
 		name: String(formData.get("name") ?? ""),
-		image: String(formData.get("image") ?? ""),
 		summary: String(formData.get("summary") ?? ""),
 	});
 	if (!parsed.ok) {
@@ -70,7 +149,7 @@ export async function action({ request }: ActionFunctionArgs) {
 		};
 	}
 
-	await updateOwnProfile({
+	await updateOwnProfileDetails({
 		userId: authUser.id,
 		...parsed.value,
 	});
@@ -171,6 +250,16 @@ export default function ProfilePage() {
 	}
 
 	const fallback = data.name.trim().slice(0, 1).toUpperCase() || "?";
+	const imageSourceText =
+		data.imageSource === "local_upload"
+			? "Using an uploaded image stored on this instance."
+			: data.imageSource === "local_url"
+				? "Using an image override saved on this instance."
+				: data.imageSource === "hub"
+					? "Using the image from the linked hub account until you upload a local override."
+					: data.imageSource === "default"
+						? "Using your current account image."
+						: "No profile image is currently set.";
 
 	return (
 		<AppShell
@@ -180,12 +269,97 @@ export default function ProfilePage() {
 		>
 			<section className="rounded-md border border-border p-4 text-sm">
 				<div className="flex items-center gap-3">
-					<ProfileImage
-						src={data.image ?? undefined}
-						alt={`${data.name} profile image`}
-						fallback={fallback}
-						size="lg"
-					/>
+					<Dialog>
+						<div className="relative">
+							<ProfileImage
+								src={data.image ?? undefined}
+								alt={`${data.name} profile image`}
+								fallback={fallback}
+								size="lg"
+							/>
+							<DialogTrigger
+								className="absolute -right-1 -top-1 h-8 w-8 rounded-full border border-border bg-background p-0 shadow-sm"
+								data-testid="profile-image-dialog-trigger"
+								aria-label="Change profile image"
+							>
+								<Icon name="imagePlus" size={16} />
+							</DialogTrigger>
+						</div>
+						<DialogContent data-testid="profile-image-dialog">
+							<DialogHeader>
+								<DialogTitle>Change image</DialogTitle>
+								<DialogDescription>{imageSourceText}</DialogDescription>
+							</DialogHeader>
+							<DialogBody>
+								<div className="flex items-start gap-4">
+									<ProfileImage
+										src={data.image ?? undefined}
+										alt={`${data.name} profile image`}
+										fallback={fallback}
+										size="lg"
+									/>
+									<div className="min-w-0 flex-1 space-y-3">
+										{actionData?.section === "image" && actionData.ok ? (
+											<p
+												className="text-sm text-emerald-700"
+												data-testid="profile-image-save-success"
+											>
+												Saved.
+											</p>
+										) : null}
+										{actionData?.section === "image" &&
+										actionData.ok === false ? (
+											<p
+												className="text-sm text-destructive"
+												data-testid="profile-image-save-error"
+											>
+												{actionData.error}
+											</p>
+										) : null}
+										<Form
+											method="post"
+											encType="multipart/form-data"
+											className="space-y-3"
+										>
+											<input
+												type="hidden"
+												name="_action"
+												value="upload-profile-image"
+											/>
+											<input
+												type="file"
+												name="imageFile"
+												accept="image/avif,image/jpeg,image/png,image/webp"
+												data-testid="profile-image-upload-input"
+												className="block w-full text-sm"
+											/>
+											<Button
+												type="submit"
+												variant="outline"
+												data-testid="profile-image-upload-button"
+											>
+												Upload image
+											</Button>
+										</Form>
+										<Form method="post">
+											<input
+												type="hidden"
+												name="_action"
+												value="clear-profile-image-override"
+											/>
+											<Button
+												type="submit"
+												variant="outline"
+												data-testid="profile-image-clear-button"
+											>
+												Clear image
+											</Button>
+										</Form>
+									</div>
+								</div>
+							</DialogBody>
+						</DialogContent>
+					</Dialog>
 					<div className="min-w-0 space-y-1">
 						<p className="truncate font-medium">{data.name}</p>
 						<p className="text-muted-foreground">
@@ -258,12 +432,6 @@ export default function ProfilePage() {
 						maxLength={80}
 						placeholder="Name"
 						data-testid="profile-name-input"
-					/>
-					<Input
-						name="image"
-						defaultValue={data.image ?? ""}
-						placeholder="Image URL"
-						data-testid="profile-image-input"
 					/>
 					<Textarea
 						name="summary"
