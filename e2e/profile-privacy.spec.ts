@@ -182,7 +182,7 @@ test.describe("profile privacy", () => {
 			email: owner.email,
 			password: owner.password,
 		});
-		await page.goto("/settings");
+		await page.goto("/profile");
 		await page
 			.getByTestId("settings-profile-visibility")
 			.selectOption("private");
@@ -212,7 +212,7 @@ test.describe("profile privacy", () => {
 			email: owner.email,
 			password: owner.password,
 		});
-		await page.goto("/settings");
+		await page.goto("/profile");
 		await page
 			.getByTestId("settings-profile-visibility")
 			.selectOption("instance_members");
@@ -282,7 +282,7 @@ test.describe("profile privacy", () => {
 			email: owner.email,
 			password: owner.password,
 		});
-		await page.goto("/settings");
+		await page.goto("/profile");
 		await expect(page.getByTestId("settings-profile-visibility")).toHaveValue(
 			"instance_members",
 		);

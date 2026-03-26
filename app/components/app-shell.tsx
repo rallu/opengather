@@ -23,8 +23,16 @@ type NotificationSummaryData = {
 };
 
 type ShellAuthUser = {
+	id: string;
 	name: string;
 } | null;
+
+type NavItem = {
+	to: string;
+	label: string;
+	testId: string;
+	activePrefixes?: string[];
+};
 
 type AppShellProps = {
 	authUser: ShellAuthUser;
@@ -36,17 +44,34 @@ type AppShellProps = {
 	children: ReactNode;
 };
 
-const baseNavItems = [
+const guestNavItems: NavItem[] = [
 	{ to: "/feed", label: "Feed", testId: "shell-nav-feed" },
-	{ to: "/groups", label: "Groups", testId: "shell-nav-groups" },
-	{
-		to: "/notifications",
-		label: "Notifications",
-		testId: "shell-nav-notifications",
-	},
-	{ to: "/profile", label: "Profile", testId: "shell-nav-profile" },
-	{ to: "/settings", label: "Settings", testId: "shell-nav-settings" },
 ];
+
+function getMemberNavItems(authUserId: string): NavItem[] {
+	return [
+		{ to: "/feed", label: "Feed", testId: "shell-nav-feed" },
+		{ to: "/groups", label: "Groups", testId: "shell-nav-groups" },
+		{
+			to: "/notifications",
+			label: "Notifications",
+			testId: "shell-nav-notifications",
+		},
+		{
+			to: `/profiles/${authUserId}`,
+			label: "Profile",
+			testId: "shell-nav-profile",
+			activePrefixes: ["/profile", `/profiles/${authUserId}`],
+		},
+	];
+}
+
+function isNavItemActive(pathname: string, item: NavItem): boolean {
+	const prefixes = item.activePrefixes ?? [item.to];
+	return prefixes.some(
+		(prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+	);
+}
 
 function NavBadge(props: { count: number; testId: string }) {
 	return (
@@ -106,7 +131,7 @@ export function AppShell(props: AppShellProps) {
 	const notificationSummary = notificationSummaryFetcher.data;
 	const navItems = props.authUser
 		? [
-				...baseNavItems,
+				...getMemberNavItems(props.authUser.id),
 				...(notificationSummary?.canAccessApprovals
 					? [
 							{
@@ -126,10 +151,10 @@ export function AppShell(props: AppShellProps) {
 						]
 					: []),
 			]
-		: baseNavItems.filter((item) => item.testId === "shell-nav-feed");
+		: guestNavItems;
 
 	const activeItem = navItems.find((item) =>
-		location.pathname.startsWith(item.to),
+		isNavItemActive(location.pathname, item),
 	)?.to;
 	const searchQuery =
 		props.searchQuery ?? new URLSearchParams(location.search).get("q") ?? "";

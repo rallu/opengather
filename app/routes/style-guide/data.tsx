@@ -187,8 +187,7 @@ export const navigationItems = [
 	{ label: "Feed", to: "/feed", active: true },
 	{ label: "Groups", to: "/groups" },
 	{ label: "Notifications", to: "/notifications" },
-	{ label: "Profile", to: "/profile" },
-	{ label: "Settings", to: "/settings" },
+	{ label: "Profile", to: "/profiles/me" },
 ];
 export const subNavigationItems = [
 	{ label: "Overview", to: "/profile", active: true },

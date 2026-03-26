@@ -48,7 +48,7 @@ export function buildTargetUrl(params: {
 	return `/feed#post-${params.postId}`;
 }
 
-async function getProfileAuthorIds(params: {
+export async function getProfileAuthorIds(params: {
 	userId: string;
 }): Promise<string[]> {
 	const user = await getDb().user.findUnique({

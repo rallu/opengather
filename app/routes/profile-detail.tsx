@@ -1,9 +1,18 @@
 import type { LoaderFunctionArgs } from "react-router";
-import { Link, useLoaderData } from "react-router";
+import { Link, useLoaderData, useNavigate } from "react-router";
 import { AppShell } from "~/components/app-shell";
+import { PostFeedItem } from "~/components/post/post-feed-item";
 import { ProfileImage } from "~/components/profile/profile-image";
 import { Button } from "~/components/ui/button";
-import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
+import {
+	Dropdown,
+	DropdownContent,
+	DropdownItem,
+	DropdownLabel,
+	DropdownTrigger,
+} from "~/components/ui/dropdown";
+import { FeedContainer } from "~/components/ui/feed-container";
+import { Icon } from "~/components/ui/icon";
 import { loadVisibleProfile } from "~/server/profile.service.server";
 import { getAuthUserFromRequest } from "~/server/session.server";
 import { getSetupStatus } from "~/server/setup.service.server";
@@ -32,6 +41,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 export default function ProfileDetailPage() {
 	const data = useLoaderData<typeof loader>();
+	const navigate = useNavigate();
 
 	if (data.status === "not_setup") {
 		return (
@@ -107,16 +117,42 @@ export default function ProfileDetailPage() {
 				className="rounded-md border border-border p-4 text-sm"
 				data-testid="profile-detail-header"
 			>
-				<div className="flex items-center gap-3">
-					<ProfileImage
-						src={data.image ?? undefined}
-						alt={`${data.name} profile image`}
-						fallback={fallback}
-						size="lg"
-					/>
-					<p className="font-medium" data-testid="profile-detail-name">
-						{data.name}
-					</p>
+				<div className="flex items-start justify-between gap-3">
+					<div className="flex items-center gap-3">
+						<ProfileImage
+							src={data.image ?? undefined}
+							alt={`${data.name} profile image`}
+							fallback={fallback}
+							size="lg"
+						/>
+						<p className="font-medium" data-testid="profile-detail-name">
+							{data.name}
+						</p>
+					</div>
+					{data.isSelf ? (
+						<Dropdown className="shrink-0">
+							<DropdownTrigger
+								className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium"
+								data-testid="profile-detail-actions-trigger"
+							>
+								Details
+								<Icon name="chevronDown" size={16} />
+							</DropdownTrigger>
+							<DropdownContent
+								align="end"
+								data-testid="profile-detail-actions-menu"
+							>
+								<DropdownLabel>Profile actions</DropdownLabel>
+								<DropdownItem
+									onClick={() => navigate("/profile")}
+									data-testid="profile-detail-edit-profile"
+								>
+									<Icon name="settings" size={16} />
+									Edit profile
+								</DropdownItem>
+							</DropdownContent>
+						</Dropdown>
+					) : null}
 				</div>
 				{data.summary ? (
 					<p className="mt-3 text-sm" data-testid="profile-detail-summary">
@@ -151,38 +187,23 @@ export default function ProfileDetailPage() {
 				</div>
 			</div>
 
-			<section className="space-y-3" data-testid="profile-activity-list">
-				{data.activities.length === 0 ? (
-					<p className="text-sm text-muted-foreground">
-						No visible activity yet.
-					</p>
-				) : (
-					data.activities.map((activity) => (
-						<div
-							key={activity.id}
-							className="rounded-md border border-border p-3"
-						>
-							<div className="flex items-center justify-between gap-3">
-								<p className="text-sm font-medium">{activity.label}</p>
-								<LocalizedTimestamp
-									value={activity.createdAt}
-									className="text-xs text-muted-foreground"
-								/>
-							</div>
-							<p className="mt-2 text-sm">
-								{activity.body?.trim() || "No text preview available"}
-							</p>
-							{activity.targetUrl ? (
-								<div className="mt-2">
-									<Button variant="link" className="h-auto p-0 text-xs" asChild>
-										<Link to={activity.targetUrl}>Open activity</Link>
-									</Button>
-								</div>
-							) : null}
-						</div>
-					))
-				)}
-			</section>
+			<FeedContainer className="space-y-4">
+				<section className="space-y-3" data-testid="profile-activity-list">
+					{data.posts.length === 0 ? (
+						<p className="text-sm text-muted-foreground">
+							No visible posts yet.
+						</p>
+					) : (
+						data.posts.map((post) => (
+							<PostFeedItem
+								key={post.id}
+								post={post}
+								isAdmin={data.viewerRole === "admin"}
+							/>
+						))
+					)}
+				</section>
+			</FeedContainer>
 		</AppShell>
 	);
 }

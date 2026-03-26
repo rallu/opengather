@@ -82,7 +82,14 @@ test("profile details can be edited from profile route", async ({ page }) => {
 	await registerUser({ page, ...account });
 	const userId = await getUserIdByEmail(account.email);
 
-	await page.goto("/profile");
+	await page.getByTestId("shell-nav-profile").click();
+	await expect(page).toHaveURL(new RegExp(`/profiles/${userId}$`));
+	await page.getByTestId("profile-detail-actions-trigger").click();
+	await expect(page.getByTestId("profile-detail-actions-menu")).toBeVisible();
+	await page.getByTestId("profile-detail-edit-profile").click();
+	await expect(page).toHaveURL(/\/profile$/);
+	await expect(page.getByTestId("profile-activity-list")).toHaveCount(0);
+
 	await expect(page.getByTestId("profile-name-input")).toBeVisible();
 	await page
 		.getByTestId("profile-name-input")

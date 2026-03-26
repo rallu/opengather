@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { getDb } from "../db.server.ts";
 import { getReadableGroupIds } from "../group.service.server.ts";
 import {
@@ -6,8 +7,17 @@ import {
 	type ProfileVisibilityMode,
 	type ViewerRole,
 } from "../permissions.server.ts";
+import { loadPostAssetSummaries } from "../post-assets.server.ts";
+import { loadPostAuthorSummaryMap } from "../post-author.service.server.ts";
+import {
+	mapPostListItem,
+	type PostListItem,
+	type PostListRow,
+} from "../post-list.service.server.ts";
+import { ensurePostRootIds } from "../post-root.server.ts";
 import {
 	buildVisibleActivities,
+	getProfileAuthorIds,
 	listProfilePosts,
 	type ProfileActivity,
 	sanitizeProfileSummary,
@@ -21,6 +31,121 @@ type AuthUser = {
 	name: string;
 	email: string;
 } | null;
+
+function getProfileScopeCondition(readableGroupIds?: string[]) {
+	if (!readableGroupIds) {
+		return Prisma.sql`TRUE`;
+	}
+
+	if (readableGroupIds.length === 0) {
+		return Prisma.sql`p.group_id IS NULL`;
+	}
+
+	return Prisma.sql`(p.group_id IS NULL OR p.group_id IN (${Prisma.join(
+		readableGroupIds,
+	)}))`;
+}
+
+async function loadVisibleProfilePostItems(params: {
+	instanceId: string;
+	profileUserId: string;
+	readableGroupIds?: string[];
+}): Promise<PostListItem[]> {
+	const authorIds = await getProfileAuthorIds({
+		userId: params.profileUserId,
+	});
+	if (authorIds.length === 0) {
+		return [];
+	}
+
+	await ensurePostRootIds();
+
+	const rows = await getDb().$queryRaw<PostListRow[]>(Prisma.sql`
+		WITH visible_posts AS (
+			SELECT
+				p.id,
+				p.parent_post_id,
+				p.author_id,
+				p.body_text,
+				p.group_id,
+				p.moderation_status,
+				p.hidden_at,
+				p.deleted_at,
+				p.created_at,
+				p.root_post_id
+			FROM post p
+			WHERE
+				p.instance_id = ${params.instanceId}
+				AND ${getProfileScopeCondition(params.readableGroupIds)}
+				AND p.deleted_at IS NULL
+				AND p.hidden_at IS NULL
+				AND p.moderation_status <> 'rejected'
+		),
+		thread_stats AS (
+			SELECT
+				v.root_post_id,
+				COUNT(*) FILTER (WHERE v.parent_post_id IS NOT NULL) AS comment_count,
+				MAX(v.created_at) AS latest_activity_at
+			FROM visible_posts v
+			GROUP BY v.root_post_id
+		),
+		root_posts AS (
+			SELECT
+				v.id,
+				v.parent_post_id,
+				v.author_id,
+				v.body_text,
+				v.group_id,
+				g.name AS group_name,
+				v.moderation_status,
+				v.hidden_at,
+				v.deleted_at,
+				v.created_at,
+				ts.comment_count,
+				ts.latest_activity_at
+			FROM visible_posts v
+			INNER JOIN thread_stats ts ON ts.root_post_id = v.id
+			LEFT JOIN community_group g ON g.id = v.group_id
+			WHERE
+				v.parent_post_id IS NULL
+				AND v.author_id IN (${Prisma.join(authorIds)})
+		)
+		SELECT
+			root_posts.id,
+			root_posts.parent_post_id AS "parentPostId",
+			root_posts.author_id AS "authorId",
+			root_posts.body_text AS "bodyText",
+			root_posts.group_id AS "groupId",
+			root_posts.group_name AS "groupName",
+			root_posts.moderation_status AS "moderationStatus",
+			root_posts.hidden_at AS "hiddenAt",
+			root_posts.deleted_at AS "deletedAt",
+			root_posts.created_at AS "createdAt",
+			root_posts.comment_count AS "commentCount",
+			root_posts.latest_activity_at AS "latestActivityAt"
+		FROM root_posts
+		ORDER BY root_posts.created_at DESC, root_posts.id DESC
+		LIMIT 40
+	`);
+
+	const [assetMap, authorMap] = await Promise.all([
+		loadPostAssetSummaries({
+			postIds: rows.map((row) => row.id),
+		}),
+		loadPostAuthorSummaryMap({
+			authorIds: rows.map((row) => row.authorId),
+		}),
+	]);
+
+	return rows.map((row) => ({
+		...mapPostListItem(
+			row,
+			"newest",
+			authorMap.get(row.authorId) ?? { name: "Member" },
+		),
+		assets: assetMap.get(row.id) ?? [],
+	}));
+}
 
 export async function loadOwnProfile(params: {
 	userId: string;
@@ -179,13 +304,14 @@ export async function loadVisibleProfile(params: {
 			image: string | null;
 			summary: string | null;
 			profileVisibility: ProfileVisibilityMode;
-			activities: ProfileActivity[];
+			posts: PostListItem[];
 			stats: {
 				totalPosts: number;
 				topLevelPosts: number;
 				replies: number;
 			};
 			isSelf: boolean;
+			viewerRole: ViewerRole;
 	  }
 > {
 	const db = getDb();
@@ -238,11 +364,18 @@ export async function loadVisibleProfile(params: {
 				authUser: params.viewer,
 				instanceViewerRole: viewerRole,
 			});
-	const postRows = await listProfilePosts({
-		instanceId: params.instanceId,
-		profileUserId: params.profileUserId,
-		readableGroupIds,
-	});
+	const [postRows, posts] = await Promise.all([
+		listProfilePosts({
+			instanceId: params.instanceId,
+			profileUserId: params.profileUserId,
+			readableGroupIds,
+		}),
+		loadVisibleProfilePostItems({
+			instanceId: params.instanceId,
+			profileUserId: params.profileUserId,
+			readableGroupIds,
+		}),
+	]);
 	const replies = postRows.filter((post) => Boolean(post.parentPostId)).length;
 
 	return {
@@ -253,12 +386,13 @@ export async function loadVisibleProfile(params: {
 			? sanitizeProfileSummary(preferenceRow.summary)
 			: null,
 		profileVisibility,
-		activities: buildVisibleActivities({ rows: postRows }),
+		posts,
 		stats: {
 			totalPosts: postRows.length,
 			topLevelPosts: postRows.length - replies,
 			replies,
 		},
 		isSelf,
+		viewerRole,
 	};
 }
