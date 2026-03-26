@@ -38,7 +38,11 @@ import { SectionHeader } from "./layout";
 export function FormsFeedbackSection() {
 	return (
 		<>
-			<section className="space-y-4" data-testid="style-guide-dialog">
+			<section
+				className="space-y-4"
+				id="style-guide-dialog"
+				data-testid="style-guide-dialog"
+			>
 				<SectionHeader
 					title="Dialog"
 					description="Modal surface built on the native HTML dialog element. Use it for blocking flows that need full attention and an explicit close path."
@@ -75,7 +79,11 @@ export function FormsFeedbackSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-popover">
+			<section
+				className="space-y-4"
+				id="style-guide-popover"
+				data-testid="style-guide-popover"
+			>
 				<SectionHeader
 					title="Popover"
 					description="Lightweight overlay built on native HTML popover behavior. Use it for secondary context like quick actions, previews, and small helper panels."
@@ -109,7 +117,11 @@ export function FormsFeedbackSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-dropdown">
+			<section
+				className="space-y-4"
+				id="style-guide-dropdown"
+				data-testid="style-guide-dropdown"
+			>
 				<SectionHeader
 					title="Dropdown"
 					description="Compact action menu for contextual choices. Use it for local actions, quick filters, or secondary commands that should not crowd the surface."
@@ -141,7 +153,11 @@ export function FormsFeedbackSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-spinner">
+			<section
+				className="space-y-4"
+				id="style-guide-spinner"
+				data-testid="style-guide-spinner"
+			>
 				<SectionHeader
 					title="Spinner"
 					description="Loading affordance built on the shared icon system. Use it for in-progress states where the interface needs a lightweight motion cue."
@@ -163,7 +179,11 @@ export function FormsFeedbackSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-toast">
+			<section
+				className="space-y-4"
+				id="style-guide-toast"
+				data-testid="style-guide-toast"
+			>
 				<SectionHeader
 					title="Toast"
 					description="Presentational notification pattern only in v1. This documents the visual states before an app-wide provider or action integration is introduced."

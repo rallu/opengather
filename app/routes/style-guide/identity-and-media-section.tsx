@@ -14,7 +14,11 @@ export function IdentityAndMediaSection() {
 			title="Identity And Media"
 			description="Visual identity and image-led surfaces for people, groups, and major moments."
 		>
-			<section className="space-y-4" data-testid="style-guide-hero-image">
+			<section
+				className="space-y-4"
+				id="style-guide-hero-image"
+				data-testid="style-guide-hero-image"
+			>
 				<SectionHeader
 					title="Hero Image"
 					description="Large image-led panel for landing moments, group intros, and future editorial sections. It should feel atmospheric without turning into generic marketing chrome."
@@ -34,7 +38,11 @@ export function IdentityAndMediaSection() {
 					</Button>
 				</HeroImage>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-profile-image">
+			<section
+				className="space-y-4"
+				id="style-guide-profile-image"
+				data-testid="style-guide-profile-image"
+			>
 				<SectionHeader
 					title="Profile Image"
 					description="Image-only profile surface for avatars, leading thumbnails, and compact identity markers. It should scale cleanly across navigation and content contexts."
@@ -63,7 +71,11 @@ export function IdentityAndMediaSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-profile-listing">
+			<section
+				className="space-y-4"
+				id="style-guide-profile-listing"
+				data-testid="style-guide-profile-listing"
+			>
 				<SectionHeader
 					title="Profile Listing"
 					description="Image-plus-name identity rows for member lists, search results, and participant pickers. This is the list-ready profile pattern."
@@ -96,7 +108,11 @@ export function IdentityAndMediaSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-profile-card">
+			<section
+				className="space-y-4"
+				id="style-guide-profile-card"
+				data-testid="style-guide-profile-card"
+			>
 				<SectionHeader
 					title="Profile Card"
 					description="Small portrait-oriented user card with a 9:16 aspect ratio. Use it when a person needs to feel highlighted rather than just listed."

@@ -21,7 +21,11 @@ export function FoundationsSection() {
 			title="Foundations"
 			description="Core building blocks, state markers, and surface rules used across the whole UI system."
 		>
-			<section className="space-y-4" data-testid="style-guide-button">
+			<section
+				className="space-y-4"
+				id="style-guide-button"
+				data-testid="style-guide-button"
+			>
 				<SectionHeader
 					title="Button"
 					description="Primary action control. Use the shared button variants for calls to action, secondary actions, and low-emphasis inline controls."
@@ -37,7 +41,11 @@ export function FoundationsSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-button-group">
+			<section
+				className="space-y-4"
+				id="style-guide-button-group"
+				data-testid="style-guide-button-group"
+			>
 				<SectionHeader
 					title="Button Group"
 					description="Grouped related actions into a single compact control. Use it when actions belong together and should read as one set instead of separate loose buttons."
@@ -56,7 +64,11 @@ export function FoundationsSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-icon">
+			<section
+				className="space-y-4"
+				id="style-guide-icon"
+				data-testid="style-guide-icon"
+			>
 				<SectionHeader
 					title="Icon"
 					description="Single icon wrapper for all Lucide usage in the product. Use this component instead of importing icons route-by-route."
@@ -82,7 +94,11 @@ export function FoundationsSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-icon-button">
+			<section
+				className="space-y-4"
+				id="style-guide-icon-button"
+				data-testid="style-guide-icon-button"
+			>
 				<SectionHeader
 					title="Icon Button"
 					description="Compact action control for icon-only affordances. Use it when the icon is clear, the action is small, and an accessible label is supplied."
@@ -101,7 +117,11 @@ export function FoundationsSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-badge">
+			<section
+				className="space-y-4"
+				id="style-guide-badge"
+				data-testid="style-guide-badge"
+			>
 				<SectionHeader
 					title="Badge"
 					description="Small state indicator for moderation, visibility, and status. Use badges when the UI needs compact state markers without turning them into full pills or buttons."
@@ -116,7 +136,11 @@ export function FoundationsSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-container">
+			<section
+				className="space-y-4"
+				id="style-guide-container"
+				data-testid="style-guide-container"
+			>
 				<SectionHeader
 					title="Container"
 					description="Base surface wrapper for navigation rails, composer shells, post blocks, and sidebar utilities when the UI only needs one consistent border-and-shadow treatment."
@@ -144,7 +168,11 @@ export function FoundationsSection() {
 					</div>
 				</Container>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-card">
+			<section
+				className="space-y-4"
+				id="style-guide-card"
+				data-testid="style-guide-card"
+			>
 				<SectionHeader
 					title="Card"
 					description="Default content container for grouped information, internal panels, guide sections, and compositional feature blocks."
@@ -185,7 +213,11 @@ export function FoundationsSection() {
 					</CardFooter>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-elevation">
+			<section
+				className="space-y-4"
+				id="style-guide-elevation"
+				data-testid="style-guide-elevation"
+			>
 				<SectionHeader
 					title="Elevation"
 					description="Shared depth system with three levels. Most components should stay on low elevation and only move up when hierarchy genuinely needs it."
