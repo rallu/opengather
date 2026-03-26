@@ -12,7 +12,11 @@ import { SectionHeader } from "./layout";
 export function PostsFoundationsSection() {
 	return (
 		<>
-			<section className="space-y-4" data-testid="style-guide-post-heading">
+			<section
+				className="space-y-4"
+				id="style-guide-post-heading"
+				data-testid="style-guide-post-heading"
+			>
 				<SectionHeader
 					title="Post Heading"
 					description="Composed heading block for posts. It pairs media with a two-line heading stack so person posts and group posts can share the same layout grammar."
@@ -61,7 +65,11 @@ export function PostsFoundationsSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-post-composer">
+			<section
+				className="space-y-4"
+				id="style-guide-post-composer"
+				data-testid="style-guide-post-composer"
+			>
 				<SectionHeader
 					title="Post Composer"
 					description="Composed input surface for creating new posts and writing replies. The large variant is for new content, while the compact variant keeps reply flows light."
@@ -81,7 +89,11 @@ export function PostsFoundationsSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-post-content">
+			<section
+				className="space-y-4"
+				id="style-guide-post-content"
+				data-testid="style-guide-post-content"
+			>
 				<SectionHeader
 					title="Post Content"
 					description="Display-only content block for a post body and its metadata. This is the base visual unit for posts before route migrations begin."
@@ -144,6 +156,7 @@ export function PostsFoundationsSection() {
 			</section>
 			<section
 				className="space-y-4"
+				id="style-guide-rich-text-content"
 				data-testid="style-guide-rich-text-content"
 			>
 				<SectionHeader

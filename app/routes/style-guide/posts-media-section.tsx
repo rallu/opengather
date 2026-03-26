@@ -21,6 +21,7 @@ export function PostsMediaSection() {
 		<>
 			<section
 				className="space-y-4"
+				id="style-guide-post-image-content"
 				data-testid="style-guide-post-image-content"
 			>
 				<SectionHeader
@@ -39,6 +40,7 @@ export function PostsMediaSection() {
 			</section>
 			<section
 				className="space-y-4"
+				id="style-guide-post-image-gallery-content"
 				data-testid="style-guide-post-image-gallery-content"
 			>
 				<SectionHeader
@@ -69,6 +71,7 @@ export function PostsMediaSection() {
 			</section>
 			<section
 				className="space-y-4"
+				id="style-guide-post-video-content"
 				data-testid="style-guide-post-video-content"
 			>
 				<SectionHeader
@@ -87,6 +90,7 @@ export function PostsMediaSection() {
 			</section>
 			<section
 				className="space-y-4"
+				id="style-guide-post-link-content"
 				data-testid="style-guide-post-link-content"
 			>
 				<SectionHeader
@@ -113,7 +117,11 @@ export function PostsMediaSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-chat-bubble">
+			<section
+				className="space-y-4"
+				id="style-guide-chat-bubble"
+				data-testid="style-guide-chat-bubble"
+			>
 				<SectionHeader
 					title="Chat Bubble"
 					description="Comment pattern with profile image, a message bubble, and lightweight text actions under the content. This is the shared composition for replies, thread actions, and future chat-like surfaces."
@@ -124,7 +132,11 @@ export function PostsMediaSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-post-comments">
+			<section
+				className="space-y-4"
+				id="style-guide-post-comments"
+				data-testid="style-guide-post-comments"
+			>
 				<SectionHeader
 					title="Post Comments"
 					description="Threaded comment model for the shared component API, including lightweight actions like reply and share under each comment. The current backend is flatter, but the style guide defines a recursive presentation shape now."

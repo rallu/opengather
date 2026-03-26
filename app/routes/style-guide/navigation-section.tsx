@@ -25,7 +25,11 @@ export function NavigationSection() {
 			title="Navigation And Wayfinding"
 			description="Shared structures for moving around the product and understanding where you are."
 		>
-			<section className="space-y-4" data-testid="style-guide-navigation">
+			<section
+				className="space-y-4"
+				id="style-guide-navigation"
+				data-testid="style-guide-navigation"
+			>
 				<SectionHeader
 					title="Navigation"
 					description="Primary page-level navigation and smaller sub-navigation patterns. They should be shared, calm, and consistent across major app surfaces."
@@ -43,7 +47,11 @@ export function NavigationSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-breadcrumb">
+			<section
+				className="space-y-4"
+				id="style-guide-breadcrumb"
+				data-testid="style-guide-breadcrumb"
+			>
 				<SectionHeader
 					title="Breadcrumb"
 					description="Compressed location trail for deeper pages. Use it when the route hierarchy matters and users need a clear path back."
@@ -68,7 +76,11 @@ export function NavigationSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-context-bar">
+			<section
+				className="space-y-4"
+				id="style-guide-context-bar"
+				data-testid="style-guide-context-bar"
+			>
 				<SectionHeader
 					title="Context Bar"
 					description="Top-level subview navigation with one clear way back, a breadcrumb trail, and optional right-side controls."
@@ -94,7 +106,11 @@ export function NavigationSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-navigation-list">
+			<section
+				className="space-y-4"
+				id="style-guide-navigation-list"
+				data-testid="style-guide-navigation-list"
+			>
 				<SectionHeader
 					title="Navigation List"
 					description="Sectioned list pattern with headers and items. Each item can carry an icon or profile image in front, plus optional trailing metadata."

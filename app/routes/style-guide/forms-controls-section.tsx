@@ -24,7 +24,11 @@ import { SectionHeader } from "./layout";
 export function FormsControlsSection() {
 	return (
 		<>
-			<section className="space-y-4" data-testid="style-guide-input">
+			<section
+				className="space-y-4"
+				id="style-guide-input"
+				data-testid="style-guide-input"
+			>
 				<SectionHeader
 					title="Input"
 					description="Single-line field for search, auth, settings, and lightweight form capture. It now supports optional prefix and suffix content, including icon and button affordances."
@@ -70,7 +74,11 @@ export function FormsControlsSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-label">
+			<section
+				className="space-y-4"
+				id="style-guide-label"
+				data-testid="style-guide-label"
+			>
 				<SectionHeader
 					title="Label"
 					description="Form field label primitive. Keep it quiet, readable, and consistent instead of redefining label styling in each route."
@@ -95,7 +103,11 @@ export function FormsControlsSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-textarea">
+			<section
+				className="space-y-4"
+				id="style-guide-textarea"
+				data-testid="style-guide-textarea"
+			>
 				<SectionHeader
 					title="Textarea"
 					description="Multi-line field for posting, setup descriptions, and longer settings content. Use for composition surfaces that need clear vertical rhythm."
@@ -120,7 +132,11 @@ export function FormsControlsSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-selector">
+			<section
+				className="space-y-4"
+				id="style-guide-selector"
+				data-testid="style-guide-selector"
+			>
 				<SectionHeader
 					title="Selector"
 					description="Anchored suggestion surface for rich-text linking and mention-style flows. Use it when typing in a text field should open a focused list of profiles, posts, groups, or other structured targets."

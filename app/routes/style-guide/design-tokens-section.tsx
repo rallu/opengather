@@ -8,7 +8,11 @@ export function DesignTokensSection() {
 			title="Design Tokens"
 			description="Foundational values for color, typography, spacing, and shape. These define the visual baseline before component-specific decisions begin."
 		>
-			<section className="space-y-4" data-testid="style-guide-tokens-colors">
+			<section
+				className="space-y-4"
+				id="style-guide-tokens-colors"
+				data-testid="style-guide-tokens-colors"
+			>
 				<SectionHeader
 					title="Colors"
 					description="Semantic color roles should be used through tokens rather than hard-coded values in routes or one-off components."
@@ -87,7 +91,11 @@ export function DesignTokensSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-tokens-fonts">
+			<section
+				className="space-y-4"
+				id="style-guide-tokens-fonts"
+				data-testid="style-guide-tokens-fonts"
+			>
 				<SectionHeader
 					title="Fonts"
 					description="The system currently uses a single sans family. Weight and size changes should do more work than adding unrelated font pairings."
@@ -103,7 +111,11 @@ export function DesignTokensSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-tokens-headings">
+			<section
+				className="space-y-4"
+				id="style-guide-tokens-headings"
+				data-testid="style-guide-tokens-headings"
+			>
 				<SectionHeader
 					title="Headings"
 					description="The typography token scale should stay simple: a display heading plus H2 through H4. Component-specific titles belong in components, not in the token layer."
@@ -139,7 +151,11 @@ export function DesignTokensSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-tokens-body-text">
+			<section
+				className="space-y-4"
+				id="style-guide-tokens-body-text"
+				data-testid="style-guide-tokens-body-text"
+			>
 				<SectionHeader
 					title="Body Text"
 					description="Body copy should stay readable and calm, with line-height tuned for product scanning rather than editorial drift."
@@ -159,7 +175,11 @@ export function DesignTokensSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-tokens-spacing">
+			<section
+				className="space-y-4"
+				id="style-guide-tokens-spacing"
+				data-testid="style-guide-tokens-spacing"
+			>
 				<SectionHeader
 					title="Spacing"
 					description="Spacing should stay systematic and restrained. The system should prefer a few repeatable gaps over many custom offsets."
@@ -185,7 +205,11 @@ export function DesignTokensSection() {
 					</CardContent>
 				</Card>
 			</section>
-			<section className="space-y-4" data-testid="style-guide-tokens-radius">
+			<section
+				className="space-y-4"
+				id="style-guide-tokens-radius"
+				data-testid="style-guide-tokens-radius"
+			>
 				<SectionHeader
 					title="Corner Radius"
 					description="Corner radius should stay moderate. Most surfaces should feel precise rather than overly soft."

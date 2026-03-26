@@ -19,7 +19,11 @@ export function LayoutsSection() {
 			title="Layouts"
 			description="Core page arrangements for centered feeds and media-plus-sidebar surfaces."
 		>
-			<section className="space-y-4" data-testid="style-guide-layout-centered">
+			<section
+				className="space-y-4"
+				id="style-guide-layout-centered"
+				data-testid="style-guide-layout-centered"
+			>
 				<SectionHeader
 					title="Centered Feed Layout"
 					description="Default feed layout with a single centered content column. Use it for posts and other linear reading flows where sidebars would add noise."
@@ -65,6 +69,7 @@ export function LayoutsSection() {
 			</section>
 			<section
 				className="space-y-4"
+				id="style-guide-layout-right-sidebar"
 				data-testid="style-guide-layout-right-sidebar"
 			>
 				<SectionHeader
