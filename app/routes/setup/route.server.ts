@@ -1,4 +1,4 @@
-import type { ActionFunctionArgs } from "react-router";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { redirect } from "react-router";
 import {
 	hasDatabaseConfig,
@@ -13,14 +13,18 @@ import {
 } from "~/server/logger.server";
 import { getPublicOrigin } from "~/server/request-origin.server.ts";
 import { getSetupStatus, initializeSetup } from "~/server/setup.service.server";
+import { resolveSetupAppOrigin } from "~/server/setup-origin.server.ts";
 
 export type SetupLoaderData = {
 	hubAvailable: boolean;
+	appBaseUrl: string;
 };
 
 export type SetupActionData = { error: string } | undefined;
 
-export async function loader(): Promise<SetupLoaderData | Response> {
+export async function loader({
+	request,
+}: LoaderFunctionArgs): Promise<SetupLoaderData | Response> {
 	if (!hasDatabaseConfig()) {
 		return redirect("/database-required");
 	}
@@ -36,6 +40,7 @@ export async function loader(): Promise<SetupLoaderData | Response> {
 
 	return {
 		hubAvailable: hasHubBaseUrlConfigured(),
+		appBaseUrl: getPublicOrigin(request),
 	};
 }
 
@@ -47,8 +52,8 @@ export async function action({
 		return redirect("/database-required");
 	}
 
-	const appOrigin = getPublicOrigin(request);
 	const formData = await request.formData();
+	const appOrigin = resolveSetupAppOrigin(request, formData);
 	const name = String(formData.get("name") ?? "").trim();
 	const description = String(formData.get("description") ?? "").trim();
 	const adminName = String(formData.get("adminName") ?? "").trim();

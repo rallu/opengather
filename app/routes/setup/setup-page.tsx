@@ -24,6 +24,25 @@ export function SetupPage(params: {
 				data-testid="setup-form"
 				aria-busy={params.loading}
 			>
+				<div className="space-y-2">
+					<label htmlFor="setup-app-base-url" className="text-sm font-medium">
+						Public app URL (APP_BASE_URL)
+					</label>
+					<input
+						id="setup-app-base-url"
+						data-testid="setup-app-base-url"
+						name="appOrigin"
+						type="url"
+						required
+						defaultValue={params.data.appBaseUrl}
+						className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+						placeholder="https://gather.example.com"
+					/>
+					<p className="text-sm text-muted-foreground">
+						Canonical URL for this server (scheme, host, and port if needed).
+						Edit if the detected value is wrong behind a reverse proxy.
+					</p>
+				</div>
 				{params.actionData && "error" in params.actionData ? (
 					<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
 						{params.actionData.error}

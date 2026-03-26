@@ -4,9 +4,31 @@ OpenGather is a self-hosted, privacy-first distributed social network designed t
 
 ## ONCE Install
 
-An ONCE install script is coming soon.
+[ONCE](https://github.com/basecamp/once) is simple hosting for Docker-based web apps: it installs Docker for you, keeps backups, and updates your container image on a schedule.
 
-The repository already includes an ONCE-compatible container image so the deployment path is ready while the install script is being finalized.
+### Install the ONCE CLI
+
+On the machine that will run OpenGather:
+
+```bash
+curl https://get.once.com | sh
+```
+
+### Deploy OpenGather
+
+Use either the interactive flow or a one-liner.
+
+- Interactive (`once` TUI): Run `once`, choose to install a custom image, and enter `ghcr.io/rallu/opengather`. When prompted, use the hostname that already points at this machine (DNS should resolve to it before you start the TUI).
+
+- Localhost: deploy to localhost with:
+
+```bash
+once deploy ghcr.io/rallu/opengather
+```
+
+After a localhost deploy, the app is usually served at [opengather.localhost](http://opengather.localhost). If you configured a public hostname in the TUI, use that URL instead.
+
+You can set `APP_BASE_URL` to that origin in the container environment (recommended for reverse proxies and fixed hostnames). If you omit it, complete [first-run setup](#custom-installation) in the browser at the URL you intend to use; the app stores that origin and uses it for auth and links. See the ONCE-Compatible Container subsection under [Custom Installation](#custom-installation).
 
 ## What OpenGather Is
 
@@ -34,24 +56,28 @@ This repository includes an ONCE-compatible image that:
 - stores mutable data under `/storage`
 - boots an internal Postgres instance automatically when `DATABASE_URL` is not set
 
-Build and run it locally:
+Build and run it locally (set `APP_BASE_URL` to the URL you open in the browser; with `-p 8080:80` that is `http://localhost:8080`):
 
 ```bash
 docker build -t opengather-once .
-docker run --rm -p 8080:80 -v opengather-storage:/storage opengather-once
+docker run --rm -p 8080:80 \
+  -e APP_BASE_URL=http://localhost:8080 \
+  -v opengather-storage:/storage \
+  opengather-once
 ```
+
+**`APP_BASE_URL`** — Optional but recommended. When set, it overrides the stored setup URL. Canonical origin: scheme, host, and port if it is not the default for that scheme (no trailing slash). Use your real public URL in production (for example `https://gather.example.com`). For ONCE installs, set it to the hostname you configured (for example `https://gather.example.com` or `http://opengather.localhost`) if it should differ from what you confirm during setup. Behind a reverse proxy, setting this to the public HTTPS URL clients use avoids relying on proxy headers alone.
+
+If you leave it unset, the origin from first-run setup is written to `$STORAGE_ROOT/app-base-url` (default `./storage/app-base-url` in development, `/storage/app-base-url` in the ONCE image) and read synchronously at runtime. `APP_BASE_URL` still overrides that file when set.
 
 Optional environment variables for the ONCE image:
 
 - `DATABASE_URL` if you want to use an external Postgres instance
 - `BETTER_AUTH_SECRET` or `SECRET_KEY_BASE` for auth signing
-- `APP_BASE_URL` when running behind a reverse proxy
 - `HUB_BASE_URL` only if you want to enable optional Hub integration
 - `INTERNAL_POSTGRES_DB`
 - `INTERNAL_POSTGRES_USER`
 - `INTERNAL_POSTGRES_PASSWORD`
-
-The setup flow respects forwarded headers and `APP_BASE_URL`, so reverse-proxied installs can persist the public HTTPS origin correctly.
 
 ### Manual Node Installation
 
@@ -71,6 +97,8 @@ nvm use
 
    - `DATABASE_URL`
    - `BETTER_AUTH_SECRET`
+
+   `APP_BASE_URL` is optional if you will finish first-run setup in the browser at your real URL (the setup flow saves it). For local development on the default Vite port, set `APP_BASE_URL=http://localhost:5173` so behavior matches the address bar before setup.
 
    `HUB_BASE_URL` is optional and only needed when you want Hub integration enabled in the UI.
 

@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import { ensureAppBaseUrlReady } from "~/server/app-base-url-bootstrap.server";
 import { getBetterAuth, getBetterAuthForHubOAuth } from "~/server/auth.server";
 import { captureMonitoredError } from "~/server/error-monitoring.server";
 import {
@@ -84,6 +85,7 @@ async function handleAuthRequest(params: {
 	}
 
 	try {
+		await ensureAppBaseUrlReady();
 		const auth = requiresHubOAuthHandler(params.request)
 			? await getBetterAuthForHubOAuth()
 			: getBetterAuth();

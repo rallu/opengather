@@ -1,3 +1,4 @@
+import { ensureAppBaseUrlReady } from "./app-base-url-bootstrap.server.ts";
 import { getBetterAuth } from "./auth.server.ts";
 import {
 	getHubIdentityForLocalUser,
@@ -32,7 +33,8 @@ export async function getAuthUserFromRequest(params: {
 	email: string;
 } | null> {
 	try {
-		const auth = await getBetterAuth();
+		await ensureAppBaseUrlReady();
+		const auth = getBetterAuth();
 		const session = await auth.api.getSession({
 			headers: params.request.headers,
 		});

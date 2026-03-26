@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { getBetterAuth } from "./auth.server.ts";
+import { writePersistedAppBaseUrl } from "./app-base-url-storage.server.ts";
+import { getBetterAuth, resetBetterAuthSingleton } from "./auth.server.ts";
 import {
 	getConfig,
 	hasAnyConfig,
@@ -108,8 +109,11 @@ export async function initializeSetup(params: {
 		setConfig("hub_instance_base_url", params.hub.instanceBaseUrl),
 	]);
 
+	writePersistedAppBaseUrl(params.betterAuthUrl);
+	resetBetterAuthSingleton();
+
 	const now = new Date();
-	const auth = await getBetterAuth();
+	const auth = getBetterAuth();
 	let adminResult:
 		| {
 				user?: {

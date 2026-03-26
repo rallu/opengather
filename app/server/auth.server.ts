@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
+import { readPersistedAppBaseUrl } from "./app-base-url-storage.server.ts";
 import { getServerConfig } from "./config.service.server.ts";
 import { getDb } from "./db.server.ts";
 import { getAppEnv, getAuthEnv, hasDatabaseConfig } from "./env.server.ts";
@@ -79,27 +80,54 @@ function createAuth(params: {
 
 type BetterAuthInstance = ReturnType<typeof createAuth>;
 
-let baseAuthSingleton: BetterAuthInstance | null = null;
+let baseAuthSingleton: {
+	key: string;
+	auth: BetterAuthInstance;
+} | null = null;
 let hubAuthSingleton: {
 	key: string;
 	auth: BetterAuthInstance;
 } | null = null;
 
-export function getBetterAuth(): BetterAuthInstance {
-	if (baseAuthSingleton) {
-		return baseAuthSingleton;
+function resolveBaseBetterAuthUrl(): string {
+	const env = getAppEnv().APP_BASE_URL.trim();
+	if (env) {
+		return env.replace(/\/+$/, "");
 	}
 
+	const fromDisk = readPersistedAppBaseUrl();
+	if (fromDisk) {
+		return fromDisk;
+	}
+
+	return "http://localhost:5173";
+}
+
+/**
+ * Clears the cached Better Auth instance so the next call rebuilds with
+ * current env / stored `better_auth_url` (e.g. after setup completes).
+ */
+export function resetBetterAuthSingleton(): void {
+	baseAuthSingleton = null;
+}
+
+export function getBetterAuth(): BetterAuthInstance {
 	if (!hasDatabaseConfig()) {
 		throw new Error("DATABASE_URL is not configured");
 	}
 
-	baseAuthSingleton = createAuth({
-		betterAuthUrl: getAppEnv().APP_BASE_URL || "http://localhost:5173",
+	const resolvedUrl = resolveBaseBetterAuthUrl();
+	if (baseAuthSingleton && baseAuthSingleton.key === resolvedUrl) {
+		return baseAuthSingleton.auth;
+	}
+
+	const auth = createAuth({
+		betterAuthUrl: resolvedUrl,
 		google: null,
 		hub: null,
 	});
-	return baseAuthSingleton;
+	baseAuthSingleton = { key: resolvedUrl, auth };
+	return auth;
 }
 
 export async function getBetterAuthForHubOAuth(): Promise<BetterAuthInstance> {
