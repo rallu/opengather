@@ -123,6 +123,9 @@ export function CommunityPage(params: {
 							key={post.id}
 							post={post}
 							isAdmin={params.data.viewerRole === "admin"}
+							canInlineReply={
+								Boolean(params.data.authUser) && params.data.status === "ok"
+							}
 						/>
 					)}
 				/>

@@ -199,6 +199,7 @@ export default function ProfileDetailPage() {
 								key={post.id}
 								post={post}
 								isAdmin={data.viewerRole === "admin"}
+								showModerationActions={false}
 							/>
 						))
 					)}

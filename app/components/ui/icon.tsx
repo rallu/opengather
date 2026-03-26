@@ -8,6 +8,7 @@ import {
 	CircleMinus,
 	CirclePlus,
 	Compass,
+	Ellipsis,
 	Grid2X2,
 	Home,
 	ImagePlus,
@@ -17,6 +18,7 @@ import {
 	Menu,
 	MessageSquare,
 	Paperclip,
+	Pen,
 	Search,
 	SendHorizontal,
 	Settings,
@@ -39,6 +41,7 @@ const icons = {
 	circleMinus: CircleMinus,
 	circlePlus: CirclePlus,
 	compass: Compass,
+	ellipsis: Ellipsis,
 	grid2x2: Grid2X2,
 	home: Home,
 	imagePlus: ImagePlus,
@@ -54,6 +57,7 @@ const icons = {
 	users: Users,
 	video: Video,
 	x: X,
+	reply: Pen,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons;

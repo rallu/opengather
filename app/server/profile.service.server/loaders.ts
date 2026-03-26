@@ -141,7 +141,7 @@ async function loadVisibleProfilePostItems(params: {
 		...mapPostListItem(
 			row,
 			"newest",
-			authorMap.get(row.authorId) ?? { name: "Member" },
+			authorMap.get(row.authorId) ?? { id: row.authorId, name: "Member" },
 		),
 		assets: assetMap.get(row.id) ?? [],
 	}));

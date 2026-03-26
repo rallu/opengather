@@ -17,6 +17,11 @@ export type PostListScope =
 			groupId: string;
 	  };
 
+export type PostGroup = {
+	id: string;
+	name: string;
+};
+
 export type PostListItem = {
 	id: string;
 	parentPostId?: string;
@@ -24,10 +29,7 @@ export type PostListItem = {
 	author: PostAuthorSummary;
 	bodyText?: string;
 	assets: PostAssetSummary[];
-	group?: {
-		id: string;
-		name: string;
-	};
+	group?: PostGroup;
 	moderationStatus: "pending" | "approved" | "rejected" | "flagged";
 	isHidden: boolean;
 	isDeleted: boolean;

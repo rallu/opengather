@@ -217,7 +217,7 @@ export async function createPost(params: {
 	const createdPost: CreatedPostSummary = {
 		id: created.id,
 		parentPostId: params.parentPostId ?? undefined,
-		author: authorMap.get(authorId) ?? { name: "Member" },
+		author: authorMap.get(authorId) ?? { id: authorId, name: "Member" },
 		bodyText: text,
 		assets: assetMap.get(created.id) ?? [],
 		group: effectiveGroupId

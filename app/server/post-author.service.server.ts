@@ -1,8 +1,10 @@
 import { getDb } from "./db.server.ts";
 
 export type PostAuthorSummary = {
+	id: string;
 	name: string;
 	imageSrc?: string;
+	profilePath?: string;
 };
 
 const FALLBACK_AUTHOR_NAME = "Member";
@@ -57,8 +59,10 @@ export async function loadPostAuthorSummaryMap(params: {
 
 	for (const user of users) {
 		const summary = {
+			id: user.id,
 			name: user.name.trim() || FALLBACK_AUTHOR_NAME,
 			imageSrc: user.image ?? undefined,
+			profilePath: `/profiles/${user.id}`,
 		} satisfies PostAuthorSummary;
 
 		if (authorIds.includes(user.id)) {
@@ -73,6 +77,7 @@ export async function loadPostAuthorSummaryMap(params: {
 	for (const authorId of authorIds) {
 		if (!summaries.has(authorId)) {
 			summaries.set(authorId, {
+				id: authorId,
 				name: FALLBACK_AUTHOR_NAME,
 			});
 		}

@@ -1,5 +1,14 @@
 import { ProfileImage } from "~/components/profile/profile-image";
 import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
+import type { PostAuthorSummary } from "~/server/post-author.service.server";
+import type { PostGroup } from "~/server/post-list.service.server/core";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbSeparator,
+} from "../ui/breadcrumb";
 import { PostHeading } from "./post-heading";
 import { PostLabels } from "./post-labels";
 
@@ -16,29 +25,29 @@ function buildAuthorFallback(name: string) {
 }
 
 type PostHeaderProps = {
-	authorName: string;
-	authorImageSrc?: string;
+	author: PostAuthorSummary;
 	createdAt?: string;
+	group?: PostGroup;
 	moderationStatus?: "pending" | "approved" | "rejected" | "flagged";
 	isHidden?: boolean;
 	isDeleted?: boolean;
 };
 
 export function PostHeader({
-	authorName,
-	authorImageSrc,
+	author,
 	createdAt,
 	moderationStatus,
+	group,
 	isHidden = false,
 	isDeleted = false,
 }: PostHeaderProps) {
-	const displayAuthor = authorName.trim() || "Member";
+	const displayAuthor = author.name.trim() || "Member";
 
 	return (
 		<PostHeading
 			media={
 				<ProfileImage
-					src={authorImageSrc}
+					src={author.imageSrc}
 					alt={displayAuthor}
 					fallback={buildAuthorFallback(displayAuthor)}
 					size="md"
@@ -46,7 +55,27 @@ export function PostHeader({
 			}
 			title={
 				<span className="flex flex-wrap items-center gap-2">
-					<span>{displayAuthor}</span>
+					<Breadcrumb>
+						<BreadcrumbList>
+							<BreadcrumbItem>
+								<BreadcrumbLink
+									to={author.profilePath ?? `/profiles/${author.id}`}
+								>
+									{author.name}
+								</BreadcrumbLink>
+							</BreadcrumbItem>
+							{group ? (
+								<>
+									<BreadcrumbSeparator />
+									<BreadcrumbItem>
+										<BreadcrumbLink to={`/groups/${group.id}`}>
+											{group.name}
+										</BreadcrumbLink>
+									</BreadcrumbItem>
+								</>
+							) : null}
+						</BreadcrumbList>
+					</Breadcrumb>
 					<PostLabels
 						moderationStatus={moderationStatus}
 						isHidden={isHidden}

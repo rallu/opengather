@@ -85,9 +85,9 @@ export function PostDetailPage(params: {
 
 				<Container data-testid="post-detail-root" className="p-4">
 					<PostHeader
-						authorName={post.author.name}
-						authorImageSrc={post.author.imageSrc}
+						author={post.author}
 						createdAt={post.createdAt}
+						group={post.group}
 						moderationStatus={post.moderationStatus}
 						isHidden={post.isHidden}
 						isDeleted={post.isDeleted}

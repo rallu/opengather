@@ -151,7 +151,10 @@ export async function loadCommunityPostThread(params: {
 			mapPost({
 				row: {
 					...row,
-					author: authorMap.get(row.authorId) ?? { name: "Member" },
+					author: authorMap.get(row.authorId) ?? {
+						id: row.authorId,
+						name: "Member",
+					},
 					assets: assetMap.get(row.id) ?? [],
 				},
 			}),

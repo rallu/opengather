@@ -195,7 +195,7 @@ export async function loadPostListPage(params: {
 		...mapPostListItem(
 			row,
 			params.sortMode,
-			authorMap.get(row.authorId) ?? { name: "Member" },
+			authorMap.get(row.authorId) ?? { id: row.authorId, name: "Member" },
 		),
 		assets: assetMap.get(row.id) ?? [],
 	}));

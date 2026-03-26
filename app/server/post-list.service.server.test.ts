@@ -13,6 +13,7 @@ function buildItem(
 	return {
 		threadDepth: 0,
 		author: {
+			id: "member",
 			name: "Member",
 		},
 		assets: [],

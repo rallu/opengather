@@ -68,7 +68,13 @@ export function GroupFeedSection(params: {
 						No posts in this group yet.
 					</div>
 				}
-				renderItem={(post) => <GroupFeedItem key={post.id} post={post} />}
+				renderItem={(post) => (
+					<GroupFeedItem
+						key={post.id}
+						post={post}
+						canInlineReply={params.data.canPost}
+					/>
+				)}
 			/>
 		</FeedContainer>
 	);

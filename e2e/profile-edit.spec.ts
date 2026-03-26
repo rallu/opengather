@@ -112,3 +112,77 @@ test("profile details can be edited from profile route", async ({ page }) => {
 		"This is my updated profile summary for route verification.",
 	);
 });
+
+test("feed post menu links to the author's public profile", async ({ page }) => {
+	await ensureConfiguredInstance(page);
+
+	const stamp = Date.now();
+	const account = {
+		name: `Feed Author ${stamp}`,
+		email: `feed-author-${stamp}@example.com`,
+		password: "author-pass-123",
+	};
+	const postText = `Feed post ${stamp}`;
+
+	await registerUser({ page, ...account });
+	const userId = await getUserIdByEmail(account.email);
+
+	await page.goto("/feed");
+	await page.getByTestId("feed-composer").fill(postText);
+	await page.getByTestId("feed-post-button").click();
+	await expect(page.getByTestId("feed-post-list")).toContainText(postText);
+	await expect(page.getByText("Start discussion")).toHaveCount(0);
+	await expect(
+		page.locator("[data-testid^='feed-comment-action-']").first(),
+	).toContainText("0 comments");
+
+	await page
+		.locator("[data-testid^='feed-post-menu-trigger-']")
+		.first()
+		.click();
+	await page.locator("[data-testid^='feed-post-profile-link-']").first().click();
+	await expect(page).toHaveURL(new RegExp(`/profiles/${userId}$`));
+});
+
+test("feed reply opens inline composer and redirects to post detail after submit", async ({
+	page,
+}) => {
+	await ensureConfiguredInstance(page);
+
+	const stamp = Date.now();
+	const account = {
+		name: `Reply Author ${stamp}`,
+		email: `reply-author-${stamp}@example.com`,
+		password: "author-pass-123",
+	};
+	const replyText = `Inline reply ${stamp}`;
+
+	await registerUser({ page, ...account });
+
+	await page.goto("/feed");
+	const firstThreadLink = page.locator("[data-testid^='feed-thread-link-']").first();
+	const postPath = await firstThreadLink.getAttribute("href");
+	if (!postPath) {
+		throw new Error("Expected first feed post to have a thread link");
+	}
+	const initialCommentText =
+		(await page.locator("[data-testid^='feed-comment-action-']").first().textContent()) ??
+		"0 comments";
+	const initialComments = Number.parseInt(initialCommentText, 10) || 0;
+
+	await page.locator("[data-testid^='feed-reply-action-']").first().click();
+	const postCard = page.locator("[data-testid^='feed-post-'][data-thread-depth]").first();
+	const inlineReply = postCard.locator("[data-testid^='feed-inline-reply-body-']");
+	await expect(inlineReply).toBeVisible();
+	await inlineReply.fill(replyText);
+	await postCard.locator("[data-testid^='feed-inline-reply-submit-']").click();
+
+	await expect(page).toHaveURL(new RegExp(`${postPath}$`));
+	await expect(page.getByTestId("post-detail-comments")).toContainText(replyText);
+	await page.goto("/feed");
+	await expect(
+		page.locator("[data-testid^='feed-comment-action-']").first(),
+	).toContainText(
+		`${initialComments + 1} ${initialComments + 1 === 1 ? "comment" : "comments"}`,
+	);
+});

@@ -64,7 +64,7 @@ const PostComposer = React.forwardRef<HTMLDivElement, PostComposerProps>(
 			submittingLabel ?? (variant === "post" ? "Posting" : resolvedSubmitLabel);
 		const isCollapsible = variant === "post";
 		const resolvedRows =
-			isCollapsible && !isExpanded ? 1 : rows ?? (variant === "post" ? 4 : 3);
+			isCollapsible && !isExpanded ? 1 : (rows ?? (variant === "post" ? 4 : 3));
 
 		React.useEffect(() => {
 			setValue(defaultValue ?? "");
@@ -137,15 +137,15 @@ const PostComposer = React.forwardRef<HTMLDivElement, PostComposerProps>(
 
 							event.currentTarget.form?.requestSubmit();
 						}}
-							className={cn(
-								"resize-none overflow-hidden border-0 bg-transparent text-[15px] leading-7 shadow-none transition-[min-height,padding] duration-150 focus-visible:ring-0 focus-visible:ring-offset-0",
-								variant === "post"
-									? isExpanded
-										? "min-h-32 px-4 py-4 sm:min-h-36"
-										: "min-h-0 px-4 py-3 leading-6"
-									: "min-h-28 px-4 py-4",
-							)}
-						/>
+						className={cn(
+							"resize-none overflow-hidden border-0 bg-transparent text-[15px] leading-7 shadow-none transition-[min-height,padding] duration-150 focus-visible:ring-0 focus-visible:ring-offset-0",
+							variant === "post"
+								? isExpanded
+									? "min-h-32 px-4 py-4 sm:min-h-36"
+									: "min-h-0 px-4 py-3 leading-6"
+								: "min-h-28 px-4 py-4",
+						)}
+					/>
 					<div
 						className={cn(
 							"flex flex-wrap items-center justify-between gap-2 overflow-hidden border-border/70 bg-muted/20 transition-all duration-150",
