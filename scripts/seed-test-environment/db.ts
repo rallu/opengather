@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../app/generated/prisma-node/client.ts";
-import { SEED_USERS } from "./data";
+import { SEED_USERS } from "./data.ts";
 
 export function createDb() {
 	const databaseUrl = process.env.DATABASE_URL;

@@ -34,6 +34,9 @@ type Pages = {
   "/api/post-list": {
     params: {};
   };
+  "/api/search": {
+    params: {};
+  };
   "/api/notifications/summary": {
     params: {};
   };
@@ -111,7 +114,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/api/post-list" | "/api/notifications/summary" | "/.well-known/appspecific/com.chrome.devtools.json" | "/media/:assetId/:variantKey" | "/metrics" | "/up" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles/:userId" | "/notifications" | "/approvals" | "/settings" | "/server-settings" | "/audit-logs";
+    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/api/post-list" | "/api/search" | "/api/notifications/summary" | "/.well-known/appspecific/com.chrome.devtools.json" | "/media/:assetId/:variantKey" | "/metrics" | "/up" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles/:userId" | "/notifications" | "/approvals" | "/settings" | "/server-settings" | "/audit-logs";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -140,6 +143,10 @@ type RouteFiles = {
   "routes/api-post-list.tsx": {
     id: "routes/api-post-list";
     page: "/api/post-list";
+  };
+  "routes/api-search.tsx": {
+    id: "routes/api-search";
+    page: "/api/search";
   };
   "routes/api-notifications-summary.tsx": {
     id: "routes/api-notifications-summary";
@@ -236,6 +243,7 @@ type RouteModules = {
   "routes/hub-callback": typeof import("./app/routes/hub-callback.tsx");
   "routes/api-auth": typeof import("./app/routes/api-auth.ts");
   "routes/api-post-list": typeof import("./app/routes/api-post-list.tsx");
+  "routes/api-search": typeof import("./app/routes/api-search.tsx");
   "routes/api-notifications-summary": typeof import("./app/routes/api-notifications-summary.tsx");
   "routes/chrome-devtools-workspace": typeof import("./app/routes/chrome-devtools-workspace.ts");
   "routes/media-asset": typeof import("./app/routes/media-asset.ts");

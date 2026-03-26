@@ -30,6 +30,10 @@ const routes: RouteConfig = [
 		file: "routes/api-post-list.tsx",
 	},
 	{
+		path: "/api/search",
+		file: "routes/api-search.tsx",
+	},
+	{
 		path: "/api/notifications/summary",
 		file: "routes/api-notifications-summary.tsx",
 	},

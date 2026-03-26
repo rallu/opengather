@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { Form, Link, useFetcher, useLocation } from "react-router";
+import { Link, useFetcher, useLocation } from "react-router";
+import { ShellSearch } from "~/components/search/shell-search";
 import { Button } from "~/components/ui/button";
 import { Container } from "~/components/ui/container";
 import {
@@ -12,7 +13,6 @@ import {
 	DialogTitle,
 } from "~/components/ui/dialog";
 import { Icon } from "~/components/ui/icon";
-import { Input } from "~/components/ui/input";
 import { signOut } from "~/lib/auth-client";
 import { cn } from "~/lib/utils";
 
@@ -184,17 +184,9 @@ export function AppShell(props: AppShellProps) {
 	const asideContent = props.aside ?? defaultAside;
 
 	const searchForm = (testId: string) => (
-		<Form method="get" action="/feed" className="min-w-0 flex-1">
-			<Input
-				name="q"
-				data-testid={testId}
-				defaultValue={searchQuery}
-				placeholder="Search"
-				className="h-10"
-				inputClassName="text-sm"
-				leadingAccessory={<Icon name="search" size={14} />}
-			/>
-		</Form>
+		<div className="min-w-0 flex-1">
+			<ShellSearch initialQuery={searchQuery} testId={testId} />
+		</div>
 	);
 
 	const authControls = (variant: "desktop" | "mobile") =>
