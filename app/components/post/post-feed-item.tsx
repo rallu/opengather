@@ -11,11 +11,13 @@ import {
 	DropdownTrigger,
 } from "~/components/ui/dropdown";
 import { Icon } from "~/components/ui/icon";
+import { plainTextToRichTextDocument } from "~/lib/rich-text";
 import type { PostListItem } from "~/server/post-list.service.server";
 import { PostAssetDisplay } from "./post-asset-display";
 import { PostComposer } from "./post-composer";
 import { PostContent } from "./post-content";
 import { PostHeader } from "./post-header";
+import { PostRichTextContent } from "./post-rich-text-content";
 
 type InlineReplyActionData =
 	| {
@@ -165,7 +167,10 @@ export function PostFeedItem(params: {
 					className="mt-3 block rounded-xl px-4 pb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 sm:px-5 sm:pb-5"
 				>
 					<PostContent className="space-y-4">
-						<p className="text-[15px] leading-8">{params.post.bodyText}</p>
+						<PostRichTextContent
+							document={plainTextToRichTextDocument(params.post.bodyText ?? "")}
+							className="text-[15px] leading-8"
+						/>
 						<PostAssetDisplay
 							assets={params.post.assets}
 							playableVideo={false}

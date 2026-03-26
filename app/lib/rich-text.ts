@@ -117,6 +117,76 @@ export function parseRichTextDocument(value: unknown): RichTextDocument | null {
 	return isRichTextDocument(value) ? value : null;
 }
 
+function getLinkTargetForToken(token: string): RichTextLinkTarget | null {
+	if (/^https?:\/\//i.test(token)) {
+		return { type: "external", href: token };
+	}
+
+	if (/^\/[\w./#-]*$/.test(token)) {
+		return { type: "route", to: token };
+	}
+
+	const mentionMatch = token.match(/^@([a-zA-Z0-9._-]{2,})$/);
+	if (mentionMatch) {
+		return {
+			type: "profile",
+			profileId: mentionMatch[1],
+			to: `/profile/${mentionMatch[1]}`,
+		};
+	}
+
+	return null;
+}
+
+function toInlineNodes(text: string): RichTextInline[] {
+	const tokenPattern = /(https?:\/\/[^\s]+|\/[\w./#-]+|@[a-zA-Z0-9._-]{2,})/g;
+	const nodes: RichTextInline[] = [];
+	let lastIndex = 0;
+
+	for (const match of text.matchAll(tokenPattern)) {
+		const index = match.index ?? 0;
+		const matchedText = match[0] ?? "";
+		if (index > lastIndex) {
+			nodes.push({
+				type: "text",
+				text: text.slice(lastIndex, index),
+			});
+		}
+
+		const target = getLinkTargetForToken(matchedText);
+		if (target) {
+			nodes.push({ type: "link", text: matchedText, target });
+		} else {
+			nodes.push({ type: "text", text: matchedText });
+		}
+
+		lastIndex = index + matchedText.length;
+	}
+
+	if (lastIndex < text.length) {
+		nodes.push({ type: "text", text: text.slice(lastIndex) });
+	}
+
+	if (nodes.length === 0) {
+		nodes.push({ type: "text", text: "" });
+	}
+
+	return nodes;
+}
+
+export function plainTextToRichTextDocument(text: string): RichTextDocument {
+	const normalized = text.replace(/\r\n/g, "\n");
+	const paragraphs = normalized.split(/\n{2,}/);
+
+	return {
+		version: RICH_TEXT_VERSION,
+		blocks: paragraphs.map((paragraph) => ({
+			type: "paragraph",
+			children: toInlineNodes(paragraph),
+		})),
+	};
+}
+
 export function resolveRichTextLinkTarget(target: RichTextLinkTarget): string {
 	switch (target.type) {
 		case "external":
