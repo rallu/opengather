@@ -16,6 +16,7 @@ import { Icon } from "~/components/ui/icon";
 import { IconButton } from "~/components/ui/icon-button";
 import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
 import { useFormatDateTime } from "~/lib/render-intl-context";
+import { plainTextToRichTextDocument } from "~/lib/rich-text";
 import { cn } from "~/lib/utils";
 import type { PostAssetSummary } from "~/server/post-assets.server";
 import {
@@ -25,6 +26,7 @@ import {
 } from "./post-actions";
 import { PostAssetDisplay } from "./post-asset-display";
 import { PostLabels } from "./post-labels";
+import { PostRichTextContent } from "./post-rich-text-content";
 
 export type PostCommentData = {
 	id: string;
@@ -114,7 +116,9 @@ export function PostComment({
 						<ChatBubble>
 							<ChatBubbleContent>
 								<ChatBubbleBody>
-									<p>{comment.body || "(no text)"}</p>
+									<PostRichTextContent
+										document={plainTextToRichTextDocument(comment.body || "")}
+									/>
 									{comment.assets?.length ? (
 										<PostAssetDisplay
 											assets={comment.assets}

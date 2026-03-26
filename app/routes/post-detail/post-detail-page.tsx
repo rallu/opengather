@@ -6,9 +6,11 @@ import { PostAssetInput } from "~/components/post/post-asset-input";
 import { PostComposer } from "~/components/post/post-composer";
 import { PostContent } from "~/components/post/post-content";
 import { PostHeader } from "~/components/post/post-header";
+import { PostRichTextContent } from "~/components/post/post-rich-text-content";
 import { Container } from "~/components/ui/container";
 import { ContextBar } from "~/components/ui/context-bar";
 import { FeedContainer } from "~/components/ui/feed-container";
+import { plainTextToRichTextDocument } from "~/lib/rich-text";
 import {
 	canReplyToThread,
 	countThreadReplies,
@@ -93,7 +95,9 @@ export function PostDetailPage(params: {
 						isDeleted={post.isDeleted}
 					/>
 					<PostContent className="mt-4">
-						<p>{post.bodyText}</p>
+						<PostRichTextContent
+							document={plainTextToRichTextDocument(post.bodyText ?? "")}
+						/>
 						<PostAssetDisplay assets={post.assets} />
 					</PostContent>
 				</Container>

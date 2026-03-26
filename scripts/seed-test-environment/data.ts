@@ -41,8 +41,8 @@ export const SEED_USERS: SeedUser[] = [
 export const ROOT_REPLY_COUNTS = [0, 3, 6, 9, 12, 15, 18, 20, 5, 11];
 
 export const ROOT_POST_TEXT = [
-	"Quick check-in: how's local testing going?",
-	"Loving this build so far.",
+	"Quick check-in: how's local testing going? Tag @alex and drop notes in /feed.",
+	"Loving this build so far. Added references in /groups and docs at https://opengather.dev/notes.",
 	`I spun up a fresh local instance this morning and invited two non-technical friends to click around without any guidance.
 
 They both found the feed immediately, posted replies without confusion, and said the overall pace felt calmer than big social apps.
@@ -86,8 +86,8 @@ If yes, this dataset is doing its job for demo and QA workflows.`,
 ];
 
 export const REPLY_TEXT = [
-	"+1, this is great.",
-	"Works for me.",
+	"+1, this is great. @jordan can you review /profile?",
+	"Works for me. I linked details in https://example.com/demo-plan.",
 	`I like this scenario because it mirrors what a real community lead might do during the first week of rollout.
 
 The thread stays practical while still feeling welcoming.`,
