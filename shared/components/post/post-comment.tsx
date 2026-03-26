@@ -1,0 +1,197 @@
+import type { ReactNode } from "react";
+import { useState } from "react";
+import { ProfileImage } from "../../../app/components/profile/profile-image";
+import {
+	type PostActionData,
+	PostActionItem,
+	PostActions,
+} from "../../../app/components/post/post-actions";
+import { PostLabels } from "../../../app/components/post/post-labels";
+import {
+	ChatBubble,
+	ChatBubbleBody,
+	ChatBubbleContent,
+	ChatBubbleFooter,
+	ChatBubbleHeader,
+	ChatBubbleHeading,
+	ChatBubbleMeta,
+	ChatBubbleTitle,
+} from "../../../app/components/ui/chat-bubble";
+import { Icon } from "../../../app/components/ui/icon";
+import { IconButton } from "../../../app/components/ui/icon-button";
+import { cn } from "../../../app/lib/utils";
+import type { SharedPostAsset, SharedPostModerationStatus } from "../../post-types";
+import { useOpenGatherLinkComponent } from "../../render-context";
+import { FormattedTimestamp } from "./formatted-timestamp";
+import { PostAssetDisplay } from "./post-asset-display";
+
+export type PostCommentData = {
+	actions?: PostActionData[];
+	assets?: SharedPostAsset[];
+	author?: string;
+	body: string;
+	createdAt: string;
+	fallback?: string;
+	id: string;
+	imageSrc?: string;
+	isDeleted?: boolean;
+	isHidden?: boolean;
+	moderationStatus?: SharedPostModerationStatus;
+	replies?: PostCommentData[];
+	testId?: string;
+	threadDepth: number;
+};
+
+type PostCommentProps = {
+	children?: ReactNode;
+	comment: PostCommentData;
+	replyComposer?: ReactNode;
+};
+
+export function PostComment({
+	children,
+	comment,
+	replyComposer,
+}: PostCommentProps) {
+	const LinkComponent = useOpenGatherLinkComponent();
+	const author = comment.author?.trim() || "Member";
+	const hasChildren = Boolean(children);
+	const [isOpen, setIsOpen] = useState(true);
+	const metaLabel = new Date(comment.createdAt).toLocaleString();
+
+	return (
+		<article
+			aria-label={`Comment from ${author} ${metaLabel}`}
+			className="min-w-0"
+			data-testid={comment.testId ?? `post-comment-${comment.id}`}
+			data-thread-depth={comment.threadDepth}
+		>
+			<details
+				open={isOpen}
+				onToggle={(event) =>
+					setIsOpen((event.currentTarget as HTMLDetailsElement).open)
+				}
+				className="min-w-0"
+			>
+				<summary className="grid cursor-pointer list-none grid-cols-[32px_minmax(0,1fr)] gap-x-3 pb-0 [&::-webkit-details-marker]:hidden">
+					<div className="relative">
+						<ProfileImage
+							src={comment.imageSrc}
+							alt={author}
+							fallback={comment.fallback ?? author.slice(0, 2).toUpperCase()}
+							size="sm"
+							className="h-8 w-8 border-background"
+						/>
+					</div>
+					<div className="min-w-0">
+						<ChatBubbleHeader className="mb-0">
+							<ChatBubbleHeading>
+								<ChatBubbleTitle className="flex flex-wrap items-center gap-2">
+									<span>{author}</span>
+									<PostLabels
+										moderationStatus={comment.moderationStatus}
+										isHidden={comment.isHidden}
+										isDeleted={comment.isDeleted}
+									/>
+								</ChatBubbleTitle>
+								<ChatBubbleMeta>
+									<FormattedTimestamp value={comment.createdAt} />
+								</ChatBubbleMeta>
+							</ChatBubbleHeading>
+						</ChatBubbleHeader>
+					</div>
+				</summary>
+				<div className="relative grid grid-cols-[32px_minmax(0,1fr)] gap-x-3 pt-1">
+					<div
+						aria-hidden="true"
+						className="pointer-events-none absolute bottom-0 left-4 top-0 flex w-px justify-center"
+					>
+						<div className="w-px bg-border/80" />
+					</div>
+					<div />
+					<div className="min-w-0">
+						<ChatBubble>
+							<ChatBubbleContent>
+								<ChatBubbleBody>
+									<p>{comment.body || "(no text)"}</p>
+									{comment.assets?.length ? (
+										<PostAssetDisplay
+											assets={comment.assets}
+											className="mt-3"
+										/>
+									) : null}
+								</ChatBubbleBody>
+							</ChatBubbleContent>
+						</ChatBubble>
+					</div>
+					<div className="relative z-10 flex justify-center bg-background pt-1">
+						{hasChildren ? (
+							<IconButton
+								type="button"
+								variant="ghost"
+								label={isOpen ? "Collapse thread" : "Expand thread"}
+								onClick={() => setIsOpen((current) => !current)}
+								className="h-7 w-7 rounded-full border border-border/80 bg-background text-foreground hover:bg-accent"
+							>
+								<Icon name={isOpen ? "circleMinus" : "circlePlus"} size={16} />
+							</IconButton>
+						) : null}
+					</div>
+					<div className="min-w-0">
+						{comment.actions?.length ? (
+							<ChatBubbleFooter className="mt-0">
+								<PostActions className="gap-x-1.5 gap-y-1">
+									{comment.actions.map((action) =>
+										action.to ? (
+											<PostActionItem
+												key={action.label}
+												asChild
+												data-testid={action.testId}
+												className={cn(
+													"h-auto rounded-md px-2 py-1 text-[13px] font-semibold hover:bg-accent/60",
+													action.isActive
+														? "bg-accent/70 text-foreground hover:bg-accent/70"
+														: undefined,
+												)}
+											>
+												<LinkComponent to={action.to}>
+													{action.label}
+												</LinkComponent>
+											</PostActionItem>
+										) : (
+											<PostActionItem
+												key={action.label}
+												type="button"
+												disabled={action.disabled}
+												onClick={action.onClick}
+												aria-pressed={action.isActive}
+												data-testid={action.testId}
+												className={cn(
+													"h-auto rounded-md px-2 py-1 text-[13px] font-semibold hover:bg-accent/60",
+													action.isActive
+														? "bg-accent/70 text-foreground hover:bg-accent/70"
+														: undefined,
+												)}
+											>
+												{action.label}
+											</PostActionItem>
+										),
+									)}
+								</PostActions>
+							</ChatBubbleFooter>
+						) : null}
+						{replyComposer ? <div className="pt-2">{replyComposer}</div> : null}
+					</div>
+					{hasChildren && isOpen ? (
+						<>
+							<div aria-hidden="true" className="threadline flex justify-end">
+								<div className="mt-2 h-4 w-[calc(50%+0.5px)] rounded-bl-[12px] border-b border-l border-border/80" />
+							</div>
+							<div className="min-w-0 pl-2 pt-1">{children}</div>
+						</>
+					) : null}
+				</div>
+			</details>
+		</article>
+	);
+}

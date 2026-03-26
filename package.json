@@ -1,10 +1,14 @@
 {
 	"name": "@opengather/web",
-	"private": true,
-	"sideEffects": false,
+	"version": "0.1.0",
+	"sideEffects": ["**/*.css"],
 	"type": "module",
 	"scripts": {
 		"build": "react-router build",
+		"build:shared": "npm run build:shared:js && npm run build:shared:types && npm run build:shared:styles",
+		"build:shared:js": "vite build --config vite.shared.config.ts",
+		"build:shared:styles": "mkdir -p dist && cp app/tailwind.css dist/styles.css",
+		"build:shared:types": "tsc -p tsconfig.shared.json && tsc-alias -p tsconfig.shared.json",
 		"dev": "npm run prisma:sync && react-router dev",
 		"start": "npm run prisma:sync && react-router-serve ./build/server/index.js",
 		"start:server": "react-router-serve ./build/server/index.js",
@@ -24,7 +28,29 @@
 		"prisma:sync": "npm run prisma:push && npm run prisma:generate",
 		"biome:check": "biome check .",
 		"biome:fix": "biome check --write .",
-		"seed:test-environment": "node --experimental-strip-types scripts/seed-test-environment.ts"
+		"seed:test-environment": "node --experimental-strip-types scripts/seed-test-environment.ts",
+		"prepare": "npm run build:shared",
+		"verify:shared": "npm run build:shared && npm pack --dry-run"
+	},
+	"files": ["dist", "LICENSE", "README.md"],
+	"exports": {
+		"./styles.css": "./dist/styles.css",
+		"./ui": {
+			"types": "./dist/ui.d.ts",
+			"import": "./dist/ui.js"
+		},
+		"./post": {
+			"types": "./dist/post.d.ts",
+			"import": "./dist/post.js"
+		},
+		"./rich-text": {
+			"types": "./dist/rich-text.d.ts",
+			"import": "./dist/rich-text.js"
+		},
+		"./utils": {
+			"types": "./dist/utils.d.ts",
+			"import": "./dist/utils.js"
+		}
 	},
 	"dependencies": {
 		"@prisma/adapter-pg": "^7.4.2",
@@ -62,6 +88,7 @@
 		"prisma": "^7.4.2",
 		"tailwindcss": "^4.2.1",
 		"tailwindcss-animate": "^1.0.7",
+		"tsc-alias": "^1.8.16",
 		"typescript": "^5.9.3",
 		"vite": "^7.3.1",
 		"vite-tsconfig-paths": "^6.1.1"
