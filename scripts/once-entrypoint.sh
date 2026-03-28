@@ -12,6 +12,7 @@ PGDATA="${INTERNAL_POSTGRES_DATA_DIR:-$STORAGE_ROOT/postgres/data}"
 PGRUN="${INTERNAL_POSTGRES_RUN_DIR:-$STORAGE_ROOT/postgres/run}"
 PGLOG="${INTERNAL_POSTGRES_LOG_FILE:-$STORAGE_ROOT/postgres/postgres.log}"
 MEDIA_LOCAL_ROOT="${MEDIA_LOCAL_ROOT:-$STORAGE_ROOT/media}"
+VAPID_ENV_FILE="${VAPID_ENV_FILE:-$STORAGE_ROOT/vapid.env}"
 
 export STORAGE_ROOT
 export MEDIA_LOCAL_ROOT
@@ -22,6 +23,38 @@ export PGUSER
 export PGPASSWORD
 
 mkdir -p "$STORAGE_ROOT" "$MEDIA_LOCAL_ROOT"
+
+if [ -f "$VAPID_ENV_FILE" ] && { [ -z "${VAPID_PUBLIC_KEY:-}" ] || [ -z "${VAPID_PRIVATE_KEY:-}" ]; }; then
+	set -a
+	. "$VAPID_ENV_FILE"
+	set +a
+fi
+
+if [ -z "${VAPID_PUBLIC_KEY:-}" ] || [ -z "${VAPID_PRIVATE_KEY:-}" ]; then
+	node --input-type=module <<'EOF' >"$VAPID_ENV_FILE"
+import webpush from "web-push";
+
+const keys = webpush.generateVAPIDKeys();
+console.log(`VAPID_PUBLIC_KEY=${keys.publicKey}`);
+console.log(`VAPID_PRIVATE_KEY=${keys.privateKey}`);
+EOF
+	chmod 600 "$VAPID_ENV_FILE"
+	set -a
+	. "$VAPID_ENV_FILE"
+	set +a
+fi
+
+if [ -z "${VAPID_SUBJECT:-}" ]; then
+	if [ -n "${APP_BASE_URL:-}" ]; then
+		VAPID_SUBJECT="$APP_BASE_URL"
+	else
+		VAPID_SUBJECT="mailto:admin@localhost"
+	fi
+fi
+
+export VAPID_PUBLIC_KEY
+export VAPID_PRIVATE_KEY
+export VAPID_SUBJECT
 
 cleanup() {
 	if [ -n "${SERVER_PID:-}" ] && kill -0 "$SERVER_PID" 2>/dev/null; then

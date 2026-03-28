@@ -1,56 +1,243 @@
 import { randomUUID } from "node:crypto";
+import {
+	isNotificationChannelSupported,
+	type NotificationChannel,
+	notificationChannels,
+	notificationKinds,
+} from "../lib/notification-preferences.ts";
 import { getConfig } from "./config.service.server.ts";
 import { getDb } from "./db.server.ts";
-import {
-	type NotificationKind,
-	type NotificationPayloadByKind,
-	notificationKinds,
+import { hasPushConfig } from "./env.server.ts";
+import { getServerConfig } from "./config.service.server.ts";
+import type { HubNotificationDeliveryMode } from "./hub.service.server.ts";
+import { logError } from "./logger.server.ts";
+import type {
+	NotificationKind,
+	NotificationPayloadByKind,
 } from "./notification.types.server.ts";
+import { sendNotificationWebPush } from "./web-push.server.ts";
+import { sendNotificationWebhook } from "./webhook-notification.server.ts";
 
 function isNotificationKind(value: string): value is NotificationKind {
 	return notificationKinds.includes(value as NotificationKind);
 }
 
-export type NotificationChannels = {
-	email: boolean;
-	push: boolean;
-	webhook: boolean;
-	hub: boolean;
+export type NotificationChannelMatrix = Record<
+	NotificationKind,
+	Record<NotificationChannel, boolean>
+>;
+
+export type NotificationPreferences = {
+	matrix: NotificationChannelMatrix;
 	webhookUrl?: string;
 };
 
-const defaultChannels: NotificationChannels = {
-	email: false,
-	push: false,
-	webhook: false,
-	hub: true,
-	webhookUrl: "",
+export type NotificationChannelAvailability = Record<
+	NotificationChannel,
+	{
+		enabled: boolean;
+		reason?: string;
+	}
+>;
+
+type LegacyNotificationChannels = {
+	email?: boolean;
+	hub?: boolean;
+	push?: boolean;
+	webhook?: boolean;
+	webhookUrl?: string;
 };
 
-function parseChannels(raw: unknown): NotificationChannels {
-	if (typeof raw !== "object" || raw === null) {
-		return defaultChannels;
-	}
-	const data = raw as Partial<NotificationChannels>;
+function createDefaultNotificationChannelRow(
+	kind: NotificationKind,
+): Record<NotificationChannel, boolean> {
 	return {
-		email: Boolean(data.email),
-		push: Boolean(data.push),
-		webhook: Boolean(data.webhook),
-		hub: data.hub === undefined ? true : Boolean(data.hub),
-		webhookUrl: typeof data.webhookUrl === "string" ? data.webhookUrl : "",
+		push: false,
+		hub: kind === "mention" || kind === "reply_to_post",
+		webhook: false,
+		email: false,
 	};
 }
 
-function toHubOutboxType(params: {
+export function createDefaultNotificationChannelMatrix(): NotificationChannelMatrix {
+	return Object.fromEntries(
+		notificationKinds.map((kind) => [
+			kind,
+			createDefaultNotificationChannelRow(kind),
+		]),
+	) as NotificationChannelMatrix;
+}
+
+export function createDefaultNotificationPreferences(): NotificationPreferences {
+	return {
+		matrix: createDefaultNotificationChannelMatrix(),
+		webhookUrl: "",
+	};
+}
+
+export async function getNotificationChannelAvailability(): Promise<NotificationChannelAvailability> {
+	const serverConfig = await getServerConfig().catch(() => null);
+
+	return {
+		push: hasPushConfig()
+			? { enabled: true }
+			: {
+					enabled: false,
+					reason: "Push delivery is unavailable because VAPID keys are not configured on this server.",
+				},
+		hub:
+			serverConfig &&
+			serverConfig.hubAvailable &&
+			serverConfig.hubEnabled &&
+			Boolean(serverConfig.hubInstanceBaseUrl)
+				? { enabled: true }
+				: {
+						enabled: false,
+						reason:
+							"Hub delivery is unavailable because Hub integration is not enabled on this server.",
+					},
+		webhook: { enabled: true },
+		email: {
+			enabled: false,
+			reason: "Email delivery is not implemented yet.",
+		},
+	};
+}
+
+export function applyNotificationChannelAvailability(params: {
+	availability: NotificationChannelAvailability;
+	preferences: NotificationPreferences;
+}): NotificationPreferences {
+	return {
+		matrix: Object.fromEntries(
+			notificationKinds.map((kind) => [
+				kind,
+				Object.fromEntries(
+					notificationChannels.map((channel) => [
+						channel,
+						params.availability[channel].enabled
+							? Boolean(params.preferences.matrix[kind][channel])
+							: false,
+					]),
+				),
+			]),
+		) as NotificationChannelMatrix,
+		webhookUrl: params.availability.webhook.enabled
+			? params.preferences.webhookUrl ?? ""
+			: "",
+	};
+}
+
+function parseNotificationMatrix(raw: unknown): NotificationChannelMatrix {
+	const defaults = createDefaultNotificationChannelMatrix();
+	if (typeof raw !== "object" || raw === null) {
+		return defaults;
+	}
+
+	const data = raw as Partial<
+		Record<NotificationKind, Partial<Record<NotificationChannel, unknown>>>
+	>;
+
+	return Object.fromEntries(
+		notificationKinds.map((kind) => {
+			const row =
+				typeof data[kind] === "object" && data[kind] !== null ? data[kind] : {};
+
+			return [
+				kind,
+				Object.fromEntries(
+					notificationChannels.map((channel) => [
+						channel,
+						isNotificationChannelSupported({ kind, channel })
+							? Boolean(row[channel])
+							: false,
+					]),
+				),
+			];
+		}),
+	) as NotificationChannelMatrix;
+}
+
+function parseLegacyNotificationPreferences(
+	raw: LegacyNotificationChannels,
+): NotificationPreferences {
+	const defaults = createDefaultNotificationChannelMatrix();
+	const legacyChannelValues: Record<NotificationChannel, boolean> = {
+		push: Boolean(raw.push),
+		hub: raw.hub === undefined ? true : Boolean(raw.hub),
+		webhook: Boolean(raw.webhook),
+		email: Boolean(raw.email),
+	};
+
+	return {
+		matrix: Object.fromEntries(
+			notificationKinds.map((kind) => [
+				kind,
+				Object.fromEntries(
+					notificationChannels.map((channel) => [
+						channel,
+						isNotificationChannelSupported({ kind, channel })
+							? legacyChannelValues[channel]
+							: defaults[kind][channel],
+					]),
+				),
+			]),
+		) as NotificationChannelMatrix,
+		webhookUrl: typeof raw.webhookUrl === "string" ? raw.webhookUrl : "",
+	};
+}
+
+export function parseNotificationPreferences(
+	raw: unknown,
+): NotificationPreferences {
+	if (typeof raw !== "object" || raw === null) {
+		return createDefaultNotificationPreferences();
+	}
+
+	const data = raw as {
+		matrix?: unknown;
+		webhookUrl?: unknown;
+	} & LegacyNotificationChannels;
+
+	if ("matrix" in data) {
+		return {
+			matrix: parseNotificationMatrix(data.matrix),
+			webhookUrl: typeof data.webhookUrl === "string" ? data.webhookUrl : "",
+		};
+	}
+
+	return parseLegacyNotificationPreferences(data);
+}
+
+export function isNotificationChannelEnabled(params: {
+	channel: NotificationChannel;
 	kind: NotificationKind;
-}): "mention" | "reply" | null {
-	if (params.kind === "mention") {
-		return "mention";
+	preferences: NotificationPreferences;
+}): boolean {
+	return Boolean(params.preferences.matrix[params.kind][params.channel]);
+}
+
+export function hasAnyNotificationChannelEnabled(params: {
+	channel: NotificationChannel;
+	preferences: NotificationPreferences;
+}): boolean {
+	return notificationKinds.some((kind) =>
+		isNotificationChannelEnabled({
+			channel: params.channel,
+			kind,
+			preferences: params.preferences,
+		}),
+	);
+}
+
+function getHubNotificationDeliveryMode(params: {
+	hubChannelEnabled: boolean;
+	primaryDeliverySucceeded: boolean;
+}): HubNotificationDeliveryMode {
+	if (params.hubChannelEnabled && !params.primaryDeliverySucceeded) {
+		return "deliver";
 	}
-	if (params.kind === "reply_to_post") {
-		return "reply";
-	}
-	return null;
+	return "sync";
 }
 
 export async function createNotification<K extends NotificationKind>(params: {
@@ -92,11 +279,92 @@ export async function createNotification<K extends NotificationKind>(params: {
 		},
 	});
 
-	const channels = await getNotificationChannels({
+	const preferences = await getNotificationPreferences({
 		userId: params.userId,
 	});
-	const hubType = toHubOutboxType({ kind: params.kind });
-	if (channels.hub && hubType) {
+	const channelAvailability = await getNotificationChannelAvailability();
+	const hubChannelEnabled =
+		channelAvailability.hub.enabled &&
+		isNotificationChannelEnabled({
+			channel: "hub",
+			kind: params.kind,
+			preferences,
+		});
+	let primaryDeliverySucceeded = false;
+
+	if (
+		channelAvailability.webhook.enabled &&
+		isNotificationChannelEnabled({
+			channel: "webhook",
+			kind: params.kind,
+			preferences,
+		}) &&
+		preferences.webhookUrl
+	) {
+		try {
+			await sendNotificationWebhook({
+				userId: params.userId,
+				webhookUrl: preferences.webhookUrl,
+				notification: {
+					id: row.id,
+					kind: row.kind as NotificationKind,
+					title: row.title,
+					body: row.body,
+					targetUrl: row.targetUrl ?? undefined,
+					relatedEntityId: row.relatedEntityId ?? undefined,
+					createdAt: row.createdAt.toISOString(),
+					payload: params.payload,
+				},
+			});
+		} catch (error) {
+			logError({
+				event: "notification.webhook.failed",
+				data: {
+					userId: params.userId,
+					notificationId: row.id,
+					error:
+						error instanceof Error ? error.message : "webhook_delivery_failed",
+				},
+			});
+		}
+	}
+
+	if (
+		channelAvailability.push.enabled &&
+		isNotificationChannelEnabled({
+			channel: "push",
+			kind: params.kind,
+			preferences,
+		})
+	) {
+		try {
+			const pushResult = await sendNotificationWebPush({
+				userId: params.userId,
+				notification: {
+					id: row.id,
+					kind: row.kind as NotificationKind,
+					title: row.title,
+					body: row.body,
+					targetUrl: row.targetUrl ?? undefined,
+					relatedEntityId: row.relatedEntityId ?? undefined,
+					createdAt: row.createdAt.toISOString(),
+				},
+			});
+			primaryDeliverySucceeded = pushResult.deliveredCount > 0;
+		} catch (error) {
+			logError({
+				event: "notification.web_push.failed",
+				data: {
+					userId: params.userId,
+					notificationId: row.id,
+					error:
+						error instanceof Error ? error.message : "web_push_delivery_failed",
+				},
+			});
+		}
+	}
+
+	if (channelAvailability.hub.enabled) {
 		const hubAccount = await db.account.findFirst({
 			where: {
 				userId: params.userId,
@@ -111,7 +379,12 @@ export async function createNotification<K extends NotificationKind>(params: {
 				data: {
 					id: randomUUID(),
 					recipientHubUserId: hubAccount.accountId,
-					type: hubType,
+					type: params.kind,
+					notificationKind: params.kind,
+					deliveryMode: getHubNotificationDeliveryMode({
+						hubChannelEnabled,
+						primaryDeliverySucceeded: primaryDeliverySucceeded ?? false,
+					}),
 					title: params.title,
 					body: params.body,
 					targetUrl: params.targetUrl ?? null,
@@ -141,9 +414,9 @@ export async function createNotification<K extends NotificationKind>(params: {
 	};
 }
 
-export async function getNotificationChannels(params: {
+export async function getNotificationPreferences(params: {
 	userId: string;
-}): Promise<NotificationChannels> {
+}): Promise<NotificationPreferences> {
 	const row = await getDb().notificationPreference.findUnique({
 		where: {
 			userId: params.userId,
@@ -153,16 +426,21 @@ export async function getNotificationChannels(params: {
 		},
 	});
 	if (!row) {
-		return defaultChannels;
+		return createDefaultNotificationPreferences();
 	}
-	return parseChannels(row.channels);
+	return parseNotificationPreferences(row.channels);
 }
 
-export async function setNotificationChannels(params: {
+export async function setNotificationPreferences(params: {
 	userId: string;
-	channels: NotificationChannels;
-}): Promise<NotificationChannels> {
-	const parsed = parseChannels(params.channels);
+	preferences: NotificationPreferences;
+}): Promise<NotificationPreferences> {
+	const parsed = parseNotificationPreferences(params.preferences);
+	const availability = await getNotificationChannelAvailability();
+	const sanitized = applyNotificationChannelAvailability({
+		availability,
+		preferences: parsed,
+	});
 	await getDb().notificationPreference.upsert({
 		where: {
 			userId: params.userId,
@@ -170,16 +448,16 @@ export async function setNotificationChannels(params: {
 		create: {
 			id: randomUUID(),
 			userId: params.userId,
-			channels: parsed as object,
+			channels: sanitized as object,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
 		update: {
-			channels: parsed as object,
+			channels: sanitized as object,
 			updatedAt: new Date(),
 		},
 	});
-	return parsed;
+	return sanitized;
 }
 
 export async function listNotifications(params: {

@@ -1,6 +1,7 @@
 import { ProfileImage } from "~/components/profile/profile-image";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Icon } from "~/components/ui/icon";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -70,6 +71,49 @@ export function FormsControlsSection() {
 								aria-invalid="true"
 								leadingAccessory={<Icon name="messageSquare" size={16} />}
 							/>
+						</div>
+					</CardContent>
+				</Card>
+			</section>
+			<section
+				className="space-y-4"
+				id="style-guide-checkbox"
+				data-testid="style-guide-checkbox"
+			>
+				<SectionHeader
+					title="Checkbox"
+					description="Binary selection control for preference matrices, consent flows, and lightweight settings. Use the shared component instead of browser-default checkboxes so checked, disabled, and focus states stay consistent."
+				/>
+				<Card>
+					<CardContent className="grid gap-4 pt-6 md:grid-cols-2">
+						<Checkbox
+							defaultChecked
+							label="Push notifications"
+							description="Receive mentions and replies in the browser on subscribed devices."
+						/>
+						<Checkbox
+							label="Webhook delivery"
+							description="Forward notification payloads to an external automation endpoint."
+						/>
+						<Checkbox
+							disabled
+							label="Email delivery"
+							description="Reserved for a future email sender integration."
+						/>
+						<div className="space-y-2">
+							<Label htmlFor="style-guide-checkbox-matrix">
+								Matrix cell treatment
+							</Label>
+							<div className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/20 px-3 py-2">
+								<span className="text-sm text-muted-foreground">
+									Mentions via push
+								</span>
+								<Checkbox
+									id="style-guide-checkbox-matrix"
+									defaultChecked
+									aria-label="Mentions via push"
+								/>
+							</div>
 						</div>
 					</CardContent>
 				</Card>

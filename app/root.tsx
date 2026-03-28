@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import {
 	Links,
 	type LoaderFunctionArgs,
@@ -12,6 +12,7 @@ import {
 import "./tailwind.css";
 import { DEFAULT_RENDER_INTL_CONFIG } from "~/lib/render-intl";
 import { RenderIntlProvider } from "~/lib/render-intl-context";
+import { registerAppServiceWorker } from "~/lib/service-worker.client";
 import { getRenderIntlConfig } from "~/server/config.service.server";
 import { hasDatabaseConfig } from "~/server/env.server.ts";
 
@@ -66,7 +67,16 @@ export default function App() {
 
 	return (
 		<RenderIntlProvider value={renderIntl}>
+			<ServiceWorkerBootstrap />
 			<Outlet />
 		</RenderIntlProvider>
 	);
+}
+
+function ServiceWorkerBootstrap() {
+	useEffect(() => {
+		void registerAppServiceWorker();
+	}, []);
+
+	return null;
 }

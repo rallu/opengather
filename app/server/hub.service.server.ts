@@ -2,6 +2,9 @@ import { getServerConfig } from "./config.service.server.ts";
 import { getDb } from "./db.server.ts";
 import { getHubEnv } from "./env.server.ts";
 import { resolveHubBaseUrl } from "./hub-config.server.ts";
+import type { NotificationKind } from "./notification.types.server.ts";
+
+export type HubNotificationDeliveryMode = "deliver" | "sync";
 
 export async function createHubAuthorizeUrl(params: {
 	state: string;
@@ -90,7 +93,9 @@ export async function linkHubInstanceForUser(params: {
 
 export async function pushHubNotification(params: {
 	recipientHubUserId: string;
-	type: "reply" | "mention";
+	type: NotificationKind;
+	notificationKind?: NotificationKind;
+	deliveryMode: HubNotificationDeliveryMode;
 	title: string;
 	body: string;
 	targetUrl?: string;
@@ -116,6 +121,8 @@ export async function pushHubNotification(params: {
 		body: JSON.stringify({
 			recipientHubUserId: params.recipientHubUserId,
 			type: params.type,
+			notificationKind: params.notificationKind,
+			deliveryMode: params.deliveryMode,
 			title: params.title,
 			body: params.body,
 			targetUrl,

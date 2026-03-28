@@ -1,12 +1,7 @@
-export const notificationKinds = [
-	"reply_to_post",
-	"mention",
-	"event_reminder",
-	"instance_membership_request",
-	"group_membership_request",
-] as const;
-
-export type NotificationKind = (typeof notificationKinds)[number];
+export {
+	type NotificationKind,
+	notificationKinds,
+} from "../lib/notification-preferences.ts";
 
 export type NotificationPayloadByKind = {
 	reply_to_post: {

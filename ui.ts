@@ -1,12 +1,13 @@
+export { ProfileImage } from "./app/components/profile/profile-image";
 export {
 	Badge,
-	badgeVariants,
 	type BadgeProps,
+	badgeVariants,
 } from "./app/components/ui/badge";
 export {
 	Button,
-	buttonVariants,
 	type ButtonProps,
+	buttonVariants,
 } from "./app/components/ui/button";
 export { ButtonGroup, ButtonGroupItem } from "./app/components/ui/button-group";
 export {
@@ -28,6 +29,7 @@ export {
 	ChatBubbleMeta,
 	ChatBubbleTitle,
 } from "./app/components/ui/chat-bubble";
+export { Checkbox, type CheckboxProps } from "./app/components/ui/checkbox";
 export { Container } from "./app/components/ui/container";
 export {
 	Dialog,
@@ -52,8 +54,8 @@ export { FeedContainer } from "./app/components/ui/feed-container";
 export { HeroImage } from "./app/components/ui/hero-image";
 export {
 	Icon,
-	icons,
 	type IconName,
+	icons,
 } from "./app/components/ui/icon";
 export { IconButton } from "./app/components/ui/icon-button";
 export { Input, type InputProps } from "./app/components/ui/input";
@@ -97,10 +99,9 @@ export {
 export { Spinner } from "./app/components/ui/spinner";
 export { Textarea, type TextareaProps } from "./app/components/ui/textarea";
 export { Toast } from "./app/components/ui/toast";
-export { ProfileImage } from "./app/components/profile/profile-image";
 export {
-	OpenGatherSharedProvider,
 	type OpenGatherLinkComponentProps,
+	OpenGatherSharedProvider,
 	type OpenGatherSharedProviderProps,
 	type OpenGatherTimestampFormatResult,
 	type OpenGatherTimestampFormatter,

@@ -2,7 +2,9 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Form, Link, useActionData, useLoaderData } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { ProfileImage } from "~/components/profile/profile-image";
+import { PushDeviceControls } from "~/components/profile/push-device-controls";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import {
 	Dialog,
 	DialogBody,
@@ -16,12 +18,24 @@ import { Icon } from "~/components/ui/icon";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import {
+	isNotificationChannelSupported,
+	notificationChannelMeta,
+	notificationChannels,
+	notificationKindMeta,
+	notificationKinds,
+} from "~/lib/notification-preferences";
+import { getPushEnv, hasPushConfig } from "~/server/env.server.ts";
+import {
 	cleanupParsedMultipartForm,
 	parseMultipartForm,
 } from "~/server/multipart-form.server";
 import {
-	getNotificationChannels,
-	setNotificationChannels,
+	applyNotificationChannelAvailability,
+	getNotificationPreferences,
+	getNotificationChannelAvailability,
+	hasAnyNotificationChannelEnabled,
+	type NotificationChannelMatrix,
+	setNotificationPreferences,
 } from "~/server/notification.service.server";
 import { getViewerContext } from "~/server/permissions.server";
 import { MAX_IMAGE_BYTES } from "~/server/post-assets.server";
@@ -38,6 +52,7 @@ import {
 	deleteUploadedProfileImage,
 	saveUploadedProfileImage,
 } from "~/server/profile-image.server";
+import { countWebPushSubscriptions } from "~/server/push-subscription.server.ts";
 import { getAuthUserFromRequest } from "~/server/session.server";
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -115,15 +130,29 @@ export async function action({ request }: ActionFunctionArgs) {
 	}
 
 	if (actionType === "save-notifications") {
-		await setNotificationChannels({
+		const matrix = Object.fromEntries(
+			notificationKinds.map((kind) => [
+				kind,
+				Object.fromEntries(
+					notificationChannels.map((channel) => [
+						channel,
+						String(formData.get(`notification:${kind}:${channel}`) ?? "") ===
+							"on",
+					]),
+				),
+			]),
+		) as NotificationChannelMatrix;
+		const channelAvailability = await getNotificationChannelAvailability();
+
+		await setNotificationPreferences({
 			userId: authUser.id,
-			channels: {
-				email: String(formData.get("channelEmail") ?? "") === "on",
-				push: String(formData.get("channelPush") ?? "") === "on",
-				webhook: String(formData.get("channelWebhook") ?? "") === "on",
-				hub: String(formData.get("channelHub") ?? "") === "on",
-				webhookUrl: String(formData.get("webhookUrl") ?? "").trim(),
-			},
+			preferences: applyNotificationChannelAvailability({
+				availability: channelAvailability,
+				preferences: {
+					matrix,
+					webhookUrl: String(formData.get("webhookUrl") ?? "").trim(),
+				},
+			}),
 		});
 		return { ok: true as const, section: "notifications" as const };
 	}
@@ -167,16 +196,25 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			return { status: "not_setup" as const, authUser };
 		}
 
-		const [profile, notificationChannels] = await Promise.all([
-			loadOwnProfile({
-				userId: authUser.id,
-				hubUserId: authUser.hubUserId,
-				instanceId: setup.instance.id,
-				instanceName: setup.instance.name,
-				viewerRole,
-			}),
-			getNotificationChannels({ userId: authUser.id }),
-		]);
+		const pushConfigured = hasPushConfig();
+		const [
+			profile,
+			notificationPreferences,
+			pushSubscriptionCount,
+			channelAvailability,
+		] =
+			await Promise.all([
+				loadOwnProfile({
+					userId: authUser.id,
+					hubUserId: authUser.hubUserId,
+					instanceId: setup.instance.id,
+					instanceName: setup.instance.name,
+					viewerRole,
+				}),
+				getNotificationPreferences({ userId: authUser.id }),
+				countWebPushSubscriptions({ userId: authUser.id }),
+				getNotificationChannelAvailability(),
+			]);
 		if (profile.status !== "ok") {
 			return { status: "error" as const };
 		}
@@ -190,7 +228,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
 				name: profileData.name,
 			},
 			email: authUser.email,
-			notificationChannels,
+			notificationPreferences,
+			channelAvailability,
+			hasAnyPushNotificationsEnabled: hasAnyNotificationChannelEnabled({
+				channel: "push",
+				preferences: notificationPreferences,
+			}),
+			pushConfigured,
+			pushSubscriptionCount,
+			pushVapidPublicKey: pushConfigured ? getPushEnv().VAPID_PUBLIC_KEY : "",
 			profileVisibilityOptions: listProfileVisibilityOptions({
 				instanceVisibilityMode: setup.instance.visibilityMode,
 			}),
@@ -506,38 +552,105 @@ export default function ProfilePage() {
 				) : null}
 				<Form method="post" className="space-y-3">
 					<input type="hidden" name="_action" value="save-notifications" />
-					<label className="flex items-center gap-2 text-sm">
-						<input
-							type="checkbox"
-							name="channelHub"
-							defaultChecked={Boolean(data.notificationChannels.hub)}
+					<div className="overflow-x-auto rounded-md border border-border/60">
+						<table className="min-w-[44rem] w-full border-collapse text-sm">
+							<thead className="bg-muted/40">
+								<tr>
+									<th className="border-b border-border/60 px-3 py-2 text-left font-medium">
+										Notification type
+									</th>
+									{notificationChannels.map((channel) => (
+										<th
+											key={channel}
+											className="border-b border-border/60 px-3 py-2 text-center font-medium"
+										>
+											<div>{notificationChannelMeta[channel].label}</div>
+											{!data.channelAvailability[channel].enabled &&
+											data.channelAvailability[channel].reason ? (
+												<div className="mt-1 text-[11px] font-normal text-muted-foreground">
+													Unavailable
+												</div>
+											) : null}
+										</th>
+									))}
+								</tr>
+							</thead>
+							<tbody>
+								{notificationKinds.map((kind) => (
+									<tr
+										key={kind}
+										className="border-b border-border/40 last:border-b-0"
+									>
+										<td className="px-3 py-3 align-top">
+											<div className="font-medium">
+												{notificationKindMeta[kind].label}
+											</div>
+											<div className="text-xs text-muted-foreground">
+												{notificationKindMeta[kind].description}
+											</div>
+										</td>
+										{notificationChannels.map((channel) => {
+											const enabled =
+												data.channelAvailability[channel].enabled &&
+												isNotificationChannelSupported({
+													kind,
+													channel,
+												});
+
+											return (
+												<td
+													key={`${kind}-${channel}`}
+													className="px-3 py-3 text-center align-middle"
+												>
+													<Checkbox
+														name={`notification:${kind}:${channel}`}
+														defaultChecked={
+															enabled &&
+															Boolean(
+																data.notificationPreferences.matrix[kind][
+																	channel
+																],
+															)
+														}
+														disabled={!enabled}
+														aria-label={`${notificationKindMeta[kind].label} via ${notificationChannelMeta[channel].label}`}
+														className="justify-center"
+													/>
+												</td>
+											);
+										})}
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+					<div className="space-y-1 text-xs text-muted-foreground">
+						<p>
+							Push also requires at least one subscribed browser/device below.
+						</p>
+						<p>
+							Hub always keeps a synced copy for linked Hub accounts and only
+							delivers directly when another primary channel did not reach you.
+						</p>
+						{notificationChannels
+							.filter((channel) => !data.channelAvailability[channel].enabled)
+							.map((channel) =>
+								data.channelAvailability[channel].reason ? (
+									<p key={channel}>
+										{notificationChannelMeta[channel].label}:{" "}
+										{data.channelAvailability[channel].reason}
+									</p>
+								) : null,
+							)}
+					</div>
+					<div className="rounded-md border border-border/60 bg-muted/30 p-3">
+						<PushDeviceControls
+							pushChannelEnabled={Boolean(data.hasAnyPushNotificationsEnabled)}
+							pushConfigured={Boolean(data.pushConfigured)}
+							pushSubscriptionCount={data.pushSubscriptionCount}
+							vapidPublicKey={data.pushVapidPublicKey}
 						/>
-						Hub
-					</label>
-					<label className="flex items-center gap-2 text-sm">
-						<input
-							type="checkbox"
-							name="channelEmail"
-							defaultChecked={Boolean(data.notificationChannels.email)}
-						/>
-						Email
-					</label>
-					<label className="flex items-center gap-2 text-sm">
-						<input
-							type="checkbox"
-							name="channelPush"
-							defaultChecked={Boolean(data.notificationChannels.push)}
-						/>
-						Push
-					</label>
-					<label className="flex items-center gap-2 text-sm">
-						<input
-							type="checkbox"
-							name="channelWebhook"
-							defaultChecked={Boolean(data.notificationChannels.webhook)}
-						/>
-						Webhook
-					</label>
+					</div>
 					<div className="space-y-2">
 						<label className="text-sm font-medium" htmlFor="webhook-url">
 							Webhook URL
@@ -545,7 +658,8 @@ export default function ProfilePage() {
 						<input
 							id="webhook-url"
 							name="webhookUrl"
-							defaultValue={data.notificationChannels.webhookUrl ?? ""}
+							defaultValue={data.notificationPreferences.webhookUrl ?? ""}
+							disabled={!data.channelAvailability.webhook.enabled}
 							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 						/>
 					</div>

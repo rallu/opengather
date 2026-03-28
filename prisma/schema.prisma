@@ -96,6 +96,8 @@ model NotificationOutbox {
   id                 String   @id @db.Text
   recipientHubUserId String   @map("recipient_hub_user_id") @db.Text
   type               String   @db.Text
+  notificationKind   String?  @map("notification_kind") @db.Text
+  deliveryMode       String   @default("deliver") @map("delivery_mode") @db.Text
   title              String   @db.Text
   body               String   @db.Text
   targetUrl          String?  @map("target_url") @db.Text
@@ -137,6 +139,25 @@ model NotificationPreference {
   updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   @@map("notification_preference")
+}
+
+model WebPushSubscription {
+  id                String    @id @db.Text
+  userId            String    @map("user_id") @db.Text
+  endpoint          String    @unique(map: "web_push_subscription_endpoint_unique") @db.Text
+  p256dhKey         String    @map("p256dh_key") @db.Text
+  authKey           String    @map("auth_key") @db.Text
+  expiresAt         DateTime? @map("expires_at") @db.Timestamptz(6)
+  userAgent         String?   @map("user_agent") @db.Text
+  lastSuccessfulAt  DateTime? @map("last_successful_at") @db.Timestamptz(6)
+  lastFailureAt     DateTime? @map("last_failure_at") @db.Timestamptz(6)
+  lastFailureStatus Int?      @map("last_failure_status")
+  lastFailureReason String?   @map("last_failure_reason") @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("web_push_subscription")
+  @@index([userId], map: "idx_web_push_subscription_user_id")
 }
 
 model ProfilePreference {

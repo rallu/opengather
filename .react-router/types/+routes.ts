@@ -40,6 +40,9 @@ type Pages = {
   "/api/notifications/summary": {
     params: {};
   };
+  "/api/notifications/push-subscriptions": {
+    params: {};
+  };
   "/.well-known/appspecific/com.chrome.devtools.json": {
     params: {};
   };
@@ -125,7 +128,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/api/post-list" | "/api/search" | "/api/notifications/summary" | "/.well-known/appspecific/com.chrome.devtools.json" | "/media/:assetId/:variantKey" | "/profile-images/:userId" | "/profile-images/:userId/:size" | "/metrics" | "/up" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles/:userId" | "/notifications" | "/approvals" | "/settings" | "/server-settings" | "/audit-logs";
+    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/api/post-list" | "/api/search" | "/api/notifications/summary" | "/api/notifications/push-subscriptions" | "/.well-known/appspecific/com.chrome.devtools.json" | "/media/:assetId/:variantKey" | "/profile-images/:userId" | "/profile-images/:userId/:size" | "/metrics" | "/up" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles/:userId" | "/notifications" | "/approvals" | "/settings" | "/server-settings" | "/audit-logs";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -162,6 +165,10 @@ type RouteFiles = {
   "routes/api-notifications-summary.tsx": {
     id: "routes/api-notifications-summary";
     page: "/api/notifications/summary";
+  };
+  "routes/api-notifications-push-subscriptions.tsx": {
+    id: "routes/api-notifications-push-subscriptions";
+    page: "/api/notifications/push-subscriptions";
   };
   "routes/chrome-devtools-workspace.ts": {
     id: "routes/chrome-devtools-workspace";
@@ -264,6 +271,7 @@ type RouteModules = {
   "routes/api-post-list": typeof import("./app/routes/api-post-list.tsx");
   "routes/api-search": typeof import("./app/routes/api-search.tsx");
   "routes/api-notifications-summary": typeof import("./app/routes/api-notifications-summary.tsx");
+  "routes/api-notifications-push-subscriptions": typeof import("./app/routes/api-notifications-push-subscriptions.tsx");
   "routes/chrome-devtools-workspace": typeof import("./app/routes/chrome-devtools-workspace.ts");
   "routes/media-asset": typeof import("./app/routes/media-asset.ts");
   "routes/profile-image": typeof import("./app/routes/profile-image.ts");

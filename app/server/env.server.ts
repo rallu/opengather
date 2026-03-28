@@ -13,6 +13,12 @@ export type AuthEnv = {
 	BETTER_AUTH_SECRET: string;
 };
 
+export type PushEnv = {
+	VAPID_PRIVATE_KEY: string;
+	VAPID_PUBLIC_KEY: string;
+	VAPID_SUBJECT: string;
+};
+
 export type AppEnv = {
 	APP_BASE_URL: string;
 	DISABLE_SSL: string;
@@ -21,7 +27,7 @@ export type AppEnv = {
 	STORAGE_ROOT: string;
 };
 
-type RuntimeEnv = Partial<DatabaseEnv & HubEnv & AuthEnv & AppEnv>;
+type RuntimeEnv = Partial<DatabaseEnv & HubEnv & AuthEnv & PushEnv & AppEnv>;
 
 const runtimeEnvSymbol = Symbol.for("opengather.runtime.env");
 
@@ -52,6 +58,22 @@ function getRuntimeEnvValue<K extends keyof RuntimeEnv>(
 	return fallback;
 }
 
+function getDefaultVapidSubject(): string {
+	const appBaseUrl = getRuntimeEnvValue("APP_BASE_URL", "").trim();
+	if (appBaseUrl) {
+		try {
+			const parsed = new URL(appBaseUrl);
+			if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+				return parsed.origin;
+			}
+		} catch {
+			// Fall through to the mailto fallback when APP_BASE_URL is invalid.
+		}
+	}
+
+	return "mailto:admin@localhost";
+}
+
 export function getDatabaseEnv(): DatabaseEnv {
 	return {
 		DATABASE_URL: getRuntimeEnvValue("DATABASE_URL", ""),
@@ -75,6 +97,21 @@ export function getAuthEnv(): AuthEnv {
 			getRuntimeEnvValue("SECRET_KEY_BASE", "") ||
 			"opengather-dev-secret",
 	};
+}
+
+export function getPushEnv(): PushEnv {
+	return {
+		VAPID_PRIVATE_KEY: getRuntimeEnvValue("VAPID_PRIVATE_KEY", ""),
+		VAPID_PUBLIC_KEY: getRuntimeEnvValue("VAPID_PUBLIC_KEY", ""),
+		VAPID_SUBJECT:
+			getRuntimeEnvValue("VAPID_SUBJECT", "").trim() ||
+			getDefaultVapidSubject(),
+	};
+}
+
+export function hasPushConfig(): boolean {
+	const env = getPushEnv();
+	return Boolean(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY);
 }
 
 export function hasDatabaseConfig(): boolean {

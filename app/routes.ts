@@ -38,6 +38,10 @@ const routes: RouteConfig = [
 		file: "routes/api-notifications-summary.tsx",
 	},
 	{
+		path: "/api/notifications/push-subscriptions",
+		file: "routes/api-notifications-push-subscriptions.tsx",
+	},
+	{
 		path: "/.well-known/appspecific/com.chrome.devtools.json",
 		file: "routes/chrome-devtools-workspace.ts",
 	},

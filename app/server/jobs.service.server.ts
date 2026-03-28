@@ -1,5 +1,9 @@
+import { notificationKinds, type NotificationKind } from "./notification.types.server.ts";
 import { getDb } from "./db.server.ts";
-import { pushHubNotification } from "./hub.service.server.ts";
+import {
+	type HubNotificationDeliveryMode,
+	pushHubNotification,
+} from "./hub.service.server.ts";
 
 function toErrorString(params: { error: unknown }): string {
 	if (params.error instanceof Error) {
@@ -13,13 +17,22 @@ function nextAttemptDate(params: { attempts: number }): Date {
 	return new Date(Date.now() + backoffMinutes * 60 * 1000);
 }
 
-function asNotificationType(params: {
-	value: string;
-}): "mention" | "reply" | null {
-	if (params.value === "mention" || params.value === "reply") {
-		return params.value;
+function asNotificationKind(params: {
+	value: string | null;
+}): NotificationKind | undefined {
+	if (
+		params.value &&
+		notificationKinds.includes(params.value as NotificationKind)
+	) {
+		return params.value as NotificationKind;
 	}
-	return null;
+	return undefined;
+}
+
+function asHubNotificationDeliveryMode(params: {
+	value: string;
+}): HubNotificationDeliveryMode {
+	return params.value === "sync" ? "sync" : "deliver";
 }
 
 export async function processNotificationOutbox(params: {
@@ -41,14 +54,16 @@ export async function processNotificationOutbox(params: {
 		if (item.attempts >= item.maxAttempts) {
 			continue;
 		}
-		const type = asNotificationType({ value: item.type });
-		if (!type) {
+		const notificationKind = asNotificationKind({
+			value: item.notificationKind ?? item.type,
+		});
+		if (!notificationKind) {
 			await db.notificationOutbox.update({
 				where: { id: item.id },
 				data: {
 					status: "failed",
 					attempts: item.attempts + 1,
-					lastError: `Unsupported notification type: ${item.type}`,
+					lastError: `Unsupported notification kind: ${item.notificationKind ?? item.type}`,
 					updatedAt: new Date(),
 				},
 			});
@@ -59,7 +74,11 @@ export async function processNotificationOutbox(params: {
 		try {
 			await pushHubNotification({
 				recipientHubUserId: item.recipientHubUserId,
-				type,
+				type: notificationKind,
+				notificationKind,
+				deliveryMode: asHubNotificationDeliveryMode({
+					value: item.deliveryMode,
+				}),
 				title: item.title,
 				body: item.body,
 				targetUrl: item.targetUrl ?? undefined,

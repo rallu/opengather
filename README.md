@@ -74,6 +74,8 @@ Optional environment variables for the ONCE image:
 
 - `DATABASE_URL` if you want to use an external Postgres instance
 - `BETTER_AUTH_SECRET` or `SECRET_KEY_BASE` for auth signing
+- `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` if you want to provide your own web-push keys instead of letting ONCE generate and persist them under `/storage/vapid.env`
+- `VAPID_SUBJECT` to override the default web-push subject (`APP_BASE_URL` when set, otherwise `mailto:admin@localhost`)
 - `HUB_BASE_URL` only if you want to enable optional Hub integration
 - `INTERNAL_POSTGRES_DB`
 - `INTERNAL_POSTGRES_USER`
@@ -101,6 +103,21 @@ nvm use
    `APP_BASE_URL` is optional if you will finish first-run setup in the browser at your real URL (the setup flow saves it). For local development on the default Vite port, set `APP_BASE_URL=http://localhost:5173` so behavior matches the address bar before setup.
 
    `HUB_BASE_URL` is optional and only needed when you want Hub integration enabled in the UI.
+
+   Browser push notifications also need VAPID keys. ONCE generates them automatically on first boot. For manual/self-hosted installs, generate them once and add them to `.env`:
+
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+
+   Then copy the generated values into:
+
+   ```bash
+   VAPID_PUBLIC_KEY=...
+   VAPID_PRIVATE_KEY=...
+   ```
+
+   `VAPID_SUBJECT` is optional. If you omit it, OpenGather uses `APP_BASE_URL` when available, otherwise `mailto:admin@localhost`.
 
 3. Start Postgres. From the workspace root, the default local database is:
 
@@ -173,3 +190,16 @@ Useful project areas:
 - `BACKUP_RECOVERY.md` for backup and restore operations
 
 Structured logging, metrics, error monitoring, and backup tooling are already included in the app for self-hosted operations.
+
+## Web Push Notifications
+
+OpenGather now supports browser push notifications for in-app notifications such as mentions, replies, and approval requests.
+
+Push delivery has two requirements:
+
+- the user enables the `Push` notification channel in their profile
+- the user registers at least one browser/device subscription from the profile page
+
+For ONCE installs, VAPID keys are generated automatically on first boot and persisted at `/storage/vapid.env` unless you provide your own. For manual installs, generate them yourself with `npx web-push generate-vapid-keys` and place them in `.env`.
+
+The service worker is built with Google Workbox as part of `npm run build`.
