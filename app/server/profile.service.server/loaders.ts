@@ -5,6 +5,7 @@ import {
 	canViewProfile,
 	getInstanceViewerRole,
 	type ProfileVisibilityMode,
+	resolveEffectiveProfileVisibility,
 	type ViewerRole,
 } from "../permissions.server.ts";
 import { loadPostAssetSummaries } from "../post-assets.server.ts";
@@ -27,7 +28,10 @@ import {
 	sanitizeProfileSummary,
 	toIsoString,
 } from "./shared.ts";
-import { getProfileVisibility } from "./visibility.ts";
+import {
+	getProfileVisibility,
+	parseProfileVisibilityMode,
+} from "./visibility.ts";
 
 type AuthUser = {
 	id: string;
@@ -151,6 +155,100 @@ async function loadVisibleProfilePostItems(params: {
 	}));
 }
 
+export async function listVisibleProfiles(params: {
+	instanceId: string;
+	viewer: AuthUser;
+	instanceViewerRole: ViewerRole;
+	instanceVisibilityMode: "public" | "registered" | "approval";
+}): Promise<
+	Array<{
+		id: string;
+		name: string;
+		image: string | null;
+		summary: string | null;
+		profileVisibility: ProfileVisibilityMode;
+		isSelf: boolean;
+	}>
+> {
+	const memberships = await getDb().instanceMembership.findMany({
+		where: {
+			instanceId: params.instanceId,
+			principalType: "user",
+			approvalStatus: "approved",
+		},
+		select: { principalId: true },
+	});
+	const userIds = [
+		...new Set(memberships.map((membership) => membership.principalId)),
+	];
+	if (userIds.length === 0) {
+		return [];
+	}
+
+	const [users, profilePreferences] = await Promise.all([
+		getDb().user.findMany({
+			where: { id: { in: userIds } },
+			select: {
+				id: true,
+				name: true,
+				image: true,
+				imageOverride: true,
+			},
+		}),
+		getDb().profilePreference.findMany({
+			where: { userId: { in: userIds } },
+			select: {
+				userId: true,
+				visibilityMode: true,
+				summary: true,
+			},
+		}),
+	]);
+	const profilePreferenceMap = new Map(
+		profilePreferences.map((preference) => [preference.userId, preference]),
+	);
+
+	return users
+		.map((user) => {
+			const preference = profilePreferenceMap.get(user.id);
+			const profileVisibility = resolveEffectiveProfileVisibility({
+				instanceVisibilityMode: params.instanceVisibilityMode,
+				visibilityMode: parseProfileVisibilityMode(preference?.visibilityMode),
+			});
+			const visibilityResult = canViewProfile({
+				isAuthenticated: Boolean(params.viewer),
+				isSelf: user.id === params.viewer?.id,
+				instanceViewerRole: params.instanceViewerRole,
+				visibilityMode: profileVisibility,
+			});
+			if (!visibilityResult.allowed) {
+				return null;
+			}
+			return {
+				id: user.id,
+				name: user.name,
+				image: resolveEffectiveProfileImage(user),
+				summary: preference?.summary
+					? sanitizeProfileSummary(preference.summary)
+					: null,
+				profileVisibility,
+				isSelf: user.id === params.viewer?.id,
+			};
+		})
+		.filter(
+			(
+				profile,
+			): profile is {
+				id: string;
+				name: string;
+				image: string | null;
+				summary: string | null;
+				profileVisibility: ProfileVisibilityMode;
+				isSelf: boolean;
+			} => Boolean(profile),
+		)
+		.sort((left, right) => left.name.localeCompare(right.name));
+}
 export async function loadOwnProfile(params: {
 	userId: string;
 	hubUserId?: string;
