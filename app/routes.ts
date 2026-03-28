@@ -106,6 +106,10 @@ const routes: RouteConfig = [
 		file: "routes/profile.tsx",
 	},
 	{
+		path: "/profiles",
+		file: "routes/profile-list.tsx",
+	},
+	{
 		path: "/profiles/:userId",
 		file: "routes/profile-detail.tsx",
 	},
