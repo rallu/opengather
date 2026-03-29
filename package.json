@@ -35,7 +35,7 @@
 		"seed:test-environment": "node --experimental-strip-types scripts/seed-test-environment.ts",
 		"prepare": "npm run build:shared",
 		"verify:shared": "npm run build:shared && npm pack --dry-run",
-		"fix:lint": "biome check --write app/routes/profile-list.tsx e2e/profile-list.spec.ts"
+		"lint:fix": "biome check --write app"
 	},
 	"files": [
 		"dist",
