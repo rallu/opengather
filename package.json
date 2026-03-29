@@ -34,7 +34,8 @@
 		"biome:fix": "biome check --write .",
 		"seed:test-environment": "node --experimental-strip-types scripts/seed-test-environment.ts",
 		"prepare": "npm run build:shared",
-		"verify:shared": "npm run build:shared && npm pack --dry-run"
+		"verify:shared": "npm run build:shared && npm pack --dry-run",
+		"lint:fix": "biome check --write app"
 	},
 	"files": [
 		"dist",

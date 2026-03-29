@@ -103,6 +103,9 @@ type Pages = {
   "/profile": {
     params: {};
   };
+  "/profiles": {
+    params: {};
+  };
   "/profiles/:userId": {
     params: {
       "userId": string;
@@ -128,7 +131,11 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
+<<<<<<< HEAD
     page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/api/post-list" | "/api/search" | "/api/notifications/summary" | "/api/notifications/push-subscriptions" | "/.well-known/appspecific/com.chrome.devtools.json" | "/media/:assetId/:variantKey" | "/profile-images/:userId" | "/profile-images/:userId/:size" | "/metrics" | "/up" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles/:userId" | "/notifications" | "/approvals" | "/settings" | "/server-settings" | "/audit-logs";
+=======
+    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/api/post-list" | "/api/search" | "/api/notifications/summary" | "/.well-known/appspecific/com.chrome.devtools.json" | "/media/:assetId/:variantKey" | "/profile-images/:userId" | "/profile-images/:userId/:size" | "/metrics" | "/up" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles" | "/profiles/:userId" | "/notifications" | "/approvals" | "/settings" | "/server-settings" | "/audit-logs";
+>>>>>>> 73fb512 (Use shared ProfileCard on profiles listing)
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -234,6 +241,10 @@ type RouteFiles = {
     id: "routes/profile";
     page: "/profile";
   };
+  "routes/profile-list.tsx": {
+    id: "routes/profile-list";
+    page: "/profiles";
+  };
   "routes/profile-detail.tsx": {
     id: "routes/profile-detail";
     page: "/profiles/:userId";
@@ -288,6 +299,7 @@ type RouteModules = {
   "routes/groups": typeof import("./app/routes/groups.tsx");
   "routes/group-detail": typeof import("./app/routes/group-detail.tsx");
   "routes/profile": typeof import("./app/routes/profile.tsx");
+  "routes/profile-list": typeof import("./app/routes/profile-list.tsx");
   "routes/profile-detail": typeof import("./app/routes/profile-detail.tsx");
   "routes/notifications": typeof import("./app/routes/notifications.tsx");
   "routes/approvals": typeof import("./app/routes/approvals.tsx");

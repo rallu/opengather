@@ -1,4 +1,5 @@
 export {
+	listVisibleProfiles,
 	loadOwnProfile,
 	loadVisibleProfile,
 } from "./profile.service.server/loaders.ts";
