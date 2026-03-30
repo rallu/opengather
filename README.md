@@ -83,6 +83,24 @@ Optional environment variables for the ONCE image:
 
 ### Manual Node Installation
 
+If you need to install local runtime dependencies (Docker + PostgreSQL) on an Ubuntu machine, run:
+
+```bash
+./scripts/install-runtime-deps.sh
+```
+
+Create a local test environment (starts PostgreSQL if needed, creates the `opengather` role/database, and writes `.env.local`):
+
+```bash
+./scripts/create-local-test-environment.sh
+```
+
+Then you can run unit tests against that environment:
+
+```bash
+npm run test:unit
+```
+
 Use a Prisma 7-compatible Node version:
 
 ```bash
