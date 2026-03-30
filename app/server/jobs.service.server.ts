@@ -1,9 +1,12 @@
-import { notificationKinds, type NotificationKind } from "./notification.types.server.ts";
 import { getDb } from "./db.server.ts";
 import {
 	type HubNotificationDeliveryMode,
 	pushHubNotification,
 } from "./hub.service.server.ts";
+import {
+	type NotificationKind,
+	notificationKinds,
+} from "./notification.types.server.ts";
 
 function toErrorString(params: { error: unknown }): string {
 	if (params.error instanceof Error) {

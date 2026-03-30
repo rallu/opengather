@@ -5,10 +5,9 @@ import {
 	notificationChannels,
 	notificationKinds,
 } from "../lib/notification-preferences.ts";
-import { getConfig } from "./config.service.server.ts";
+import { getConfig, getServerConfig } from "./config.service.server.ts";
 import { getDb } from "./db.server.ts";
 import { hasPushConfig } from "./env.server.ts";
-import { getServerConfig } from "./config.service.server.ts";
 import type { HubNotificationDeliveryMode } from "./hub.service.server.ts";
 import { logError } from "./logger.server.ts";
 import type {
@@ -83,11 +82,11 @@ export async function getNotificationChannelAvailability(): Promise<Notification
 			? { enabled: true }
 			: {
 					enabled: false,
-					reason: "Push delivery is unavailable because VAPID keys are not configured on this server.",
+					reason:
+						"Push delivery is unavailable because VAPID keys are not configured on this server.",
 				},
 		hub:
-			serverConfig &&
-			serverConfig.hubAvailable &&
+			serverConfig?.hubAvailable &&
 			serverConfig.hubEnabled &&
 			Boolean(serverConfig.hubInstanceBaseUrl)
 				? { enabled: true }
@@ -123,7 +122,7 @@ export function applyNotificationChannelAvailability(params: {
 			]),
 		) as NotificationChannelMatrix,
 		webhookUrl: params.availability.webhook.enabled
-			? params.preferences.webhookUrl ?? ""
+			? (params.preferences.webhookUrl ?? "")
 			: "",
 	};
 }

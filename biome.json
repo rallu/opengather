@@ -8,6 +8,7 @@
 			"!build",
 			"!test-results",
 			"!node_modules",
+			"!dist",
 			"!app/generated",
 			"!e2e/**/*"
 		]

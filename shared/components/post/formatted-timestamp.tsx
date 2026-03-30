@@ -16,7 +16,7 @@ export function FormattedTimestamp({
 	const title =
 		typeof formatted === "string"
 			? date.toLocaleString()
-			: formatted.title ?? formatted.label;
+			: (formatted.title ?? formatted.label);
 
 	return (
 		<time className={className} dateTime={date.toISOString()} title={title}>
