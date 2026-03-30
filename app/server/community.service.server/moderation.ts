@@ -71,14 +71,20 @@ export async function softDeletePost(params: {
 		instanceId: setup.instance.id,
 		user: params.user,
 	});
-	if (!admin) {
-		return { ok: false, error: "Admin access required" };
+	if (!params.user) {
+		return { ok: false, error: "Sign in required" };
+	}
+
+	const viewerAuthorIds = [params.user.id];
+	if (params.user.hubUserId) {
+		viewerAuthorIds.push(params.user.hubUserId);
 	}
 
 	const updated = await getDb().post.updateMany({
 		where: {
 			id: params.postId,
 			instanceId: setup.instance.id,
+			...(admin ? {} : { authorId: { in: viewerAuthorIds } }),
 		},
 		data: {
 			deletedAt: new Date(),
@@ -87,7 +93,10 @@ export async function softDeletePost(params: {
 	});
 
 	if (updated.count === 0) {
-		return { ok: false, error: "Post not found" };
+		return {
+			ok: false,
+			error: admin ? "Post not found" : "Post not found or not owned by user",
+		};
 	}
 
 	await processNotificationOutbox({ limit: 10 });

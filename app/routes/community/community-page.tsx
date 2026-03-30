@@ -21,6 +21,12 @@ export function CommunityPage(params: {
 }) {
 	const buildSortHref = (sortMode: "activity" | "newest") =>
 		`${params.pathname}?sort=${sortMode}`;
+	const viewerIdentityIds = new Set(
+		[
+			params.data.authUser?.id,
+			params.data.authUser?.hubUserId ?? undefined,
+		].filter((value): value is string => Boolean(value)),
+	);
 	const communityAside = (
 		<Container className="rounded-lg border-border/50 bg-card">
 			<div className="space-y-3 p-5">
@@ -123,6 +129,10 @@ export function CommunityPage(params: {
 							key={post.id}
 							post={post}
 							isAdmin={params.data.viewerRole === "admin"}
+							canDelete={
+								params.data.viewerRole === "admin" ||
+								viewerIdentityIds.has(post.author.id)
+							}
 							canInlineReply={
 								Boolean(params.data.authUser) && params.data.status === "ok"
 							}
