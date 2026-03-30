@@ -31,8 +31,8 @@ import {
 } from "~/server/multipart-form.server";
 import {
 	applyNotificationChannelAvailability,
-	getNotificationPreferences,
 	getNotificationChannelAvailability,
+	getNotificationPreferences,
 	hasAnyNotificationChannelEnabled,
 	type NotificationChannelMatrix,
 	setNotificationPreferences,
@@ -202,19 +202,18 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			notificationPreferences,
 			pushSubscriptionCount,
 			channelAvailability,
-		] =
-			await Promise.all([
-				loadOwnProfile({
-					userId: authUser.id,
-					hubUserId: authUser.hubUserId,
-					instanceId: setup.instance.id,
-					instanceName: setup.instance.name,
-					viewerRole,
-				}),
-				getNotificationPreferences({ userId: authUser.id }),
-				countWebPushSubscriptions({ userId: authUser.id }),
-				getNotificationChannelAvailability(),
-			]);
+		] = await Promise.all([
+			loadOwnProfile({
+				userId: authUser.id,
+				hubUserId: authUser.hubUserId,
+				instanceId: setup.instance.id,
+				instanceName: setup.instance.name,
+				viewerRole,
+			}),
+			getNotificationPreferences({ userId: authUser.id }),
+			countWebPushSubscriptions({ userId: authUser.id }),
+			getNotificationChannelAvailability(),
+		]);
 		if (profile.status !== "ok") {
 			return { status: "error" as const };
 		}

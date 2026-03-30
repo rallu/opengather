@@ -1,9 +1,9 @@
-import { Badge } from "../../../app/components/ui/badge";
-import { cn } from "../../../app/lib/utils";
-import { type SharedPostAsset } from "../../post-types";
 import { PostImageContent } from "../../../app/components/post/post-image-content";
 import { PostImageGalleryContent } from "../../../app/components/post/post-image-gallery-content";
 import { PostVideoContent } from "../../../app/components/post/post-video-content";
+import { Badge } from "../../../app/components/ui/badge";
+import { cn } from "../../../app/lib/utils";
+import type { SharedPostAsset } from "../../post-types";
 
 function formatDuration(durationSeconds?: number | null): string | undefined {
 	if (!durationSeconds || !Number.isFinite(durationSeconds)) {

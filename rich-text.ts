@@ -1,8 +1,7 @@
 export {
-	RICH_TEXT_VERSION,
 	isRichTextDocument,
 	parseRichTextDocument,
-	resolveRichTextLinkTarget,
+	RICH_TEXT_VERSION,
 	type RichTextBlock,
 	type RichTextDocument,
 	type RichTextInline,
@@ -10,4 +9,5 @@ export {
 	type RichTextLinkTarget,
 	type RichTextParagraphBlock,
 	type RichTextTextNode,
+	resolveRichTextLinkTarget,
 } from "./app/lib/rich-text";

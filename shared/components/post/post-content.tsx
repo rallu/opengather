@@ -1,8 +1,11 @@
 import type { ReactNode } from "react";
-import { cn } from "../../../app/lib/utils";
 import type { PostActionData } from "../../../app/components/post/post-actions";
-import { PostActionItem, PostActions } from "../../../app/components/post/post-actions";
+import {
+	PostActionItem,
+	PostActions,
+} from "../../../app/components/post/post-actions";
 import { PostLabels } from "../../../app/components/post/post-labels";
+import { cn } from "../../../app/lib/utils";
 import { useOpenGatherLinkComponent } from "../../render-context";
 import { FormattedTimestamp } from "./formatted-timestamp";
 
