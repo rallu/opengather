@@ -4,6 +4,7 @@ import type { PostListItem } from "~/server/post-list.service.server";
 export function CommunityFeedItem(params: {
 	post: PostListItem;
 	isAdmin: boolean;
+	canDelete?: boolean;
 	canInlineReply?: boolean;
 }) {
 	return <PostFeedItem {...params} />;

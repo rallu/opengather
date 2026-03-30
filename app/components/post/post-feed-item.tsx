@@ -37,6 +37,7 @@ export function PostFeedItem(params: {
 	post: PostListItem;
 	isAdmin: boolean;
 	showModerationActions?: boolean;
+	canDelete?: boolean;
 	showGroupLabel?: boolean;
 	testIdPrefix?: string;
 	canInlineReply?: boolean;
@@ -48,6 +49,7 @@ export function PostFeedItem(params: {
 	const testIdPrefix = params.testIdPrefix ?? "feed";
 	const showGroupLabel = params.showGroupLabel ?? Boolean(params.post.group);
 	const showModerationActions = params.showModerationActions ?? params.isAdmin;
+	const canDelete = params.canDelete ?? showModerationActions;
 	const canInlineReply = params.canInlineReply ?? false;
 	const authorProfilePath = params.post.author.profilePath;
 	const [replyOpen, setReplyOpen] = React.useState(false);
@@ -152,6 +154,11 @@ export function PostFeedItem(params: {
 										<Icon name="circleMinus" size={16} />
 										Hide
 									</DropdownItem>
+								</>
+							) : null}
+							{canDelete ? (
+								<>
+									{!showModerationActions ? <DropdownSeparator /> : null}
 									<DropdownItem onClick={() => submitPostAction("delete")}>
 										<Icon name="x" size={16} />
 										Delete
