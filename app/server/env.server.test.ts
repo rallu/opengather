@@ -22,6 +22,25 @@ test("getHubEnv returns an empty HUB_BASE_URL when the env var is missing", () =
 	assert.equal(hasHubBaseUrlConfigured(), false);
 });
 
+test("getHubEnv defaults to opengather.net in production when missing", () => {
+	const previousNodeEnv = process.env.NODE_ENV;
+	process.env.NODE_ENV = "production";
+	setRuntimeEnv({});
+
+	try {
+		assert.deepEqual(getHubEnv(), {
+			HUB_BASE_URL: "https://opengather.net",
+		});
+		assert.equal(hasHubBaseUrlConfigured(), true);
+	} finally {
+		if (previousNodeEnv === undefined) {
+			delete process.env.NODE_ENV;
+		} else {
+			process.env.NODE_ENV = previousNodeEnv;
+		}
+	}
+});
+
 test("getHubEnv normalizes HUB_BASE_URL when configured", () => {
 	setRuntimeEnv({
 		HUB_BASE_URL: "https://hub.example.com/",

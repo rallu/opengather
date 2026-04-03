@@ -76,7 +76,7 @@ Optional environment variables for the ONCE image:
 - `BETTER_AUTH_SECRET` or `SECRET_KEY_BASE` for auth signing
 - `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` if you want to provide your own web-push keys instead of letting ONCE generate and persist them under `/storage/vapid.env`
 - `VAPID_SUBJECT` to override the default web-push subject (`APP_BASE_URL` when set, otherwise `mailto:admin@localhost`)
-- `HUB_BASE_URL` only if you want to enable optional Hub integration
+- `HUB_BASE_URL` only if you want to override the default production Hub at `https://opengather.net`
 - `INTERNAL_POSTGRES_DB`
 - `INTERNAL_POSTGRES_USER`
 - `INTERNAL_POSTGRES_PASSWORD`
@@ -120,7 +120,7 @@ nvm use
 
    `APP_BASE_URL` is optional if you will finish first-run setup in the browser at your real URL (the setup flow saves it). For local development on the default Vite port, set `APP_BASE_URL=http://localhost:5173` so behavior matches the address bar before setup.
 
-   `HUB_BASE_URL` is optional and only needed when you want Hub integration enabled in the UI.
+   `HUB_BASE_URL` is optional. In production, OpenGather defaults it to `https://opengather.net`. Set it explicitly only when you want to point an instance at a different Hub or disable that production default during deployment.
 
    Browser push notifications also need VAPID keys. ONCE generates them automatically on first boot. For manual/self-hosted installs, generate them once and add them to `.env`:
 

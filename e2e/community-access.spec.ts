@@ -165,6 +165,24 @@ test.describe("community access flow", () => {
 		await expect(page.getByTestId("login-context")).toBeVisible();
 	});
 
+	test("shell sign out updates the current page without a manual refresh", async ({
+		page,
+	}) => {
+		await ensureConfiguredInstance(page);
+		await signOutIfNeeded(page);
+		await signInLocal({
+			page,
+			email: adminUser.email,
+			password: adminUser.password,
+		});
+
+		await page.getByTestId("shell-sign-out").click();
+
+		await expect(page.getByTestId("shell-sign-in-link")).toBeVisible();
+		await expect(page.getByTestId("shell-register-link")).toBeVisible();
+		await expect(page.getByTestId("shell-sign-out")).toHaveCount(0);
+	});
+
 	test("manual approval notifies admins and approval unlocks access", async ({
 		page,
 	}) => {

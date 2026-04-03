@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { Link, useFetcher, useLocation } from "react-router";
+import { Link, useFetcher, useLocation, useRevalidator } from "react-router";
 import { ShellSearch } from "~/components/search/shell-search";
 import { Button } from "~/components/ui/button";
 import { Container } from "~/components/ui/container";
@@ -104,15 +104,38 @@ function ShellPanel(props: { children?: ReactNode; className?: string }) {
 
 export function AppShell(props: AppShellProps) {
 	const location = useLocation();
+	const revalidator = useRevalidator();
 	const notificationSummaryFetcher = useFetcher<NotificationSummaryData>();
 	const notificationRefreshKey = `${location.pathname}:${location.search}`;
 	const lastNotificationRefreshKeyRef = useRef<string | null>(null);
 	const lastRouteKeyRef = useRef(notificationRefreshKey);
 	const [mobileNavOpen, setMobileNavOpen] = useState(false);
 	const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
+	const [isSigningOut, setIsSigningOut] = useState(false);
+	const authUser = isSigningOut ? null : props.authUser;
 
 	useEffect(() => {
 		if (!props.authUser) {
+			setIsSigningOut(false);
+		}
+	}, [props.authUser]);
+
+	const handleSignOut = async () => {
+		if (isSigningOut) {
+			return;
+		}
+
+		setIsSigningOut(true);
+		try {
+			await signOut();
+			revalidator.revalidate();
+		} catch {
+			setIsSigningOut(false);
+		}
+	};
+
+	useEffect(() => {
+		if (!authUser) {
 			lastNotificationRefreshKeyRef.current = null;
 			return;
 		}
@@ -123,7 +146,7 @@ export function AppShell(props: AppShellProps) {
 			lastNotificationRefreshKeyRef.current = notificationRefreshKey;
 			notificationSummaryFetcher.load("/api/notifications/summary");
 		}
-	}, [notificationRefreshKey, notificationSummaryFetcher, props.authUser]);
+	}, [authUser, notificationRefreshKey, notificationSummaryFetcher]);
 
 	useEffect(() => {
 		if (lastRouteKeyRef.current === notificationRefreshKey) {
@@ -135,9 +158,9 @@ export function AppShell(props: AppShellProps) {
 	}, [notificationRefreshKey]);
 
 	const notificationSummary = notificationSummaryFetcher.data;
-	const navItems = props.authUser
+	const navItems = authUser
 		? [
-				...getMemberNavItems(props.authUser.id),
+				...getMemberNavItems(authUser.id),
 				...(notificationSummary?.canAccessApprovals
 					? [
 							{
@@ -177,10 +200,10 @@ export function AppShell(props: AppShellProps) {
 			</ShellPanel>
 			<ShellPanel>
 				<p className="text-sm text-foreground">
-					{props.authUser ? props.authUser.name : "Guest access"}
+					{authUser ? authUser.name : "Guest access"}
 				</p>
 				<p className="text-sm text-muted-foreground">
-					{props.authUser
+					{authUser
 						? "You're signed in and can participate where your permissions allow."
 						: "Sign in or register to post, reply, and manage your account."}
 				</p>
@@ -196,7 +219,7 @@ export function AppShell(props: AppShellProps) {
 	);
 
 	const authControls = (variant: "desktop" | "mobile") =>
-		props.authUser ? (
+		authUser ? (
 			<Button
 				variant="ghost"
 				className={cn(
@@ -204,7 +227,9 @@ export function AppShell(props: AppShellProps) {
 					variant === "desktop" ? "shrink-0 px-2 sm:px-3" : "w-full",
 				)}
 				size={variant === "desktop" ? "sm" : "default"}
-				onClick={() => signOut()}
+				onClick={() => {
+					void handleSignOut();
+				}}
 				data-testid={
 					variant === "desktop" ? "shell-sign-out" : "shell-sign-out-mobile"
 				}

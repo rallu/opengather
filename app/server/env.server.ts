@@ -35,6 +35,8 @@ type GlobalWithRuntimeEnv = typeof globalThis & {
 	[runtimeEnvSymbol]?: RuntimeEnv;
 };
 
+const DEFAULT_PRODUCTION_HUB_BASE_URL = "https://opengather.net";
+
 export function setRuntimeEnv(env: RuntimeEnv): void {
 	(globalThis as GlobalWithRuntimeEnv)[runtimeEnvSymbol] = env;
 }
@@ -74,6 +76,17 @@ function getDefaultVapidSubject(): string {
 	return "mailto:admin@localhost";
 }
 
+function getDefaultHubBaseUrl(): string {
+	if (
+		typeof process !== "undefined" &&
+		process.env.NODE_ENV === "production"
+	) {
+		return DEFAULT_PRODUCTION_HUB_BASE_URL;
+	}
+
+	return "";
+}
+
 export function getDatabaseEnv(): DatabaseEnv {
 	return {
 		DATABASE_URL: getRuntimeEnvValue("DATABASE_URL", ""),
@@ -82,7 +95,9 @@ export function getDatabaseEnv(): DatabaseEnv {
 
 export function getHubEnv(): HubEnv {
 	return {
-		HUB_BASE_URL: normalizeHubBaseUrl(getRuntimeEnvValue("HUB_BASE_URL", "")),
+		HUB_BASE_URL: normalizeHubBaseUrl(
+			getRuntimeEnvValue("HUB_BASE_URL", getDefaultHubBaseUrl()),
+		),
 	};
 }
 
