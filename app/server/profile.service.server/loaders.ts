@@ -275,7 +275,13 @@ export async function loadOwnProfile(params: {
 			name: string;
 			image: string | null;
 			imageOverride: string | null;
-			imageSource: "hub" | "local_upload" | "local_url" | "default" | "none";
+			imageSource:
+				| "hub"
+				| "local_upload"
+				| "local_url"
+				| "default"
+				| "generated_default"
+				| "none";
 			summary: string | null;
 	  }
 > {
@@ -373,7 +379,10 @@ export async function loadOwnProfile(params: {
 	);
 
 	const replies = postRows.filter((post) => Boolean(post.parentPostId)).length;
-	const effectiveImage = resolveEffectiveProfileImage(userRow);
+	const effectiveImage = resolveEffectiveProfileImage({
+		id: params.userId,
+		...userRow,
+	});
 	const hasUploadedOverride = isUploadedProfileImageOverride(
 		userRow.imageOverride,
 	);
@@ -384,9 +393,11 @@ export async function loadOwnProfile(params: {
 			? "local_url"
 			: params.hubUserId && userRow.image
 				? "hub"
-				: userRow.image
-					? "default"
-					: "none";
+				: effectiveImage && !userRow.image
+					? "generated_default"
+					: userRow.image
+						? "default"
+						: "none";
 
 	return {
 		status: "ok",

@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { getDefaultProfileImage } from "~/lib/default-profile-images";
 import { cn } from "~/lib/utils";
 
 type ProfileImageProps = {
@@ -49,9 +51,17 @@ export function ProfileImage({
 	size = "md",
 	className,
 }: ProfileImageProps) {
+	const [failedSrc, setFailedSrc] = useState<string | null>(null);
 	const resolvedSrc = src
 		? resolveProfileImageSrcForSize(src, size)
 		: undefined;
+	const backupSrc = getDefaultProfileImage({
+		seed: `${fallback}:${alt}`,
+	});
+	const displaySrc =
+		resolvedSrc && failedSrc !== resolvedSrc
+			? resolvedSrc
+			: backupSrc || undefined;
 
 	return (
 		<div
@@ -61,11 +71,16 @@ export function ProfileImage({
 				className,
 			)}
 		>
-			{resolvedSrc ? (
+			{displaySrc ? (
 				<img
-					src={resolvedSrc}
+					src={displaySrc}
 					alt={alt}
 					className="h-full w-full object-cover"
+					onError={() => {
+						if (resolvedSrc && displaySrc === resolvedSrc) {
+							setFailedSrc(resolvedSrc);
+						}
+					}}
 				/>
 			) : (
 				<div className="flex h-full w-full items-center justify-center bg-primary/10 font-medium text-primary">

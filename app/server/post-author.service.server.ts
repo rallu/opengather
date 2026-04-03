@@ -63,7 +63,7 @@ export async function loadPostAuthorSummaryMap(params: {
 		const summary = {
 			id: user.id,
 			name: user.name.trim() || FALLBACK_AUTHOR_NAME,
-			imageSrc: resolveEffectiveProfileImage(user) ?? undefined,
+			imageSrc: resolveEffectiveProfileImage(user),
 			profilePath: `/profiles/${user.id}`,
 		} satisfies PostAuthorSummary;
 

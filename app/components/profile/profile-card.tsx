@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { getDefaultProfileImage } from "~/lib/default-profile-images";
 import { cn } from "~/lib/utils";
 
 type ProfileCardProps = {
@@ -15,6 +17,10 @@ export function ProfileCard({
 	description,
 	className,
 }: ProfileCardProps) {
+	const [failedSrc, setFailedSrc] = useState<string | null>(null);
+	const displayImageSrc =
+		failedSrc === imageSrc ? getDefaultProfileImage({ seed: name }) : imageSrc;
+
 	return (
 		<article
 			className={cn(
@@ -23,9 +29,14 @@ export function ProfileCard({
 			)}
 		>
 			<img
-				src={imageSrc}
+				src={displayImageSrc}
 				alt={imageAlt}
 				className="h-full w-full object-cover"
+				onError={() => {
+					if (displayImageSrc === imageSrc) {
+						setFailedSrc(imageSrc);
+					}
+				}}
 			/>
 			<div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 			<div className="absolute inset-x-0 bottom-0 space-y-2 p-4 text-white">

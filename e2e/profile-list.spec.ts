@@ -67,7 +67,8 @@ test("profiles route renders a card list and links to profile detail", async ({
 
 	await registerUser({ page, ...account });
 
-	await page.goto("/profiles");
+	await expect(page.getByTestId("shell-nav-profiles")).toBeVisible();
+	await page.getByTestId("shell-nav-profiles").click();
 	await expect(page).toHaveURL(/\/profiles$/);
 	const profileGrid = page.getByTestId("profile-list-grid");
 	await expect(profileGrid).toBeVisible();

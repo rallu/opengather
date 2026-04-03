@@ -53,15 +53,21 @@ function getMemberNavItems(authUserId: string): NavItem[] {
 		{ to: "/feed", label: "Feed", testId: "shell-nav-feed" },
 		{ to: "/groups", label: "Groups", testId: "shell-nav-groups" },
 		{
-			to: "/notifications",
-			label: "Notifications",
-			testId: "shell-nav-notifications",
-		},
-		{
 			to: `/profiles/${authUserId}`,
 			label: "Profile",
 			testId: "shell-nav-profile",
 			activePrefixes: ["/profile", `/profiles/${authUserId}`],
+		},
+		{
+			to: "/profiles",
+			label: "Profiles",
+			testId: "shell-nav-profiles",
+			activePrefixes: ["/profiles"],
+		},
+		{
+			to: "/notifications",
+			label: "Notifications",
+			testId: "shell-nav-notifications",
 		},
 	];
 }

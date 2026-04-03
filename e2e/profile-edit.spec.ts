@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { Client } from "pg";
 import sharp from "sharp";
+import { DEFAULT_PROFILE_IMAGES } from "../app/lib/default-profile-images";
 
 const databaseUrl =
 	process.env.DATABASE_URL ??
@@ -82,6 +83,19 @@ async function getUserIdByEmail(email: string): Promise<string> {
 	});
 }
 
+async function getUserImageByEmail(email: string): Promise<string | null> {
+	return withDb(async (client) => {
+		const result = await client.query<{ image: string | null }>(
+			'select image from "user" where email = $1 limit 1',
+			[email],
+		);
+		if (result.rowCount === 0) {
+			throw new Error(`User not found for ${email}`);
+		}
+		return result.rows[0]?.image ?? null;
+	});
+}
+
 async function buildPngBuffer() {
 	return sharp({
 		create: {
@@ -109,6 +123,9 @@ test("profile details and image overrides can be edited from profile route", asy
 	};
 	await registerUser({ page, ...account });
 	const userId = await getUserIdByEmail(account.email);
+	const userImage = await getUserImageByEmail(account.email);
+	expect(userImage).toBeTruthy();
+	expect(DEFAULT_PROFILE_IMAGES).toContain(userImage as string);
 
 	await page.getByTestId("shell-nav-profile").click();
 	await expect(page).toHaveURL(new RegExp(`/profiles/${userId}$`));
@@ -122,11 +139,6 @@ test("profile details and image overrides can be edited from profile route", asy
 	await page
 		.getByTestId("profile-name-input")
 		.fill(`Updated Profile Owner ${stamp}`);
-	await page
-		.getByTestId("profile-image-url-input")
-		.fill("https://example.com/avatar.png");
-	await page.getByTestId("profile-image-url-save-button").click();
-	await expect(page.getByTestId("profile-image-save-success")).toBeVisible();
 	await page
 		.getByTestId("profile-summary-input")
 		.fill("This is my updated profile summary for route verification.");
@@ -144,6 +156,8 @@ test("profile details and image overrides can be edited from profile route", asy
 
 	const uploadedImage = await buildPngBuffer();
 	await page.goto("/profile");
+	await page.getByTestId("profile-image-dialog-trigger").click();
+	await expect(page.getByTestId("profile-image-dialog")).toBeVisible();
 	await page.getByTestId("profile-image-upload-input").setInputFiles({
 		name: "profile-image.png",
 		mimeType: "image/png",
@@ -151,9 +165,6 @@ test("profile details and image overrides can be edited from profile route", asy
 	});
 	await page.getByTestId("profile-image-upload-button").click();
 	await expect(page.getByTestId("profile-image-save-success")).toBeVisible();
-	await expect(page.getByTestId("profile-image-source")).toContainText(
-		"uploaded image stored on this instance",
-	);
 
 	await page.goto(`/profiles/${userId}`);
 	const imageSrc = await page
@@ -162,7 +173,7 @@ test("profile details and image overrides can be edited from profile route", asy
 		.first()
 		.getAttribute("src");
 	expect(imageSrc).toBeTruthy();
-	expect(imageSrc).toMatch(new RegExp(`/profile-images/${userId}\\?v=`));
+	expect(imageSrc).toMatch(new RegExp(`/profile-images/${userId}/256\\?v=`));
 	if (!imageSrc) {
 		throw new Error("Expected uploaded profile image src");
 	}

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { getDefaultProfileImageForUser } from "../lib/default-profile-images.ts";
 import {
 	buildUploadedProfileImageUrl,
 	isUploadedProfileImageOverride,
@@ -21,10 +22,28 @@ test("resolveEffectiveProfileImage prefers local override", () => {
 test("resolveEffectiveProfileImage falls back to provider image", () => {
 	assert.equal(
 		resolveEffectiveProfileImage({
+			id: "user-456",
 			image: "https://hub.example/avatar.png",
 			imageOverride: null,
 		}),
 		"https://hub.example/avatar.png",
+	);
+});
+
+test("resolveEffectiveProfileImage falls back to a default avatar", () => {
+	assert.equal(
+		resolveEffectiveProfileImage({
+			id: "user-789",
+			name: "Default Person",
+			email: "default@example.com",
+			image: null,
+			imageOverride: null,
+		}),
+		getDefaultProfileImageForUser({
+			id: "user-789",
+			name: "Default Person",
+			email: "default@example.com",
+		}),
 	);
 });
 

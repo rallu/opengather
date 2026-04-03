@@ -136,7 +136,7 @@ export async function searchProfiles(params: {
 		results.push({
 			id: user.id,
 			name: user.name.trim() || "Member",
-			imageSrc: resolveEffectiveProfileImage(user) ?? undefined,
+			imageSrc: resolveEffectiveProfileImage(user),
 			summary: sanitizeProfileSummary(preference?.summary) ?? undefined,
 			profilePath: `/profiles/${user.id}`,
 			rank: getProfileMatchRank(

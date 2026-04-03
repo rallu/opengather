@@ -1,5 +1,6 @@
 import sharp from "sharp";
 
+import { getDefaultProfileImageForUser } from "../lib/default-profile-images.ts";
 import { getAssetStorage } from "./asset-storage.server.ts";
 import type { ParsedMultipartFile } from "./multipart-form.server.ts";
 import { pickImageVariantFormat } from "./post-assets.server/image-processing.ts";
@@ -14,6 +15,9 @@ const PROFILE_IMAGE_SIZES = [64, 128, 256] as const;
 type ProfileImageSize = (typeof PROFILE_IMAGE_SIZES)[number];
 
 type StoredProfileImageParams = {
+	id?: string | null | undefined;
+	email?: string | null | undefined;
+	name?: string | null | undefined;
 	image: string | null | undefined;
 	imageOverride: string | null | undefined;
 };
@@ -27,11 +31,35 @@ function normalizeStoredImageValue(
 
 export function resolveEffectiveProfileImage(
 	params: StoredProfileImageParams,
-): string | null {
+): string {
 	return (
 		normalizeStoredImageValue(params.imageOverride) ??
-		normalizeStoredImageValue(params.image)
+		normalizeStoredImageValue(params.image) ??
+		getDefaultProfileImageForUser({
+			id: params.id,
+			email: params.email,
+			name: params.name,
+		})
 	);
+}
+
+function createImageResponseFromDataUrl(dataUrl: string): Response {
+	const [metadata, encodedBody] = dataUrl.split(",", 2);
+	if (!metadata || !encodedBody) {
+		return new Response("Not found", { status: 404 });
+	}
+
+	const mimeType = metadata.match(/^data:([^;,]+)/)?.[1] ?? "image/svg+xml";
+	const body = metadata.includes(";base64")
+		? Buffer.from(encodedBody, "base64")
+		: decodeURIComponent(encodedBody);
+
+	return new Response(body, {
+		headers: {
+			"Content-Type": mimeType,
+			"Cache-Control": "public, max-age=31536000, immutable",
+		},
+	});
 }
 
 export function isUploadedProfileImageOverride(
@@ -203,7 +231,9 @@ export async function createProfileImageResponse(params: {
 			: []),
 	];
 	if (variants.length === 0) {
-		return new Response("Not found", { status: 404 });
+		return createImageResponseFromDataUrl(
+			getDefaultProfileImageForUser({ id: params.userId }),
+		);
 	}
 
 	const format = pickImageVariantFormat(

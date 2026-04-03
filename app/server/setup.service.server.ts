@@ -11,6 +11,7 @@ import { getDb } from "./db.server.ts";
 import { captureMonitoredError } from "./error-monitoring.server.ts";
 import { linkHubInstanceForUser } from "./hub.service.server.ts";
 import { logError } from "./logger.server.ts";
+import { ensureUserHasStoredProfileImage } from "./profile-defaults.server.ts";
 
 export const SINGLETON_INSTANCE_ID = "singleton";
 
@@ -161,6 +162,11 @@ export async function initializeSetup(params: {
 		};
 	}
 	const adminUser = adminResult.user;
+	await ensureUserHasStoredProfileImage({
+		userId: adminUser.id,
+		email: adminUser.email,
+		name: adminUser.name,
+	});
 
 	try {
 		await db.$transaction(async (trx) => {

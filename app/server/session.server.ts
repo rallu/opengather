@@ -4,6 +4,7 @@ import {
 	getHubIdentityForLocalUser,
 	linkHubInstanceForUser,
 } from "./hub.service.server.ts";
+import { ensureUserHasStoredProfileImage } from "./profile-defaults.server.ts";
 
 export function parseCookieHeader(params: {
 	cookieHeader: string | null;
@@ -41,6 +42,12 @@ export async function getAuthUserFromRequest(params: {
 		if (!session?.user?.id) {
 			return null;
 		}
+
+		await ensureUserHasStoredProfileImage({
+			userId: session.user.id,
+			email: session.user.email,
+			name: session.user.name,
+		});
 
 		const hubIdentity = await getHubIdentityForLocalUser({
 			localUserId: session.user.id,
