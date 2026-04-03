@@ -16,9 +16,10 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 COPY . .
+RUN npm run build:shared
 RUN npm run build
 
 RUN chmod +x scripts/once-entrypoint.sh
