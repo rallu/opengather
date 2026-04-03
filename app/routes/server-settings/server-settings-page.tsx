@@ -111,20 +111,12 @@ export function ServerSettingsPage(params: {
 			</section>
 
 			<section className="rounded-md border border-border p-4">
-				<div
-					className={`grid gap-3 ${
-						params.data.hubConfig?.hubAvailable
-							? "sm:grid-cols-3"
-							: "sm:grid-cols-2"
-					}`}
-				>
-					{params.data.hubConfig?.hubAvailable ? (
-						<AuthProviderTile
-							label="Hub"
-							enabled={params.data.authProviders.hub}
-							description="Recommended identity provider"
-						/>
-					) : null}
+				<div className="grid gap-3 sm:grid-cols-3">
+					<AuthProviderTile
+						label="Hub"
+						enabled={params.data.authProviders.hub}
+						description="Connect this server to OpenGather Hub"
+					/>
 					<AuthProviderTile
 						label="Email + Password"
 						enabled={params.data.authProviders.emailPassword}
@@ -138,61 +130,69 @@ export function ServerSettingsPage(params: {
 				</div>
 			</section>
 
-			{params.data.hubConfig?.hubAvailable ? (
-				<section className="rounded-md border border-border p-4">
-					<h2 className="mb-3 text-base font-semibold">Hub Connection</h2>
-					{params.actionData &&
-					"error" in params.actionData &&
-					actionSection === "hub" ? (
-						<div className="mb-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-							{params.actionData.error}
+			<section className="rounded-md border border-border p-4">
+				<h2 className="mb-3 text-base font-semibold">Hub Connection</h2>
+				{params.actionData &&
+				"error" in params.actionData &&
+				actionSection === "hub" ? (
+					<div className="mb-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+						{params.actionData.error}
+					</div>
+				) : null}
+				{params.actionData &&
+				"ok" in params.actionData &&
+				actionSection === "hub" ? (
+					<div className="mb-3 rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700">
+						Saved.
+					</div>
+				) : null}
+				<Form method="post" className="space-y-4">
+					<input type="hidden" name="_action" value="save-hub" />
+					<label className="block space-y-2 text-sm">
+						<span className="font-medium">Hub URL</span>
+						<input
+							name="hubBaseUrl"
+							type="url"
+							defaultValue={params.data.hubConfig?.hubBaseUrl ?? ""}
+							placeholder="https://opengather.net"
+							className="w-full rounded-md border border-input bg-background px-3 py-2"
+						/>
+					</label>
+					<label className="flex items-center gap-2 text-sm font-medium">
+						<input
+							name="hubEnabled"
+							type="checkbox"
+							defaultChecked={Boolean(params.data.hubConfig?.hubEnabled)}
+						/>
+						Enable Hub connection
+					</label>
+					<p className="text-sm text-muted-foreground">
+						Enabling auto-registers this server with the configured hub and stores
+						the returned OAuth credentials.
+					</p>
+					{params.data.hubConfig?.hubEnabled ? (
+						<div className="rounded-md border border-border p-3 text-sm">
+							<p>
+								<span className="text-muted-foreground">Hub URL:</span>{" "}
+								{params.data.hubConfig.hubBaseUrl || "-"}
+							</p>
+							<p>
+								<span className="text-muted-foreground">Client ID:</span>{" "}
+								{params.data.hubConfig.hubClientId || "-"}
+							</p>
+							<p>
+								<span className="text-muted-foreground">Discovery URL:</span>{" "}
+								{params.data.hubConfig.hubOidcDiscoveryUrl || "-"}
+							</p>
+							<p>
+								<span className="text-muted-foreground">Instance URL:</span>{" "}
+								{params.data.hubConfig.hubInstanceBaseUrl || "-"}
+							</p>
 						</div>
 					) : null}
-					{params.actionData &&
-					"ok" in params.actionData &&
-					actionSection === "hub" ? (
-						<div className="mb-3 rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700">
-							Saved.
-						</div>
-					) : null}
-					<Form method="post" className="space-y-4">
-						<input type="hidden" name="_action" value="save-hub" />
-						<label className="flex items-center gap-2 text-sm font-medium">
-							<input
-								name="hubEnabled"
-								type="checkbox"
-								defaultChecked={Boolean(params.data.hubConfig?.hubEnabled)}
-							/>
-							Enable Hub connection
-						</label>
-						<p className="text-sm text-muted-foreground">
-							Hub URL is resolved from environment. Enabling auto-registers this
-							server and stores returned OAuth + push credentials.
-						</p>
-						{params.data.hubConfig?.hubEnabled ? (
-							<div className="rounded-md border border-border p-3 text-sm">
-								<p>
-									<span className="text-muted-foreground">Hub URL:</span>{" "}
-									{params.data.hubConfig.hubBaseUrl}
-								</p>
-								<p>
-									<span className="text-muted-foreground">Client ID:</span>{" "}
-									{params.data.hubConfig.hubClientId || "-"}
-								</p>
-								<p>
-									<span className="text-muted-foreground">Discovery URL:</span>{" "}
-									{params.data.hubConfig.hubOidcDiscoveryUrl || "-"}
-								</p>
-								<p>
-									<span className="text-muted-foreground">Instance URL:</span>{" "}
-									{params.data.hubConfig.hubInstanceBaseUrl || "-"}
-								</p>
-							</div>
-						) : null}
-						<Button type="submit">Save</Button>
-					</Form>
-				</section>
-			) : null}
+					<Button type="submit">Save Hub settings</Button>
+				</Form>
+			</section>
 
 			<section className="rounded-md border border-border p-4">
 				<h2 className="mb-3 text-base font-semibold">Media Storage</h2>

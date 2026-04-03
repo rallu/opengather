@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { redirect } from "react-router";
 import {
+	getHubEnv,
 	hasDatabaseConfig,
 	hasHubBaseUrlConfigured,
 } from "~/server/env.server";
@@ -68,9 +69,9 @@ export async function action({
 	const approvalMode = (formData.get("approvalMode") ?? "automatic") as
 		| "automatic"
 		| "manual";
+	const hubBaseUrl = getHubEnv().HUB_BASE_URL;
 	const hubEnabled =
-		hasHubBaseUrlConfigured() &&
-		String(formData.get("hubEnabled") ?? "") === "on";
+		Boolean(hubBaseUrl) && String(formData.get("hubEnabled") ?? "") === "on";
 
 	if (!name || !adminName || !adminEmail || !adminPassword) {
 		return { error: "Server and admin fields are required" };
@@ -86,6 +87,7 @@ export async function action({
 					instanceName: name,
 					instanceBaseUrl: appOrigin,
 					redirectUri: `${appOrigin}/api/auth/oauth2/callback/hub`,
+					hubBaseUrl,
 				})
 			: null;
 
@@ -99,6 +101,7 @@ export async function action({
 			adminEmail,
 			adminPassword,
 			hub: {
+				baseUrl: hubEnabled ? hubBaseUrl : "",
 				enabled: hubEnabled,
 				oidcDiscoveryUrl: hubRegistration?.hubOidcDiscoveryUrl ?? "",
 				clientId: hubRegistration?.hubClientId ?? "",

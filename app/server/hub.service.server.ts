@@ -1,7 +1,5 @@
 import { getServerConfig } from "./config.service.server.ts";
 import { getDb } from "./db.server.ts";
-import { getHubEnv } from "./env.server.ts";
-import { resolveHubBaseUrl } from "./hub-config.server.ts";
 import type { NotificationKind } from "./notification.types.server.ts";
 
 export type HubNotificationDeliveryMode = "deliver" | "sync";
@@ -10,11 +8,7 @@ export async function createHubAuthorizeUrl(params: {
 	state: string;
 }): Promise<string> {
 	const config = await getServerConfig();
-	const hubBaseUrl = resolveHubBaseUrl({
-		envBaseUrl: getHubEnv().HUB_BASE_URL,
-		discoveryUrl: config.hubOidcDiscoveryUrl,
-	});
-	if (!hubBaseUrl) {
+	if (!config.hubBaseUrl) {
 		throw new Error("Hub is unavailable");
 	}
 	const query = new URLSearchParams({
@@ -24,7 +18,7 @@ export async function createHubAuthorizeUrl(params: {
 		scope: "openid profile email offline_access",
 		state: params.state,
 	});
-	return `${hubBaseUrl}/api/auth/oauth2/authorize?${query.toString()}`;
+	return `${config.hubBaseUrl}/api/auth/oauth2/authorize?${query.toString()}`;
 }
 
 export async function completeHubLogin(_params: {
@@ -66,11 +60,7 @@ export async function linkHubInstanceForUser(params: {
 	hubAccessToken?: string;
 }): Promise<void> {
 	const config = await getServerConfig();
-	const hubBaseUrl = resolveHubBaseUrl({
-		envBaseUrl: getHubEnv().HUB_BASE_URL,
-		discoveryUrl: config.hubOidcDiscoveryUrl,
-	});
-	if (!hubBaseUrl) {
+	if (!config.hubBaseUrl) {
 		return;
 	}
 	const headers: Record<string, string> = {
@@ -80,7 +70,7 @@ export async function linkHubInstanceForUser(params: {
 		headers.Authorization = `Bearer ${params.hubAccessToken}`;
 	}
 
-	await fetch(`${hubBaseUrl}/api/instances/link`, {
+	await fetch(`${config.hubBaseUrl}/api/instances/link`, {
 		method: "POST",
 		headers,
 		body: JSON.stringify({
@@ -101,11 +91,7 @@ export async function pushHubNotification(params: {
 	targetUrl?: string;
 }): Promise<void> {
 	const config = await getServerConfig();
-	const hubBaseUrl = resolveHubBaseUrl({
-		envBaseUrl: getHubEnv().HUB_BASE_URL,
-		discoveryUrl: config.hubOidcDiscoveryUrl,
-	});
-	if (!config.hubEnabled || !config.hubInstanceBaseUrl || !hubBaseUrl) {
+	if (!config.hubEnabled || !config.hubInstanceBaseUrl || !config.hubBaseUrl) {
 		return;
 	}
 
@@ -113,7 +99,7 @@ export async function pushHubNotification(params: {
 		? new URL(params.targetUrl, config.hubInstanceBaseUrl).toString()
 		: undefined;
 
-	const response = await fetch(`${hubBaseUrl}/api/notifications/push`, {
+	const response = await fetch(`${config.hubBaseUrl}/api/notifications/push`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -139,16 +125,16 @@ export async function registerInstanceWithHub(params: {
 	instanceName: string;
 	instanceBaseUrl: string;
 	redirectUri: string;
+	hubBaseUrl: string;
 }): Promise<{
 	hubClientId: string;
 	hubClientSecret: string;
 	hubOidcDiscoveryUrl: string;
 }> {
-	const hubBaseUrl = getHubEnv().HUB_BASE_URL;
-	if (!hubBaseUrl) {
+	if (!params.hubBaseUrl) {
 		throw new Error("HUB_BASE_URL is not configured");
 	}
-	const response = await fetch(`${hubBaseUrl}/api/instances/register`, {
+	const response = await fetch(`${params.hubBaseUrl}/api/instances/register`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -184,14 +170,10 @@ export async function unregisterInstanceFromHub(params: {
 	instanceBaseUrl: string;
 }): Promise<void> {
 	const config = await getServerConfig();
-	const hubBaseUrl = resolveHubBaseUrl({
-		envBaseUrl: getHubEnv().HUB_BASE_URL,
-		discoveryUrl: config.hubOidcDiscoveryUrl,
-	});
-	if (!hubBaseUrl) {
+	if (!config.hubBaseUrl) {
 		return;
 	}
-	const response = await fetch(`${hubBaseUrl}/api/instances/unregister`, {
+	const response = await fetch(`${config.hubBaseUrl}/api/instances/unregister`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",

@@ -9,7 +9,7 @@ import {
 	registerInstanceWithHub,
 	unregisterInstanceFromHub,
 } from "~/server/hub.service.server";
-import { isHubUiEnabled } from "~/server/hub-config.server.ts";
+import { isHubUiEnabled, normalizeHubBaseUrl } from "~/server/hub-config.server.ts";
 import {
 	canManageInstance,
 	getViewerContext as getPermissionsViewerContext,
@@ -69,6 +69,9 @@ export async function action({
 					? "media"
 					: "hub";
 		const hubEnabled = String(formData.get("hubEnabled") ?? "") === "on";
+		const hubBaseUrl = normalizeHubBaseUrl(
+			String(formData.get("hubBaseUrl") ?? ""),
+		);
 		const appOrigin = getPublicOrigin(request);
 		const currentConfig = await getServerConfig();
 
@@ -131,6 +134,12 @@ export async function action({
 		}
 
 		if (hubEnabled) {
+			if (!hubBaseUrl) {
+				return {
+					error: "Enter a Hub URL before enabling the connection.",
+					section: "hub",
+				};
+			}
 			const instanceName =
 				currentConfig.hubInstanceName ||
 				setup.instance?.name ||
@@ -139,8 +148,10 @@ export async function action({
 				instanceName,
 				instanceBaseUrl: appOrigin,
 				redirectUri: `${appOrigin}/api/auth/oauth2/callback/hub`,
+				hubBaseUrl,
 			});
 			await Promise.all([
+				setConfig("hub_base_url", hubBaseUrl),
 				setConfig("hub_enabled", true),
 				setConfig("hub_oidc_discovery_url", registration.hubOidcDiscoveryUrl),
 				setConfig("hub_client_id", registration.hubClientId),
@@ -159,6 +170,7 @@ export async function action({
 				resourceId: "hub_connection",
 				request,
 				payload: {
+					hubBaseUrl,
 					hubEnabled: true,
 					instanceName,
 					instanceBaseUrl: appOrigin,
@@ -170,6 +182,7 @@ export async function action({
 				instanceBaseUrl: currentConfig.hubInstanceBaseUrl || appOrigin,
 			});
 			await Promise.all([
+				setConfig("hub_base_url", hubBaseUrl),
 				setConfig("hub_enabled", false),
 				setConfig("hub_oidc_discovery_url", ""),
 				setConfig("hub_client_id", ""),
@@ -184,6 +197,7 @@ export async function action({
 				resourceId: "hub_connection",
 				request,
 				payload: {
+					hubBaseUrl,
 					hubEnabled: false,
 					instanceBaseUrl: currentConfig.hubInstanceBaseUrl || appOrigin,
 					outcome: "success",

@@ -83,6 +83,7 @@ export async function initializeSetup(params: {
 	adminEmail: string;
 	adminPassword: string;
 	hub: {
+		baseUrl: string;
 		enabled: boolean;
 		oidcDiscoveryUrl: string;
 		clientId: string;
@@ -101,6 +102,7 @@ export async function initializeSetup(params: {
 
 	await Promise.all([
 		setConfig("better_auth_url", params.betterAuthUrl),
+		setConfig("hub_base_url", params.hub.baseUrl),
 		setConfig("hub_enabled", params.hub.enabled),
 		setConfig("hub_oidc_discovery_url", params.hub.oidcDiscoveryUrl),
 		setConfig("hub_client_id", params.hub.clientId),

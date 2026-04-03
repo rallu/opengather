@@ -10,6 +10,7 @@ export type ConfigValueByKey = {
 	better_auth_url: string;
 	google_client_id: string;
 	google_client_secret: string;
+	hub_base_url: string;
 	hub_enabled: boolean;
 	hub_oidc_discovery_url: string;
 	hub_client_id: string;
@@ -142,6 +143,10 @@ export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
 	google_client_secret: {
 		defaultValue: "",
 		parse: (raw) => parseString(raw),
+	},
+	hub_base_url: {
+		defaultValue: hubEnv.HUB_BASE_URL,
+		parse: (raw) => parseString(raw, hubEnv.HUB_BASE_URL),
 	},
 	hub_enabled: {
 		defaultValue: false,
