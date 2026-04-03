@@ -164,7 +164,7 @@ export async function listVisibleProfiles(params: {
 	Array<{
 		id: string;
 		name: string;
-		image: string | null;
+		image: string;
 		summary: string | null;
 		profileVisibility: ProfileVisibilityMode;
 		isSelf: boolean;
@@ -208,46 +208,46 @@ export async function listVisibleProfiles(params: {
 		profilePreferences.map((preference) => [preference.userId, preference]),
 	);
 
-	return users
-		.map((user) => {
-			const preference = profilePreferenceMap.get(user.id);
-			const profileVisibility = resolveEffectiveProfileVisibility({
-				instanceVisibilityMode: params.instanceVisibilityMode,
-				visibilityMode: parseProfileVisibilityMode(preference?.visibilityMode),
-			});
-			const visibilityResult = canViewProfile({
-				isAuthenticated: Boolean(params.viewer),
-				isSelf: user.id === params.viewer?.id,
-				instanceViewerRole: params.instanceViewerRole,
-				visibilityMode: profileVisibility,
-			});
-			if (!visibilityResult.allowed) {
-				return null;
-			}
-			return {
-				id: user.id,
-				name: user.name,
-				image: resolveEffectiveProfileImage(user),
-				summary: preference?.summary
-					? sanitizeProfileSummary(preference.summary)
-					: null,
-				profileVisibility,
-				isSelf: user.id === params.viewer?.id,
-			};
-		})
-		.filter(
-			(
-				profile,
-			): profile is {
-				id: string;
-				name: string;
-				image: string | null;
-				summary: string | null;
-				profileVisibility: ProfileVisibilityMode;
-				isSelf: boolean;
-			} => Boolean(profile),
-		)
-		.sort((left, right) => left.name.localeCompare(right.name));
+	const visibleProfiles: Array<{
+		id: string;
+		name: string;
+		image: string;
+		summary: string | null;
+		profileVisibility: ProfileVisibilityMode;
+		isSelf: boolean;
+	}> = [];
+
+	for (const user of users) {
+		const preference = profilePreferenceMap.get(user.id);
+		const profileVisibility = resolveEffectiveProfileVisibility({
+			instanceVisibilityMode: params.instanceVisibilityMode,
+			visibilityMode: parseProfileVisibilityMode(preference?.visibilityMode),
+		});
+		const visibilityResult = canViewProfile({
+			isAuthenticated: Boolean(params.viewer),
+			isSelf: user.id === params.viewer?.id,
+			instanceViewerRole: params.instanceViewerRole,
+			visibilityMode: profileVisibility,
+		});
+		if (!visibilityResult.allowed) {
+			continue;
+		}
+
+		visibleProfiles.push({
+			id: user.id,
+			name: user.name,
+			image: resolveEffectiveProfileImage(user),
+			summary: preference?.summary
+				? sanitizeProfileSummary(preference.summary)
+				: null,
+			profileVisibility,
+			isSelf: user.id === params.viewer?.id,
+		});
+	}
+
+	return visibleProfiles.sort((left, right) =>
+		left.name.localeCompare(right.name),
+	);
 }
 export async function loadOwnProfile(params: {
 	userId: string;
