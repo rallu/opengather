@@ -77,10 +77,7 @@ function getDefaultVapidSubject(): string {
 }
 
 function getDefaultHubBaseUrl(): string {
-	if (
-		typeof process !== "undefined" &&
-		process.env.NODE_ENV === "production"
-	) {
+	if (typeof process !== "undefined" && process.env.NODE_ENV === "production") {
 		return DEFAULT_PRODUCTION_HUB_BASE_URL;
 	}
 

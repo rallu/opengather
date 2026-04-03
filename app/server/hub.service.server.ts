@@ -173,15 +173,18 @@ export async function unregisterInstanceFromHub(params: {
 	if (!config.hubBaseUrl) {
 		return;
 	}
-	const response = await fetch(`${config.hubBaseUrl}/api/instances/unregister`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
+	const response = await fetch(
+		`${config.hubBaseUrl}/api/instances/unregister`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				instanceBaseUrl: params.instanceBaseUrl,
+			}),
 		},
-		body: JSON.stringify({
-			instanceBaseUrl: params.instanceBaseUrl,
-		}),
-	});
+	);
 
 	if (!response.ok && response.status !== 404) {
 		throw new Error(`Hub unregister failed: ${response.status}`);

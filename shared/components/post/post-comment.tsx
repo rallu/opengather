@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { ProfileImage } from "../../../app/components/profile/profile-image";
 import {
 	type PostActionData,
 	PostActionItem,
 	PostActions,
 } from "../../../app/components/post/post-actions";
 import { PostLabels } from "../../../app/components/post/post-labels";
+import { ProfileImage } from "../../../app/components/profile/profile-image";
 import {
 	ChatBubble,
 	ChatBubbleBody,
@@ -20,7 +20,10 @@ import {
 import { Icon } from "../../../app/components/ui/icon";
 import { IconButton } from "../../../app/components/ui/icon-button";
 import { cn } from "../../../app/lib/utils";
-import type { SharedPostAsset, SharedPostModerationStatus } from "../../post-types";
+import type {
+	SharedPostAsset,
+	SharedPostModerationStatus,
+} from "../../post-types";
 import { useOpenGatherLinkComponent } from "../../render-context";
 import { FormattedTimestamp } from "./formatted-timestamp";
 import { PostAssetDisplay } from "./post-asset-display";

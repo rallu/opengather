@@ -1,8 +1,4 @@
-export {
-	listVisibleProfiles,
-	loadOwnProfile,
-	loadVisibleProfile,
-} from "./profile.service.server/loaders.ts";
+export { loadOwnProfile } from "./profile.service.server/loaders.ts";
 export type { ProfileActivity } from "./profile.service.server/shared.ts";
 export {
 	getProfileVisibility,
@@ -14,3 +10,7 @@ export {
 	setProfileVisibility,
 	updateOwnProfileDetails,
 } from "./profile.service.server/visibility.ts";
+export {
+	listVisibleProfiles,
+	loadVisibleProfile,
+} from "./profile.service.server/visible-loaders.ts";

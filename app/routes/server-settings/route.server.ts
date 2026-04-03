@@ -9,7 +9,10 @@ import {
 	registerInstanceWithHub,
 	unregisterInstanceFromHub,
 } from "~/server/hub.service.server";
-import { isHubUiEnabled, normalizeHubBaseUrl } from "~/server/hub-config.server.ts";
+import {
+	isHubUiEnabled,
+	normalizeHubBaseUrl,
+} from "~/server/hub-config.server.ts";
 import {
 	canManageInstance,
 	getViewerContext as getPermissionsViewerContext,

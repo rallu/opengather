@@ -167,8 +167,8 @@ export function ServerSettingsPage(params: {
 						Enable Hub connection
 					</label>
 					<p className="text-sm text-muted-foreground">
-						Enabling auto-registers this server with the configured hub and stores
-						the returned OAuth credentials.
+						Enabling auto-registers this server with the configured hub and
+						stores the returned OAuth credentials.
 					</p>
 					{params.data.hubConfig?.hubEnabled ? (
 						<div className="rounded-md border border-border p-3 text-sm">

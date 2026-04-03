@@ -1,11 +1,7 @@
 import type { PostCommentData } from "~/components/post/post-comments";
 import { ProfileImage } from "~/components/profile/profile-image";
 import { Icon } from "~/components/ui/icon";
-import {
-	ainoImage,
-	mikaImage,
-	saraImage,
-} from "~/lib/default-profile-images";
+import { ainoImage, mikaImage, saraImage } from "~/lib/default-profile-images";
 import { RICH_TEXT_VERSION, type RichTextDocument } from "~/lib/rich-text";
 
 export { ainoImage, mikaImage, saraImage };

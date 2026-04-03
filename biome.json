@@ -6,6 +6,7 @@
 			"!.react-router",
 			"!.turbo",
 			"!build",
+			"!dist",
 			"!test-results",
 			"!node_modules",
 			"!app/generated",
