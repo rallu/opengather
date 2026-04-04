@@ -19,6 +19,7 @@ function createAuth(params: {
 	} | null;
 }) {
 	const env = getAuthEnv();
+	const trustedAccountLinkingProviders = params.hub ? ["hub"] : [];
 
 	return betterAuth({
 		database: prismaAdapter(getDb(), {
@@ -33,6 +34,11 @@ function createAuth(params: {
 		secret: env.BETTER_AUTH_SECRET,
 		advanced: {
 			cookiePrefix: "opengather",
+		},
+		account: {
+			accountLinking: {
+				trustedProviders: trustedAccountLinkingProviders,
+			},
 		},
 		...(params.google
 			? {
