@@ -1,5 +1,4 @@
 import { ProfileImage } from "~/components/profile/profile-image";
-import { Badge } from "~/components/ui/badge";
 import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
 import type { PostAuthorSummary } from "~/server/post-author.service.server";
 import type { PostGroup } from "~/server/post-list.service.server/core";

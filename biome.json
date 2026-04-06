@@ -36,5 +36,17 @@
 				}
 			}
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["**/*.test.*", "**/*.spec.*"],
+			"linter": {
+				"rules": {
+					"nursery": {
+						"noExcessiveLinesPerFile": "off"
+					}
+				}
+			}
+		}
+	]
 }

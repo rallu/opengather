@@ -242,7 +242,7 @@ export async function action(
 				agentId,
 				grants: scopes.map((scope) => ({
 					resourceType: "instance",
-					resourceId: setup.instance!.id,
+					resourceId: setup.instance?.id,
 					scope,
 				})),
 			});
@@ -335,7 +335,7 @@ export async function action(
 			instanceRole: requestedRole,
 			grants: scopes.map((scope) => ({
 				resourceType: "instance",
-				resourceId: setup.instance!.id,
+				resourceId: setup.instance?.id,
 				scope,
 			})),
 		});

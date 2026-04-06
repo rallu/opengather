@@ -249,7 +249,7 @@ export async function action(
 			instanceRole: "member",
 			grants: scopes.map((scope) => ({
 				resourceType: "instance",
-				resourceId: viewer.setup.instance!.id,
+				resourceId: viewer.setup.instance?.id,
 				scope,
 			})),
 		});
