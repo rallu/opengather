@@ -1,6 +1,7 @@
 export const notificationKinds = [
 	"reply_to_post",
 	"mention",
+	"agent_message",
 	"event_reminder",
 	"instance_membership_request",
 	"group_membership_request",
@@ -28,6 +29,10 @@ export const notificationKindMeta: Record<
 	mention: {
 		label: "Mentions",
 		description: "Someone mentions you in a post.",
+	},
+	agent_message: {
+		label: "Agent messages",
+		description: "A local agent sends you a direct notification.",
 	},
 	event_reminder: {
 		label: "Event reminders",

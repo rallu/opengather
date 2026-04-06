@@ -314,6 +314,17 @@ export function ServerSettingsPage(params: {
 					</Button>
 				</div>
 			</section>
+
+			<section className="rounded-md border border-border p-4">
+				<h2 className="mb-3 text-base font-semibold">Agents</h2>
+				<p className="mb-3 text-sm text-muted-foreground">
+					Create a bearer token for an external client and review existing
+					agents, their scopes, and last-used time.
+				</p>
+				<Button variant="outline" asChild>
+					<Link to="/server-settings/agents">Open Agent Settings</Link>
+				</Button>
+			</section>
 		</AppShell>
 	);
 }

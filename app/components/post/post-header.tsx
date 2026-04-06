@@ -58,11 +58,13 @@ export function PostHeader({
 					<Breadcrumb>
 						<BreadcrumbList>
 							<BreadcrumbItem>
-								<BreadcrumbLink
-									to={author.profilePath ?? `/profiles/${author.id}`}
-								>
-									{author.name}
-								</BreadcrumbLink>
+								{author.profilePath ? (
+									<BreadcrumbLink to={author.profilePath}>
+										{author.name}
+									</BreadcrumbLink>
+								) : (
+									<span>{author.name}</span>
+								)}
 							</BreadcrumbItem>
 							{group ? (
 								<>
@@ -77,6 +79,7 @@ export function PostHeader({
 						</BreadcrumbList>
 					</Breadcrumb>
 					<PostLabels
+						isAgent={author.kind === "agent"}
 						moderationStatus={moderationStatus}
 						isHidden={isHidden}
 						isDeleted={isDeleted}

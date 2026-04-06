@@ -15,6 +15,7 @@ function buildItem(
 		author: {
 			id: "member",
 			name: "Member",
+			kind: "user",
 		},
 		assets: [],
 		moderationStatus: "approved",

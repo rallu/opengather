@@ -83,7 +83,11 @@ export function CommunityPage(params: {
 			<FeedContainer className="space-y-4">
 				{params.data.authUser && params.data.status === "ok" ? (
 					<section>
-						<Form method="post" encType="multipart/form-data">
+						<Form
+							id="feed-post-form"
+							method="post"
+							encType="multipart/form-data"
+						>
 							<input type="hidden" name="_action" value="post" />
 							<input type="hidden" name="parentPostId" value="" />
 							<PostComposer
@@ -98,6 +102,7 @@ export function CommunityPage(params: {
 								footer={
 									<div className="px-1">
 										<PostAssetInput
+											formId="feed-post-form"
 											previousAlbums={params.data.previousAlbums}
 											inputTestId="feed-assets-input"
 											albumInputTestId="feed-albums-input"

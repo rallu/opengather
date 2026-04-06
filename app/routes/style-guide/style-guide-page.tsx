@@ -87,6 +87,22 @@ export function StyleGuidePage() {
 							<PostsFoundationsSection />
 							<PostsMediaSection />
 						</GuideGroup>
+						<section
+							id="style-guide-coming-next"
+							data-testid="style-guide-coming-next"
+							className="rounded-3xl border border-dashed border-border bg-muted/20 p-6"
+						>
+							<div className="space-y-2">
+								<h2 className="text-lg font-semibold tracking-tight">
+									Coming Next
+								</h2>
+								<p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+									Future sections will cover moderation tooling, richer empty
+									states, and agent-aware admin surfaces once those patterns are
+									stable enough to codify.
+								</p>
+							</div>
+						</section>
 					</div>
 				</div>
 			</div>

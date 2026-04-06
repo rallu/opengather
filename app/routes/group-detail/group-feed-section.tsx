@@ -22,7 +22,7 @@ export function GroupFeedSection(params: {
 	return (
 		<FeedContainer>
 			{params.data.canPost ? (
-				<Form method="post" encType="multipart/form-data">
+				<Form id="group-post-form" method="post" encType="multipart/form-data">
 					<input type="hidden" name="_action" value="post" />
 					<PostComposer
 						name="bodyText"
@@ -35,6 +35,7 @@ export function GroupFeedSection(params: {
 						resetKey={params.priorityPost?.id}
 						footer={
 							<PostAssetInput
+								formId="group-post-form"
 								previousAlbums={params.data.previousAlbums}
 								inputTestId="group-assets-input"
 								albumInputTestId="group-albums-input"

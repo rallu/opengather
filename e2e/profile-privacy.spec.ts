@@ -164,6 +164,7 @@ test.describe("profile privacy", () => {
 			...owner,
 		});
 		await page.goto("/feed");
+		await page.getByTestId("feed-composer").click();
 		await page.getByTestId("feed-composer").fill(profilePost);
 		await page.getByTestId("feed-post-button").click();
 		await expect(page.getByTestId("feed-post-list")).toContainText(profilePost);
@@ -258,6 +259,7 @@ test.describe("profile privacy", () => {
 			...owner,
 		});
 		await page.goto("/feed");
+		await page.getByTestId("feed-composer").click();
 		await page.getByTestId("feed-composer").fill(profilePost);
 		await page.getByTestId("feed-post-button").click();
 		await expect(page.getByTestId("feed-post-list")).toContainText(profilePost);

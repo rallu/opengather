@@ -52,3 +52,34 @@ test("writeAuditLog creates entry with actor/action/resource/payload", async () 
 	assert.equal(requestPayload.ip, "203.0.113.9");
 	assert.equal(requestPayload.userAgent, "node-test");
 });
+
+test("writeAuditLog accepts agent actors", async () => {
+	const created: unknown[] = [];
+	const fakeDb = {
+		auditLog: {
+			create: async (args: unknown) => {
+				created.push(args);
+				return args;
+			},
+		},
+	};
+
+	await writeAuditLog({
+		action: "agent.post.create",
+		actor: {
+			type: "agent",
+			id: "agent-1",
+		},
+		resourceType: "post",
+		resourceId: "post-1",
+		payload: { scope: "group.post" },
+		db: fakeDb,
+		instanceId: "singleton",
+	});
+
+	assert.equal(created.length, 1);
+	const [first] = created as Array<{ data: Record<string, unknown> }>;
+	assert.equal(first.data.actorId, "agent-1");
+	assert.equal(first.data.actorType, "agent");
+	assert.equal(first.data.action, "agent.post.create");
+});

@@ -14,12 +14,68 @@ const routes: RouteConfig = [
 		file: "routes/register.tsx",
 	},
 	{
+		path: "/logout",
+		file: "routes/logout.ts",
+	},
+	{
 		path: "/auth/hub/login",
 		file: "routes/hub-login.tsx",
 	},
 	{
 		path: "/auth/hub/callback",
 		file: "routes/hub-callback.tsx",
+	},
+	{
+		path: "/api/agents/v1/me",
+		file: "routes/api-agents-v1-me.ts",
+	},
+	{
+		path: "/api/agents/v1/groups",
+		file: "routes/api-agents-v1-groups.ts",
+	},
+	{
+		path: "/api/agents/v1/feed/posts",
+		file: "routes/api-agents-v1-feed-posts.ts",
+	},
+	{
+		path: "/api/agents/v1/notifications",
+		file: "routes/api-agents-v1-notifications.ts",
+	},
+	{
+		path: "/api/agents/v1/posts/:postId/replies",
+		file: "routes/api-agents-v1-posts-postId-replies.ts",
+	},
+	{
+		path: "/api/agents/v1/posts/:postId/hide",
+		file: "routes/api-agents-v1-posts-postId-hide.ts",
+	},
+	{
+		path: "/api/agents/v1/groups/:groupId/posts",
+		file: "routes/api-agents-v1-groups-group-posts.ts",
+	},
+	{
+		path: "/mcp",
+		file: "routes/mcp.ts",
+	},
+	{
+		path: "/authorize",
+		file: "routes/authorize.tsx",
+	},
+	{
+		path: "/token",
+		file: "routes/token.ts",
+	},
+	{
+		path: "/mcp/token",
+		file: "routes/mcp-token.ts",
+	},
+	{
+		path: "/.well-known/oauth-authorization-server",
+		file: "routes/oauth-authorization-server.ts",
+	},
+	{
+		path: "/.well-known/oauth-protected-resource/mcp",
+		file: "routes/oauth-protected-resource-mcp.ts",
 	},
 	{
 		path: "/api/auth/*",
@@ -128,6 +184,10 @@ const routes: RouteConfig = [
 	{
 		path: "/server-settings",
 		file: "routes/server-settings.tsx",
+	},
+	{
+		path: "/server-settings/agents",
+		file: "routes/server-settings-agents.tsx",
 	},
 	{
 		path: "/audit-logs",
