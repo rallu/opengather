@@ -210,6 +210,7 @@ export async function action(
 			status: 409,
 		});
 	}
+	const instanceId = viewer.setup.instance.id;
 
 	const formData = await params.request.formData();
 	const decision = String(formData.get("decision") ?? "approve");
@@ -242,14 +243,14 @@ export async function action(
 		}
 
 		const created = await (deps?.createAgent ?? createAgent)({
-			instanceId: viewer.setup.instance.id,
+			instanceId,
 			createdByUserId: viewer.authUser.id,
 			displayName,
 			displayLabel,
 			instanceRole: "member",
 			grants: scopes.map((scope) => ({
 				resourceType: "instance",
-				resourceId: viewer.setup.instance?.id,
+				resourceId: instanceId,
 				scope,
 			})),
 		});
