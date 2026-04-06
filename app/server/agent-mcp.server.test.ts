@@ -3,59 +3,8 @@ import test from "node:test";
 import {
 	AGENT_MCP_TOOLS,
 	callAgentMcpTool,
-	encodeMcpMessage,
 	handleAgentMcpRequest,
-	parseNextMcpMessage,
-	resolveAgentMcpConfig,
 } from "./agent-mcp.server.ts";
-
-test("resolveAgentMcpConfig prefers explicit flags and trims the base URL", () => {
-	const config = resolveAgentMcpConfig({
-		env: {
-			OG_BASE_URL: "http://localhost:5173/",
-			OG_AGENT_TOKEN: "oga_env",
-		},
-		argv: ["--base-url", "http://example.test/", "--token", "oga_flag"],
-	});
-
-	assert.deepEqual(config, {
-		baseUrl: "http://example.test",
-		token: "oga_flag",
-	});
-});
-
-test("parseNextMcpMessage decodes a framed JSON-RPC request", () => {
-	const framed = Buffer.concat([
-		Buffer.from("Content-Length: 58\r\n\r\n", "utf8"),
-		Buffer.from(
-			JSON.stringify({
-				jsonrpc: "2.0",
-				id: 1,
-				method: "ping",
-			}),
-			"utf8",
-		),
-	]);
-
-	const parsed = parseNextMcpMessage(framed);
-	assert.deepEqual(parsed.message, {
-		jsonrpc: "2.0",
-		id: 1,
-		method: "ping",
-	});
-	assert.equal(parsed.rest.length, 0);
-});
-
-test("encodeMcpMessage writes Content-Length framing", () => {
-	const framed = encodeMcpMessage({
-		jsonrpc: "2.0",
-		id: 1,
-		result: { ok: true },
-	});
-
-	assert.match(framed.toString("utf8"), /^Content-Length: \d+\r\n\r\n/);
-	assert.match(framed.toString("utf8"), /"ok":true/);
-});
 
 test("handleAgentMcpRequest initializes and lists tools", async () => {
 	const init = await handleAgentMcpRequest({
@@ -72,7 +21,10 @@ test("handleAgentMcpRequest initializes and lists tools", async () => {
 			token: "oga_test",
 		},
 	});
-	assert.equal(init?.result?.serverInfo?.name, "opengather-agent");
+	assert.equal(
+		((init?.result?.serverInfo as { name?: string } | undefined)?.name),
+		"opengather-agent",
+	);
 
 	const tools = await handleAgentMcpRequest({
 		message: {

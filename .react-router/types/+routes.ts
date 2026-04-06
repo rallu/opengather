@@ -53,6 +53,9 @@ type Pages = {
       "groupId": string;
     };
   };
+  "/mcp": {
+    params: {};
+  };
   "/api/auth/*": {
     params: {
       "*": string;
@@ -161,7 +164,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/agents/v1/me" | "/api/agents/v1/groups" | "/api/agents/v1/feed/posts" | "/api/agents/v1/notifications" | "/api/agents/v1/posts/:postId/replies" | "/api/agents/v1/posts/:postId/hide" | "/api/agents/v1/groups/:groupId/posts" | "/api/auth/*" | "/api/post-list" | "/api/search" | "/api/notifications/summary" | "/api/notifications/push-subscriptions" | "/.well-known/appspecific/com.chrome.devtools.json" | "/media/:assetId/:variantKey" | "/profile-images/:userId" | "/profile-images/:userId/:size" | "/metrics" | "/up" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles" | "/profiles/:userId" | "/notifications" | "/approvals" | "/settings" | "/server-settings" | "/server-settings/agents" | "/audit-logs";
+    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/agents/v1/me" | "/api/agents/v1/groups" | "/api/agents/v1/feed/posts" | "/api/agents/v1/notifications" | "/api/agents/v1/posts/:postId/replies" | "/api/agents/v1/posts/:postId/hide" | "/api/agents/v1/groups/:groupId/posts" | "/mcp" | "/api/auth/*" | "/api/post-list" | "/api/search" | "/api/notifications/summary" | "/api/notifications/push-subscriptions" | "/.well-known/appspecific/com.chrome.devtools.json" | "/media/:assetId/:variantKey" | "/profile-images/:userId" | "/profile-images/:userId/:size" | "/metrics" | "/up" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles" | "/profiles/:userId" | "/notifications" | "/approvals" | "/settings" | "/server-settings" | "/server-settings/agents" | "/audit-logs";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -210,6 +213,10 @@ type RouteFiles = {
   "routes/api-agents-v1-groups-group-posts.ts": {
     id: "routes/api-agents-v1-groups-group-posts";
     page: "/api/agents/v1/groups/:groupId/posts";
+  };
+  "routes/mcp.ts": {
+    id: "routes/mcp";
+    page: "/mcp";
   };
   "routes/api-auth.ts": {
     id: "routes/api-auth";
@@ -343,6 +350,7 @@ type RouteModules = {
   "routes/api-agents-v1-posts-postId-replies": typeof import("./app/routes/api-agents-v1-posts-postId-replies.ts");
   "routes/api-agents-v1-posts-postId-hide": typeof import("./app/routes/api-agents-v1-posts-postId-hide.ts");
   "routes/api-agents-v1-groups-group-posts": typeof import("./app/routes/api-agents-v1-groups-group-posts.ts");
+  "routes/mcp": typeof import("./app/routes/mcp.ts");
   "routes/api-auth": typeof import("./app/routes/api-auth.ts");
   "routes/api-post-list": typeof import("./app/routes/api-post-list.tsx");
   "routes/api-search": typeof import("./app/routes/api-search.tsx");

@@ -367,6 +367,7 @@ Users should never need to guess whether a human or agent performed an action.
 - [x] Implement one safe write endpoint for posting.
 - [x] Provide a minimal admin bootstrap path for creating, rotating, and disabling agent credentials.
 - [x] Document the curl-level external-client flow for Codex and other HTTP clients.
+- [x] Expose a remote HTTP MCP endpoint so bots can connect without stdio transport.
 
 Reason:
 
@@ -428,8 +429,8 @@ Reason:
 - [x] Let an admin copy the base URL plus bearer token from the create result so an external client can connect immediately.
 - [x] Add disable from the UI.
 - [x] Add rotate token from the UI and show the replacement token exactly once.
-- [ ] Add grant editing from the UI.
-- [ ] Support create, disable, rotate, and grant management from the UI.
+- [x] Add grant editing from the UI.
+- [x] Support create, disable, rotate, and grant management from the UI.
 - [ ] Expose last-used data and audit-log links in the UI.
 
 Reason:
@@ -467,7 +468,7 @@ Add lightweight API docs for external clients:
 
 - [x] Add `app/server/agent-api-docs.server.ts` or markdown under `plans/` or `docs/`.
 
-The first client should be able to succeed with plain HTTP examples.
+The first client should be able to succeed with plain HTTP examples or an HTTP MCP connection.
 
 ## Testing Plan
 

@@ -5,6 +5,7 @@ import {
 	disableAgent,
 	listAgents,
 	rotateAgentToken,
+	setAgentGrants,
 	type AgentSummary,
 } from "../../server/agent.service.server.ts";
 import {
@@ -44,8 +45,18 @@ export type ServerSettingsAgentsActionData =
 			baseUrl: string;
 	  }
 	| {
+			ok: true;
+			action: "update-grants";
+			agentId: string;
+			scopes: string[];
+	  }
+	| {
 			ok: false;
-			action?: "create-agent" | "disable-agent" | "rotate-agent";
+			action?:
+				| "create-agent"
+				| "disable-agent"
+				| "rotate-agent"
+				| "update-grants";
 			error: string;
 	  }
 	| undefined;
@@ -66,6 +77,9 @@ function parseRequestedScopes(formData: FormData): string[] {
 	if (String(formData.get("scope_instance_feed_post") ?? "") === "on") {
 		scopes.push("instance.feed.post");
 	}
+	if (String(formData.get("scope_instance_feed_reply") ?? "") === "on") {
+		scopes.push("instance.feed.reply");
+	}
 	if (
 		String(formData.get("scope_instance_notifications_create") ?? "") === "on"
 	) {
@@ -81,6 +95,7 @@ export async function action(
 		createAgent?: typeof createAgent;
 		disableAgent?: typeof disableAgent;
 		rotateAgentToken?: typeof rotateAgentToken;
+		setAgentGrants?: typeof setAgentGrants;
 		writeAuditLog?: typeof writeAuditLogSafely;
 	},
 ): Promise<ServerSettingsAgentsActionData> {
@@ -105,7 +120,8 @@ export async function action(
 		if (
 			actionType !== "create-agent" &&
 			actionType !== "disable-agent" &&
-			actionType !== "rotate-agent"
+			actionType !== "rotate-agent" &&
+			actionType !== "update-grants"
 		) {
 			return { ok: false, error: "Unsupported action." };
 		}
@@ -169,6 +185,52 @@ export async function action(
 				agentId,
 				token,
 				baseUrl: getPublicOrigin(params.request),
+			};
+		}
+		if (actionType === "update-grants") {
+			const agentId = String(formData.get("agentId") ?? "").trim();
+			if (!agentId) {
+				return {
+					ok: false,
+					action: "update-grants",
+					error: "Agent ID is required.",
+				};
+			}
+
+			const scopes = parseRequestedScopes(formData);
+			if (scopes.length === 0) {
+				return {
+					ok: false,
+					action: "update-grants",
+					error: "Select at least one scope.",
+				};
+			}
+
+			await (deps?.setAgentGrants ?? setAgentGrants)({
+				agentId,
+				grants: scopes.map((scope) => ({
+					resourceType: "instance",
+					resourceId: setup.instance!.id,
+					scope,
+				})),
+			});
+			await (deps?.writeAuditLog ?? writeAuditLogSafely)({
+				action: "agent.update_grants",
+				actor: { type: "user", id: authUser.id },
+				resourceType: "agent",
+				resourceId: agentId,
+				request: params.request,
+				payload: {
+					outcome: "success",
+					scopes,
+				},
+			});
+
+			return {
+				ok: true,
+				action: "update-grants",
+				agentId,
+				scopes,
 			};
 		}
 

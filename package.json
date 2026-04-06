@@ -34,7 +34,6 @@
 		"biome:fix": "biome check --write .",
 		"seed:test-environment": "node --experimental-strip-types scripts/seed-test-environment.ts",
 		"agent:smoke": "node --experimental-strip-types scripts/agent-api-smoke.ts",
-		"agent:mcp": "node --experimental-strip-types scripts/agent-mcp.ts",
 		"prepare": "npm run build:shared",
 		"verify:shared": "npm run build:shared && npm pack --dry-run",
 		"lint:fix": "biome check --write app"

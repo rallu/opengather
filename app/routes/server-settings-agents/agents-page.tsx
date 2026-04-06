@@ -7,6 +7,54 @@ import type {
 	ServerSettingsAgentsLoaderData,
 } from "./route.server";
 
+const INSTANCE_SCOPE_FIELDS = [
+	{
+		name: "scope_instance_feed_read",
+		label: "Read instance feed",
+		scope: "instance.feed.read",
+		defaultChecked: true,
+	},
+	{
+		name: "scope_instance_feed_post",
+		label: "Post to instance feed",
+		scope: "instance.feed.post",
+		defaultChecked: true,
+	},
+	{
+		name: "scope_instance_feed_reply",
+		label: "Reply in instance feed",
+		scope: "instance.feed.reply",
+		defaultChecked: false,
+	},
+	{
+		name: "scope_instance_notifications_create",
+		label: "Create notifications",
+		scope: "instance.notifications.create",
+		defaultChecked: false,
+	},
+] as const;
+
+function AgentScopeCheckboxes(params: { selectedScopes?: Set<string> }) {
+	return (
+		<>
+			{INSTANCE_SCOPE_FIELDS.map((field) => (
+				<label key={field.name} className="flex items-center gap-2">
+					<input
+						name={field.name}
+						type="checkbox"
+						defaultChecked={
+							params.selectedScopes
+								? params.selectedScopes.has(field.scope)
+								: field.defaultChecked
+						}
+					/>
+					<span>{field.label}</span>
+				</label>
+			))}
+		</>
+	);
+}
+
 function AgentScopeList(params: { scopes: string[] }) {
 	if (params.scopes.length === 0) {
 		return <span className="text-muted-foreground">No scopes</span>;
@@ -141,7 +189,8 @@ export function ServerSettingsAgentsContent(params: {
 				!params.actionData.ok &&
 				(params.actionData.action === "create-agent" ||
 					params.actionData.action === "disable-agent" ||
-					params.actionData.action === "rotate-agent") ? (
+					params.actionData.action === "rotate-agent" ||
+					params.actionData.action === "update-grants") ? (
 					<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
 						{params.actionData.error}
 					</div>
@@ -149,6 +198,11 @@ export function ServerSettingsAgentsContent(params: {
 				{params.actionData?.ok && params.actionData.action === "disable-agent" ? (
 					<div className="rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700">
 						Agent disabled.
+					</div>
+				) : null}
+				{params.actionData?.ok && params.actionData.action === "update-grants" ? (
+					<div className="rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700">
+						Agent grants updated.
 					</div>
 				) : null}
 				<Form method="post" className="grid gap-4 md:grid-cols-2">
@@ -186,34 +240,12 @@ export function ServerSettingsAgentsContent(params: {
 					</label>
 					<div className="space-y-2 text-sm">
 						<p className="font-medium">Instance scopes</p>
-						<label className="flex items-center gap-2">
-							<input
-								name="scope_instance_feed_read"
-								type="checkbox"
-								defaultChecked
-							/>
-							<span>Read instance feed</span>
-						</label>
-						<label className="flex items-center gap-2">
-							<input
-								name="scope_instance_feed_post"
-								type="checkbox"
-								defaultChecked
-							/>
-							<span>Post to instance feed</span>
-						</label>
-						<label className="flex items-center gap-2">
-							<input
-								name="scope_instance_notifications_create"
-								type="checkbox"
-							/>
-							<span>Create notifications</span>
-						</label>
+						<AgentScopeCheckboxes />
 					</div>
 					<div className="md:col-span-2">
 						<p className="mb-3 text-sm text-muted-foreground">
-							This first UI slice creates instance-scoped agents. Group grants,
-							disable, rotate, and grant editing stay on the next UI pass.
+							This UI currently manages instance-scoped grants. Group grants
+							still need a later pass.
 						</p>
 						<Button type="submit">Create agent token</Button>
 					</div>
@@ -264,6 +296,28 @@ export function ServerSettingsAgentsContent(params: {
 									/>
 									<div className="pt-1">
 										<div className="flex flex-wrap gap-2">
+											<Form
+												method="post"
+												className="space-y-3 rounded-md border border-border p-3"
+											>
+												<input
+													type="hidden"
+													name="_action"
+													value="update-grants"
+												/>
+												<input type="hidden" name="agentId" value={agent.id} />
+												<div className="space-y-2 text-sm">
+													<p className="font-medium">Edit instance scopes</p>
+													<AgentScopeCheckboxes
+														selectedScopes={new Set(
+															agent.grants.map((grant) => grant.scope),
+														)}
+													/>
+												</div>
+												<Button type="submit" variant="outline">
+													Save grants
+												</Button>
+											</Form>
 											<Form method="post">
 												<input
 													type="hidden"

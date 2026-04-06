@@ -80,6 +80,7 @@ test("server-settings agents action creates a token and audits it", async () => 
 			instanceRole: "member",
 			scope_instance_feed_read: "on",
 			scope_instance_feed_post: "on",
+			scope_instance_feed_reply: "on",
 		}),
 	});
 
@@ -122,6 +123,11 @@ test("server-settings agents action creates a token and audits it", async () => 
 						resourceId: "instance-1",
 						scope: "instance.feed.post",
 					},
+					{
+						resourceType: "instance",
+						resourceId: "instance-1",
+						scope: "instance.feed.reply",
+					},
 				]);
 				return {
 					agentId: "agent-1",
@@ -146,6 +152,96 @@ test("server-settings agents action creates a token and audits it", async () => 
 		(auditCalls[0] as { action: string; resourceType: string; resourceId: string })
 			.action,
 		"agent.create",
+	);
+});
+
+test("server-settings agents action updates grants and audits it", async () => {
+	const auditCalls: unknown[] = [];
+	const grantCalls: unknown[] = [];
+	const request = new Request("http://localhost:5173/server-settings/agents", {
+		method: "POST",
+		headers: {
+			"content-type": "application/x-www-form-urlencoded",
+		},
+		body: new URLSearchParams({
+			_action: "update-grants",
+			agentId: "agent-1",
+			scope_instance_feed_read: "on",
+			scope_instance_feed_post: "on",
+			scope_instance_feed_reply: "on",
+		}),
+	});
+
+	const result = await action(
+		{
+			request,
+			params: {},
+			context: {},
+			unstable_pattern: "",
+		} as never,
+		{
+			resolveViewerRole: async () => ({
+				authUser: {
+					id: "user-1",
+					name: "Admin",
+					email: "admin@example.com",
+				},
+				viewerRole: "admin",
+				setup: {
+					isSetup: true,
+					instance: {
+						id: "instance-1",
+						name: "OpenGather Local",
+						visibilityMode: "public",
+						approvalMode: "automatic",
+					},
+				},
+			}),
+			setAgentGrants: async (params) => {
+				grantCalls.push(params);
+				return { agentId: "agent-1", grants: [] };
+			},
+			writeAuditLog: async (params) => {
+				auditCalls.push(params);
+			},
+		},
+	);
+
+	assert.deepEqual(result, {
+		ok: true,
+		action: "update-grants",
+		agentId: "agent-1",
+		scopes: [
+			"instance.feed.read",
+			"instance.feed.post",
+			"instance.feed.reply",
+		],
+	});
+	assert.deepEqual(grantCalls, [
+		{
+			agentId: "agent-1",
+			grants: [
+				{
+					resourceType: "instance",
+					resourceId: "instance-1",
+					scope: "instance.feed.read",
+				},
+				{
+					resourceType: "instance",
+					resourceId: "instance-1",
+					scope: "instance.feed.post",
+				},
+				{
+					resourceType: "instance",
+					resourceId: "instance-1",
+					scope: "instance.feed.reply",
+				},
+			],
+		},
+	]);
+	assert.equal(
+		(auditCalls[0] as { action: string }).action,
+		"agent.update_grants",
 	);
 });
 

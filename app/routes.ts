@@ -50,6 +50,10 @@ const routes: RouteConfig = [
 		file: "routes/api-agents-v1-groups-group-posts.ts",
 	},
 	{
+		path: "/mcp",
+		file: "routes/mcp.ts",
+	},
+	{
 		path: "/api/auth/*",
 		file: "routes/api-auth.ts",
 	},

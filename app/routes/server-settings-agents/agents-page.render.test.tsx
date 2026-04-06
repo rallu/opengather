@@ -51,6 +51,14 @@ const TestRoutes = createRoutesStub([
 									id: "grant-1",
 									resourceType: "instance",
 									resourceId: "instance-1",
+									scope: "instance.feed.reply",
+									createdAt: new Date("2026-04-06T12:00:00.000Z"),
+									updatedAt: new Date("2026-04-06T12:00:00.000Z"),
+								},
+								{
+									id: "grant-2",
+									resourceType: "instance",
+									resourceId: "instance-1",
 									scope: "instance.feed.post",
 									createdAt: new Date("2026-04-06T12:00:00.000Z"),
 									updatedAt: new Date("2026-04-06T12:00:00.000Z"),
@@ -72,5 +80,7 @@ assert.match(markup, /Existing Agents/);
 assert.match(markup, /Codex agent/);
 assert.match(markup, /Rotate token/);
 assert.match(markup, /Disable agent/);
+assert.match(markup, /Reply in instance feed/);
+assert.match(markup, /Save grants/);
 
 console.log("server-settings-agents render validation passed");
