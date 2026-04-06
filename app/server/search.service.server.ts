@@ -190,6 +190,7 @@ export async function searchPosts(params: {
 		select: {
 			id: true,
 			authorId: true,
+			authorType: true,
 			bodyText: true,
 			group: {
 				select: {
@@ -204,7 +205,10 @@ export async function searchPosts(params: {
 	}
 
 	const authorMap = await loadPostAuthorSummaryMap({
-		authorIds: posts.map((post) => post.authorId),
+		authors: posts.map((post) => ({
+			id: post.authorId,
+			type: post.authorType,
+		})),
 	});
 
 	return posts.map((post) => {

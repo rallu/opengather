@@ -7,6 +7,7 @@ export {
 	canJoinGroup,
 	canManageGroup,
 	canPostToGroup,
+	canReplyToGroup,
 	canViewGroup,
 } from "./permissions.server/group.ts";
 export {
@@ -26,6 +27,8 @@ export type {
 	MembershipRecord,
 	PermissionResult,
 	ProfileVisibilityMode,
+	Subject,
+	SubjectContext,
 	ViewerRole,
 } from "./permissions.server/shared.ts";
 export {
@@ -34,6 +37,24 @@ export {
 	resolveGroupRoleFromMembership,
 	resolveViewerRoleFromMembership,
 } from "./permissions.server/shared.ts";
+export {
+	canSubjectPostToGroup,
+	canSubjectPostToInstanceFeed,
+	canSubjectReplyToGroup,
+	canSubjectReplyToPost,
+	canSubjectViewGroup,
+	canSubjectViewInstanceFeed,
+	canSubjectViewProfile,
+	createAgentSubjectContext,
+	createAnonymousSubjectContext,
+	createUserSubjectContext,
+	getSubjectGroupRole,
+	hasSubjectScope,
+} from "./permissions.server/subject.ts";
+export {
+	createAgentGrantIndex,
+	hasAgentGrantScope,
+} from "./agent-permissions.server.ts";
 export {
 	getInstanceViewerRole,
 	getViewerContext,

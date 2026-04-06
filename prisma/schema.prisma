@@ -172,17 +172,40 @@ model ProfilePreference {
 }
 
 model Agent {
-  id         String   @id @db.Text
-  instanceId String   @map("instance_id") @db.Text
-  displayName String  @map("display_name") @db.Text
-  description String? @db.Text
-  role       String   @db.Text
-  apiKeyHash String   @map("api_key_hash") @unique(map: "idx_agent_api_key_hash") @db.Text
-  isEnabled  Boolean  @default(true) @map("is_enabled")
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id              String       @id @db.Text
+  instanceId      String       @map("instance_id") @db.Text
+  createdByUserId String?      @map("created_by_user_id") @db.Text
+  displayName     String       @map("display_name") @db.Text
+  displayLabel    String?      @map("display_label") @db.Text
+  description     String?      @db.Text
+  role            String       @db.Text
+  apiKeyHash      String       @map("api_key_hash") @unique(map: "idx_agent_api_key_hash") @db.Text
+  isEnabled       Boolean      @default(true) @map("is_enabled")
+  lastUsedAt      DateTime?    @map("last_used_at") @db.Timestamptz(6)
+  deletedAt       DateTime?    @map("deleted_at") @db.Timestamptz(6)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
+  grants          AgentGrant[]
   @@map("agent")
   @@index([instanceId], map: "idx_agent_instance_id")
+  @@index([createdByUserId], map: "idx_agent_created_by_user_id")
+  @@index([deletedAt], map: "idx_agent_deleted_at")
+}
+
+model AgentGrant {
+  id           String   @id @db.Text
+  agentId      String   @map("agent_id") @db.Text
+  resourceType String   @map("resource_type") @db.Text
+  resourceId   String   @map("resource_id") @db.Text
+  scope        String   @db.Text
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  agent        Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@map("agent_grant")
+  @@index([agentId], map: "idx_agent_grant_agent_id")
+  @@index([resourceType, resourceId], map: "idx_agent_grant_resource")
+  @@unique([agentId, resourceType, resourceId, scope], map: "agent_grant_agent_resource_scope_unique")
 }
 
 model CommunityGroup {

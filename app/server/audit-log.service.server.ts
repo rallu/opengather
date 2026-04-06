@@ -4,7 +4,7 @@ import { getRequestIp } from "./rate-limit.server.ts";
 
 export type AuditActor = {
 	id?: string;
-	type: "user" | "system";
+	type: "agent" | "user" | "system";
 };
 
 export async function writeAuditLog(params: {
@@ -21,7 +21,7 @@ export async function writeAuditLog(params: {
 					id: string;
 					instanceId: string | null;
 					actorId: string | undefined;
-					actorType: "user" | "system";
+					actorType: "agent" | "user" | "system";
 					action: string;
 					resourceType: string | undefined;
 					resourceId: string | undefined;
@@ -81,7 +81,7 @@ export async function writeAuditLogSafely(params: {
 					id: string;
 					instanceId: string | null;
 					actorId: string | undefined;
-					actorType: "user" | "system";
+					actorType: "agent" | "user" | "system";
 					action: string;
 					resourceType: string | undefined;
 					resourceId: string | undefined;

@@ -26,6 +26,33 @@ type Pages = {
   "/auth/hub/callback": {
     params: {};
   };
+  "/api/agents/v1/me": {
+    params: {};
+  };
+  "/api/agents/v1/groups": {
+    params: {};
+  };
+  "/api/agents/v1/feed/posts": {
+    params: {};
+  };
+  "/api/agents/v1/notifications": {
+    params: {};
+  };
+  "/api/agents/v1/posts/:postId/replies": {
+    params: {
+      "postId": string;
+    };
+  };
+  "/api/agents/v1/posts/:postId/hide": {
+    params: {
+      "postId": string;
+    };
+  };
+  "/api/agents/v1/groups/:groupId/posts": {
+    params: {
+      "groupId": string;
+    };
+  };
   "/api/auth/*": {
     params: {
       "*": string;
@@ -123,6 +150,9 @@ type Pages = {
   "/server-settings": {
     params: {};
   };
+  "/server-settings/agents": {
+    params: {};
+  };
   "/audit-logs": {
     params: {};
   };
@@ -131,7 +161,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/auth/*" | "/api/post-list" | "/api/search" | "/api/notifications/summary" | "/api/notifications/push-subscriptions" | "/.well-known/appspecific/com.chrome.devtools.json" | "/media/:assetId/:variantKey" | "/profile-images/:userId" | "/profile-images/:userId/:size" | "/metrics" | "/up" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles" | "/profiles/:userId" | "/notifications" | "/approvals" | "/settings" | "/server-settings" | "/audit-logs";
+    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/agents/v1/me" | "/api/agents/v1/groups" | "/api/agents/v1/feed/posts" | "/api/agents/v1/notifications" | "/api/agents/v1/posts/:postId/replies" | "/api/agents/v1/posts/:postId/hide" | "/api/agents/v1/groups/:groupId/posts" | "/api/auth/*" | "/api/post-list" | "/api/search" | "/api/notifications/summary" | "/api/notifications/push-subscriptions" | "/.well-known/appspecific/com.chrome.devtools.json" | "/media/:assetId/:variantKey" | "/profile-images/:userId" | "/profile-images/:userId/:size" | "/metrics" | "/up" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles" | "/profiles/:userId" | "/notifications" | "/approvals" | "/settings" | "/server-settings" | "/server-settings/agents" | "/audit-logs";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -152,6 +182,34 @@ type RouteFiles = {
   "routes/hub-callback.tsx": {
     id: "routes/hub-callback";
     page: "/auth/hub/callback";
+  };
+  "routes/api-agents-v1-me.ts": {
+    id: "routes/api-agents-v1-me";
+    page: "/api/agents/v1/me";
+  };
+  "routes/api-agents-v1-groups.ts": {
+    id: "routes/api-agents-v1-groups";
+    page: "/api/agents/v1/groups";
+  };
+  "routes/api-agents-v1-feed-posts.ts": {
+    id: "routes/api-agents-v1-feed-posts";
+    page: "/api/agents/v1/feed/posts";
+  };
+  "routes/api-agents-v1-notifications.ts": {
+    id: "routes/api-agents-v1-notifications";
+    page: "/api/agents/v1/notifications";
+  };
+  "routes/api-agents-v1-posts-postId-replies.ts": {
+    id: "routes/api-agents-v1-posts-postId-replies";
+    page: "/api/agents/v1/posts/:postId/replies";
+  };
+  "routes/api-agents-v1-posts-postId-hide.ts": {
+    id: "routes/api-agents-v1-posts-postId-hide";
+    page: "/api/agents/v1/posts/:postId/hide";
+  };
+  "routes/api-agents-v1-groups-group-posts.ts": {
+    id: "routes/api-agents-v1-groups-group-posts";
+    page: "/api/agents/v1/groups/:groupId/posts";
   };
   "routes/api-auth.ts": {
     id: "routes/api-auth";
@@ -261,6 +319,10 @@ type RouteFiles = {
     id: "routes/server-settings";
     page: "/server-settings";
   };
+  "routes/server-settings-agents.tsx": {
+    id: "routes/server-settings-agents";
+    page: "/server-settings/agents";
+  };
   "routes/audit-logs.tsx": {
     id: "routes/audit-logs";
     page: "/audit-logs";
@@ -274,6 +336,13 @@ type RouteModules = {
   "routes/register": typeof import("./app/routes/register.tsx");
   "routes/hub-login": typeof import("./app/routes/hub-login.tsx");
   "routes/hub-callback": typeof import("./app/routes/hub-callback.tsx");
+  "routes/api-agents-v1-me": typeof import("./app/routes/api-agents-v1-me.ts");
+  "routes/api-agents-v1-groups": typeof import("./app/routes/api-agents-v1-groups.ts");
+  "routes/api-agents-v1-feed-posts": typeof import("./app/routes/api-agents-v1-feed-posts.ts");
+  "routes/api-agents-v1-notifications": typeof import("./app/routes/api-agents-v1-notifications.ts");
+  "routes/api-agents-v1-posts-postId-replies": typeof import("./app/routes/api-agents-v1-posts-postId-replies.ts");
+  "routes/api-agents-v1-posts-postId-hide": typeof import("./app/routes/api-agents-v1-posts-postId-hide.ts");
+  "routes/api-agents-v1-groups-group-posts": typeof import("./app/routes/api-agents-v1-groups-group-posts.ts");
   "routes/api-auth": typeof import("./app/routes/api-auth.ts");
   "routes/api-post-list": typeof import("./app/routes/api-post-list.tsx");
   "routes/api-search": typeof import("./app/routes/api-search.tsx");
@@ -301,5 +370,6 @@ type RouteModules = {
   "routes/approvals": typeof import("./app/routes/approvals.tsx");
   "routes/settings": typeof import("./app/routes/settings.tsx");
   "routes/server-settings": typeof import("./app/routes/server-settings.tsx");
+  "routes/server-settings-agents": typeof import("./app/routes/server-settings-agents.tsx");
   "routes/audit-logs": typeof import("./app/routes/audit-logs.tsx");
 };

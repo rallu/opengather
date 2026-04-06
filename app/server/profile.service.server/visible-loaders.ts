@@ -68,6 +68,7 @@ async function loadVisibleProfilePostItems(params: {
 				p.id,
 				p.parent_post_id,
 				p.author_id,
+				p.author_type,
 				p.body_text,
 				p.group_id,
 				p.moderation_status,
@@ -96,6 +97,7 @@ async function loadVisibleProfilePostItems(params: {
 				v.id,
 				v.parent_post_id,
 				v.author_id,
+				v.author_type,
 				v.body_text,
 				v.group_id,
 				g.name AS group_name,
@@ -116,6 +118,7 @@ async function loadVisibleProfilePostItems(params: {
 			root_posts.id,
 			root_posts.parent_post_id AS "parentPostId",
 			root_posts.author_id AS "authorId",
+			root_posts.author_type AS "authorType",
 			root_posts.body_text AS "bodyText",
 			root_posts.group_id AS "groupId",
 			root_posts.group_name AS "groupName",
@@ -135,7 +138,10 @@ async function loadVisibleProfilePostItems(params: {
 			postIds: rows.map((row) => row.id),
 		}),
 		loadPostAuthorSummaryMap({
-			authorIds: rows.map((row) => row.authorId),
+			authors: rows.map((row) => ({
+				id: row.authorId,
+				type: row.authorType,
+			})),
 		}),
 	]);
 
@@ -143,7 +149,11 @@ async function loadVisibleProfilePostItems(params: {
 		...mapPostListItem(
 			row,
 			"newest",
-			authorMap.get(row.authorId) ?? { id: row.authorId, name: "Member" },
+			authorMap.get(row.authorId) ?? {
+				id: row.authorId,
+				name: row.authorType === "agent" ? "Agent" : "Member",
+				kind: row.authorType === "agent" ? "agent" : "user",
+			},
 		),
 		assets: assetMap.get(row.id) ?? [],
 	}));

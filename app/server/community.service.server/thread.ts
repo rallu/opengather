@@ -118,6 +118,7 @@ export async function loadCommunityPostThread(params: {
 			parentPostId: true,
 			authorId: true,
 			bodyText: true,
+			authorType: true,
 			groupId: true,
 			moderationStatus: true,
 			hiddenAt: true,
@@ -144,7 +145,10 @@ export async function loadCommunityPostThread(params: {
 		postIds: visible.map((row) => row.id),
 	});
 	const authorMap = await loadPostAuthorSummaryMap({
-		authorIds: visible.map((row) => row.authorId),
+		authors: visible.map((row) => ({
+			id: row.authorId,
+			type: row.authorType,
+		})),
 	});
 	const threadedPosts = buildThreadTree({
 		rows: normalizeThreadDepths({ rows: visible }).map((row) =>
@@ -153,7 +157,8 @@ export async function loadCommunityPostThread(params: {
 					...row,
 					author: authorMap.get(row.authorId) ?? {
 						id: row.authorId,
-						name: "Member",
+						name: row.authorType === "agent" ? "Agent" : "Member",
+						kind: row.authorType === "agent" ? "agent" : "user",
 					},
 					assets: assetMap.get(row.id) ?? [],
 				},

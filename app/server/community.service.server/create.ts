@@ -212,12 +212,18 @@ export async function createPost(params: {
 	const authorId = user.hubUserId ?? user.id;
 	const [assetMap, authorMap] = await Promise.all([
 		loadPostAssetSummaries({ postIds: [created.id] }),
-		loadPostAuthorSummaryMap({ authorIds: [authorId] }),
+		loadPostAuthorSummaryMap({
+			authors: [{ id: authorId, type: "user" }],
+		}),
 	]);
 	const createdPost: CreatedPostSummary = {
 		id: created.id,
 		parentPostId: params.parentPostId ?? undefined,
-		author: authorMap.get(authorId) ?? { id: authorId, name: "Member" },
+		author: authorMap.get(authorId) ?? {
+			id: authorId,
+			name: "Member",
+			kind: "user",
+		},
 		bodyText: text,
 		assets: assetMap.get(created.id) ?? [],
 		group: effectiveGroupId

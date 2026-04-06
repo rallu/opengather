@@ -1,4 +1,5 @@
 import { ProfileImage } from "~/components/profile/profile-image";
+import { Badge } from "~/components/ui/badge";
 import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
 import type { PostAuthorSummary } from "~/server/post-author.service.server";
 import type { PostGroup } from "~/server/post-list.service.server/core";
@@ -58,11 +59,13 @@ export function PostHeader({
 					<Breadcrumb>
 						<BreadcrumbList>
 							<BreadcrumbItem>
-								<BreadcrumbLink
-									to={author.profilePath ?? `/profiles/${author.id}`}
-								>
-									{author.name}
-								</BreadcrumbLink>
+								{author.profilePath ? (
+									<BreadcrumbLink to={author.profilePath}>
+										{author.name}
+									</BreadcrumbLink>
+								) : (
+									<span>{author.name}</span>
+								)}
 							</BreadcrumbItem>
 							{group ? (
 								<>
@@ -77,6 +80,7 @@ export function PostHeader({
 						</BreadcrumbList>
 					</Breadcrumb>
 					<PostLabels
+						isAgent={author.kind === "agent"}
 						moderationStatus={moderationStatus}
 						isHidden={isHidden}
 						isDeleted={isDeleted}

@@ -22,6 +22,34 @@ const routes: RouteConfig = [
 		file: "routes/hub-callback.tsx",
 	},
 	{
+		path: "/api/agents/v1/me",
+		file: "routes/api-agents-v1-me.ts",
+	},
+	{
+		path: "/api/agents/v1/groups",
+		file: "routes/api-agents-v1-groups.ts",
+	},
+	{
+		path: "/api/agents/v1/feed/posts",
+		file: "routes/api-agents-v1-feed-posts.ts",
+	},
+	{
+		path: "/api/agents/v1/notifications",
+		file: "routes/api-agents-v1-notifications.ts",
+	},
+	{
+		path: "/api/agents/v1/posts/:postId/replies",
+		file: "routes/api-agents-v1-posts-postId-replies.ts",
+	},
+	{
+		path: "/api/agents/v1/posts/:postId/hide",
+		file: "routes/api-agents-v1-posts-postId-hide.ts",
+	},
+	{
+		path: "/api/agents/v1/groups/:groupId/posts",
+		file: "routes/api-agents-v1-groups-group-posts.ts",
+	},
+	{
 		path: "/api/auth/*",
 		file: "routes/api-auth.ts",
 	},
@@ -128,6 +156,10 @@ const routes: RouteConfig = [
 	{
 		path: "/server-settings",
 		file: "routes/server-settings.tsx",
+	},
+	{
+		path: "/server-settings/agents",
+		file: "routes/server-settings-agents.tsx",
 	},
 	{
 		path: "/audit-logs",

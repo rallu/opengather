@@ -101,6 +101,12 @@ export function canPostToGroup(params: {
 		: { allowed: false, reason: "group_membership_required" };
 }
 
+export function canReplyToGroup(params: {
+	groupRole: GroupRole;
+}): PermissionResult<"group_membership_required"> {
+	return canPostToGroup(params);
+}
+
 export function canManageGroup(params: {
 	groupRole: GroupRole;
 }): PermissionResult<"group_manager_required"> {

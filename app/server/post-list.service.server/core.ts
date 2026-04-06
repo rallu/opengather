@@ -66,6 +66,7 @@ export type PostListRow = {
 	id: string;
 	parentPostId: string | null;
 	authorId: string;
+	authorType: string;
 	bodyText: string | null;
 	groupId: string | null;
 	groupName: string | null;
