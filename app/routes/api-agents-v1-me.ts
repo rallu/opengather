@@ -1,15 +1,15 @@
 import type { LoaderFunctionArgs } from "react-router";
 import {
-	type AgentAuthResult,
-	authenticateAgentRequest,
-} from "../server/agent-auth.server.ts";
-import {
 	agentAuthErrorResponse,
 	agentJsonSuccess,
 	agentRateLimitedResponse,
 	checkAgentRouteRateLimit,
 	resolveAgentRequestId,
 } from "../server/agent-api.server.ts";
+import {
+	type AgentAuthResult,
+	authenticateAgentRequest,
+} from "../server/agent-auth.server.ts";
 
 export async function loadAgentMe(params: {
 	request: Request;
@@ -72,17 +72,19 @@ export async function loadAgentMe(params: {
 				}),
 			),
 			scopes: Array.from(auth.subjectContext.scopes).sort(),
-			grants: auth.agent.grants.map((grant: {
-				id: string;
-				resourceType: string;
-				resourceId: string;
-				scope: string;
-			}) => ({
-				id: grant.id,
-				resourceType: grant.resourceType,
-				resourceId: grant.resourceId,
-				scope: grant.scope,
-			})),
+			grants: auth.agent.grants.map(
+				(grant: {
+					id: string;
+					resourceType: string;
+					resourceId: string;
+					scope: string;
+				}) => ({
+					id: grant.id,
+					resourceType: grant.resourceType,
+					resourceId: grant.resourceId,
+					scope: grant.scope,
+				}),
+			),
 		},
 		{
 			requestId,
@@ -90,6 +92,8 @@ export async function loadAgentMe(params: {
 	);
 }
 
-export async function loader({ request }: LoaderFunctionArgs): Promise<Response> {
+export async function loader({
+	request,
+}: LoaderFunctionArgs): Promise<Response> {
 	return loadAgentMe({ request });
 }

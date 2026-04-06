@@ -1,4 +1,9 @@
-import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import {
+	createHash,
+	randomBytes,
+	randomUUID,
+	timingSafeEqual,
+} from "node:crypto";
 
 export const MCP_AUTH_CODE_TTL_MS = 5 * 60 * 1000;
 export const MCP_ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000;
@@ -177,9 +182,7 @@ export function derivePkceCodeChallenge(params: {
 	codeVerifier: string;
 	method: "S256";
 }): string {
-	return createHash("sha256")
-		.update(params.codeVerifier)
-		.digest("base64url");
+	return createHash("sha256").update(params.codeVerifier).digest("base64url");
 }
 
 function requireNonEmpty(value: string, label: string): string {
@@ -270,73 +273,75 @@ async function createTokenBundle(params: {
 		params.now.getTime() + MCP_REFRESH_TOKEN_TTL_MS,
 	);
 
-	await params.db.$transaction(async (trx: {
-		agentMcpSession: AgentOauthDb["agentMcpSession"];
-		agentMcpAccessToken: AgentOauthDb["agentMcpAccessToken"];
-		agentMcpRefreshToken: AgentOauthDb["agentMcpRefreshToken"];
-	}) => {
-		if (!params.sessionId) {
-			await trx.agentMcpSession.create({
+	await params.db.$transaction(
+		async (trx: {
+			agentMcpSession: AgentOauthDb["agentMcpSession"];
+			agentMcpAccessToken: AgentOauthDb["agentMcpAccessToken"];
+			agentMcpRefreshToken: AgentOauthDb["agentMcpRefreshToken"];
+		}) => {
+			if (!params.sessionId) {
+				await trx.agentMcpSession.create({
+					data: {
+						id: sessionId,
+						agentId: params.agentId,
+						userId: params.userId,
+						clientId: params.clientId ?? null,
+						expiresAt: refreshTokenExpiresAt,
+						revokedAt: null,
+						lastUsedAt: params.now,
+						createdAt: params.now,
+						updatedAt: params.now,
+					},
+				});
+			} else {
+				await trx.agentMcpSession.update({
+					where: { id: sessionId },
+					data: {
+						expiresAt: refreshTokenExpiresAt,
+						lastUsedAt: params.now,
+						updatedAt: params.now,
+					},
+				});
+			}
+
+			await trx.agentMcpAccessToken.updateMany({
+				where: {
+					sessionId,
+					revokedAt: null,
+				},
 				data: {
-					id: sessionId,
-					agentId: params.agentId,
-					userId: params.userId,
-					clientId: params.clientId ?? null,
+					revokedAt: params.now,
+				},
+			});
+
+			await trx.agentMcpAccessToken.create({
+				data: {
+					id: params.generateId(),
+					sessionId,
+					tokenHash: hashMcpSecretToken(accessToken),
+					expiresAt: accessTokenExpiresAt,
+					revokedAt: null,
+					lastUsedAt: null,
+					createdAt: params.now,
+				},
+			});
+
+			await trx.agentMcpRefreshToken.create({
+				data: {
+					id: params.generateId(),
+					sessionId,
+					familyId,
+					tokenHash: hashMcpSecretToken(refreshToken),
 					expiresAt: refreshTokenExpiresAt,
 					revokedAt: null,
-					lastUsedAt: params.now,
+					rotatedAt: null,
+					replacedById: null,
+					lastUsedAt: null,
 					createdAt: params.now,
-					updatedAt: params.now,
 				},
 			});
-		} else {
-			await trx.agentMcpSession.update({
-				where: { id: sessionId },
-				data: {
-					expiresAt: refreshTokenExpiresAt,
-					lastUsedAt: params.now,
-					updatedAt: params.now,
-				},
-			});
-		}
-
-		await trx.agentMcpAccessToken.updateMany({
-			where: {
-				sessionId,
-				revokedAt: null,
-			},
-			data: {
-				revokedAt: params.now,
-			},
-		});
-
-		await trx.agentMcpAccessToken.create({
-			data: {
-				id: params.generateId(),
-				sessionId,
-				tokenHash: hashMcpSecretToken(accessToken),
-				expiresAt: accessTokenExpiresAt,
-				revokedAt: null,
-				lastUsedAt: null,
-				createdAt: params.now,
-			},
-		});
-
-		await trx.agentMcpRefreshToken.create({
-			data: {
-				id: params.generateId(),
-				sessionId,
-				familyId,
-				tokenHash: hashMcpSecretToken(refreshToken),
-				expiresAt: refreshTokenExpiresAt,
-				revokedAt: null,
-				rotatedAt: null,
-				replacedById: null,
-				lastUsedAt: null,
-				createdAt: params.now,
-			},
-		});
-	});
+		},
+	);
 
 	return {
 		sessionId,
@@ -367,7 +372,9 @@ export async function createMcpAuthorizationCode(params: {
 		(await import("./db.server.ts")).getDb()) as AgentOauthDb;
 	const now = params.now ?? new Date();
 	const generateId = params.generateId ?? randomUUID;
-	const code = (params.generateToken ?? (() => generateMcpSecretToken({ prefix: "ogmcc_" })))();
+	const code = (
+		params.generateToken ?? (() => generateMcpSecretToken({ prefix: "ogmcc_" }))
+	)();
 	const expiresAt = new Date(now.getTime() + MCP_AUTH_CODE_TTL_MS);
 
 	await db.agentMcpAuthorizationCode.create({
@@ -426,7 +433,10 @@ export async function exchangeMcpAuthorizationCode(params: {
 	if (codeRecord.expiresAt.getTime() <= now.getTime()) {
 		throw new Error("Authorization code has expired.");
 	}
-	if (codeRecord.redirectUri !== requireNonEmpty(params.redirectUri, "redirectUri")) {
+	if (
+		codeRecord.redirectUri !==
+		requireNonEmpty(params.redirectUri, "redirectUri")
+	) {
 		throw new Error("redirectUri does not match the authorization request.");
 	}
 	if ((codeRecord.clientId ?? "") !== (params.clientId?.trim() ?? "")) {
@@ -484,7 +494,9 @@ export async function refreshMcpSessionTokens(params: {
 
 	const refreshRecord = await db.agentMcpRefreshToken.findUnique({
 		where: {
-			tokenHash: hashMcpSecretToken(requireNonEmpty(params.refreshToken, "refreshToken")),
+			tokenHash: hashMcpSecretToken(
+				requireNonEmpty(params.refreshToken, "refreshToken"),
+			),
 		},
 		select: selectRefreshTokenFields(),
 	});
@@ -537,37 +549,39 @@ export async function revokeMcpSession(params: {
 		(await import("./db.server.ts")).getDb()) as AgentOauthDb;
 	const now = params.now ?? new Date();
 
-	await db.$transaction(async (trx: {
-		agentMcpSession: AgentOauthDb["agentMcpSession"];
-		agentMcpAccessToken: AgentOauthDb["agentMcpAccessToken"];
-		agentMcpRefreshToken: AgentOauthDb["agentMcpRefreshToken"];
-	}) => {
-		await trx.agentMcpSession.update({
-			where: { id: params.sessionId },
-			data: {
-				revokedAt: now,
-				updatedAt: now,
-			},
-		});
-		await trx.agentMcpAccessToken.updateMany({
-			where: {
-				sessionId: params.sessionId,
-				revokedAt: null,
-			},
-			data: {
-				revokedAt: now,
-			},
-		});
-		await trx.agentMcpRefreshToken.updateMany({
-			where: {
-				sessionId: params.sessionId,
-				revokedAt: null,
-			},
-			data: {
-				revokedAt: now,
-			},
-		});
-	});
+	await db.$transaction(
+		async (trx: {
+			agentMcpSession: AgentOauthDb["agentMcpSession"];
+			agentMcpAccessToken: AgentOauthDb["agentMcpAccessToken"];
+			agentMcpRefreshToken: AgentOauthDb["agentMcpRefreshToken"];
+		}) => {
+			await trx.agentMcpSession.update({
+				where: { id: params.sessionId },
+				data: {
+					revokedAt: now,
+					updatedAt: now,
+				},
+			});
+			await trx.agentMcpAccessToken.updateMany({
+				where: {
+					sessionId: params.sessionId,
+					revokedAt: null,
+				},
+				data: {
+					revokedAt: now,
+				},
+			});
+			await trx.agentMcpRefreshToken.updateMany({
+				where: {
+					sessionId: params.sessionId,
+					revokedAt: null,
+				},
+				data: {
+					revokedAt: now,
+				},
+			});
+		},
+	);
 
 	return {
 		sessionId: params.sessionId,
@@ -586,7 +600,9 @@ export async function findActiveMcpAccessToken(params: {
 	const now = params.now ?? new Date();
 	const record = await db.agentMcpAccessToken.findUnique({
 		where: {
-			tokenHash: hashMcpSecretToken(requireNonEmpty(params.accessToken, "accessToken")),
+			tokenHash: hashMcpSecretToken(
+				requireNonEmpty(params.accessToken, "accessToken"),
+			),
 		},
 		select: selectAccessTokenFields(),
 	});

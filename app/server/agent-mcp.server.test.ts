@@ -22,7 +22,7 @@ test("handleAgentMcpRequest initializes and lists tools", async () => {
 		},
 	});
 	assert.equal(
-		((init?.result?.serverInfo as { name?: string } | undefined)?.name),
+		(init?.result?.serverInfo as { name?: string } | undefined)?.name,
 		"opengather-agent",
 	);
 
@@ -37,11 +37,11 @@ test("handleAgentMcpRequest initializes and lists tools", async () => {
 			token: "oga_test",
 		},
 	});
+	assert.equal(Array.isArray(tools?.result?.tools), true);
 	assert.equal(
-		Array.isArray(tools?.result?.tools),
-		true,
+		(tools?.result?.tools as unknown[]).length,
+		AGENT_MCP_TOOLS.length,
 	);
-	assert.equal((tools?.result?.tools as unknown[]).length, AGENT_MCP_TOOLS.length);
 });
 
 test("callAgentMcpTool proxies a feed post request", async () => {

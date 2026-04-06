@@ -1,9 +1,5 @@
 import type { ActionFunctionArgs } from "react-router";
 import {
-	type AgentAuthResult,
-	authenticateAgentRequest,
-} from "../server/agent-auth.server.ts";
-import {
 	agentAuthErrorResponse,
 	agentJsonError,
 	agentJsonSuccess,
@@ -11,6 +7,10 @@ import {
 	checkAgentRouteRateLimit,
 	resolveAgentRequestId,
 } from "../server/agent-api.server.ts";
+import {
+	type AgentAuthResult,
+	authenticateAgentRequest,
+} from "../server/agent-auth.server.ts";
 import { writeAuditLogSafely } from "../server/audit-log.service.server.ts";
 import { processNotificationOutbox } from "../server/jobs.service.server.ts";
 import { hasSubjectScope } from "../server/permissions.server.ts";
@@ -103,9 +103,7 @@ export async function hideAgentPost(params: {
 			message: "Agent cannot hide posts.",
 			details: {
 				reason:
-					auth.instanceRole !== "admin"
-						? "admin_required"
-						: "missing_scope",
+					auth.instanceRole !== "admin" ? "admin_required" : "missing_scope",
 			},
 		});
 	}

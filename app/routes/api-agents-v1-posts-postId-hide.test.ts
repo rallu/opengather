@@ -238,16 +238,19 @@ test("hideAgentPost creates agent moderation and audit records", async () => {
 	});
 	assert.equal(outboxRuns, 1);
 	assert.equal(moderationDecisions.length, 1);
-	assert.deepEqual((moderationDecisions[0] as { data: Record<string, unknown> }).data, {
-		id: "decision-1",
-		postId: "post-1",
-		status: "rejected",
-		reason: "agent-hide-post",
-		actorType: "agent",
-		actorId: "agent-1",
-		modelName: null,
-		createdAt: new Date("2026-04-06T12:20:00.000Z"),
-	});
+	assert.deepEqual(
+		(moderationDecisions[0] as { data: Record<string, unknown> }).data,
+		{
+			id: "decision-1",
+			postId: "post-1",
+			status: "rejected",
+			reason: "agent-hide-post",
+			actorType: "agent",
+			actorId: "agent-1",
+			modelName: null,
+			createdAt: new Date("2026-04-06T12:20:00.000Z"),
+		},
+	);
 	const [audit] = audits as Array<{
 		action: string;
 		actor: { type: string; id?: string };

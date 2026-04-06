@@ -1,10 +1,10 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { authenticateAgentRequest } from "../server/agent-auth.server.ts";
-import { createMcpWwwAuthenticateHeader } from "../server/agent-oauth-metadata.server.ts";
 import {
 	type AgentMcpConfig,
 	handleAgentMcpRequest,
 } from "../server/agent-mcp.server.ts";
+import { createMcpWwwAuthenticateHeader } from "../server/agent-oauth-metadata.server.ts";
 
 type JsonRpcRequestShape = {
 	jsonrpc: "2.0";
@@ -216,16 +216,19 @@ export async function handleAgentMcpHttpRequest(params: {
 			id: message.id ?? null,
 			status: 500,
 			code: -32603,
-			message:
-				error instanceof Error ? error.message : "Internal server error",
+			message: error instanceof Error ? error.message : "Internal server error",
 		});
 	}
 }
 
-export async function loader({ request }: LoaderFunctionArgs): Promise<Response> {
+export async function loader({
+	request,
+}: LoaderFunctionArgs): Promise<Response> {
 	return handleAgentMcpHttpRequest({ request });
 }
 
-export async function action({ request }: ActionFunctionArgs): Promise<Response> {
+export async function action({
+	request,
+}: ActionFunctionArgs): Promise<Response> {
 	return handleAgentMcpHttpRequest({ request });
 }

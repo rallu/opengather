@@ -29,10 +29,15 @@ async function handleLogout(request: Request): Promise<Response> {
 	const headers = new Headers({
 		Location: normalizeNextPath(requestUrl.searchParams.get("next")),
 	});
-	const getSetCookie = (signOutResponse.headers as Headers & {
-		getSetCookie?: () => string[];
-	}).getSetCookie;
-	const cookies = typeof getSetCookie === "function" ? getSetCookie.call(signOutResponse.headers) : [];
+	const getSetCookie = (
+		signOutResponse.headers as Headers & {
+			getSetCookie?: () => string[];
+		}
+	).getSetCookie;
+	const cookies =
+		typeof getSetCookie === "function"
+			? getSetCookie.call(signOutResponse.headers)
+			: [];
 	if (cookies.length > 0) {
 		for (const cookie of cookies) {
 			headers.append("Set-Cookie", cookie);

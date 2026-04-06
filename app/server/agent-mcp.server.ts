@@ -109,7 +109,8 @@ export const AGENT_MCP_TOOLS: AgentToolDefinition[] = [
 	},
 	{
 		name: "create_notification",
-		description: "Create an agent-authored notification for a user in this instance.",
+		description:
+			"Create an agent-authored notification for a user in this instance.",
 		inputSchema: {
 			type: "object",
 			properties: {
@@ -167,10 +168,7 @@ function createJsonRpcError(params: {
 	};
 }
 
-function requireStringArgument(
-	value: unknown,
-	name: string,
-): string {
+function requireStringArgument(value: unknown, name: string): string {
 	const normalized = String(value ?? "").trim();
 	if (!normalized) {
 		throw new Error(`${name} is required.`);

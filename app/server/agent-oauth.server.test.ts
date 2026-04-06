@@ -16,7 +16,9 @@ function createDbHarness() {
 	const refreshTokens = new Map<string, Record<string, unknown>>();
 
 	type TestDb = {
-		$transaction: (callback: (trx: TestDb) => Promise<unknown>) => Promise<unknown>;
+		$transaction: (
+			callback: (trx: TestDb) => Promise<unknown>,
+		) => Promise<unknown>;
 		agentMcpAuthorizationCode: {
 			create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
 			findUnique: (args: { where: { codeHash: string } }) => Promise<unknown>;
@@ -111,8 +113,7 @@ function createDbHarness() {
 					if (record.tokenHash === args.where.tokenHash) {
 						return {
 							...record,
-							session:
-								sessions.get(String(record.sessionId as string)) ?? null,
+							session: sessions.get(String(record.sessionId as string)) ?? null,
 						} as never;
 					}
 				}
@@ -146,8 +147,7 @@ function createDbHarness() {
 					if (record.tokenHash === args.where.tokenHash) {
 						return {
 							...record,
-							session:
-								sessions.get(String(record.sessionId as string)) ?? null,
+							session: sessions.get(String(record.sessionId as string)) ?? null,
 						} as never;
 					}
 				}
@@ -226,12 +226,7 @@ test("exchangeMcpAuthorizationCode validates PKCE and creates a session plus tok
 		db: harness.db as never,
 	});
 
-	const ids = [
-		"session-1",
-		"family-1",
-		"access-row-1",
-		"refresh-row-1",
-	];
+	const ids = ["session-1", "family-1", "access-row-1", "refresh-row-1"];
 	const bundle = await exchangeMcpAuthorizationCode({
 		code: "ogmcc_raw",
 		redirectUri: "https://example.test/callback",

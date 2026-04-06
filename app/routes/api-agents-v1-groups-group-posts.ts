@@ -1,10 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { ActionFunctionArgs } from "react-router";
 import {
-	type AgentAuthResult,
-	authenticateAgentRequest,
-} from "../server/agent-auth.server.ts";
-import {
 	agentAuthErrorResponse,
 	agentJsonError,
 	agentJsonSuccess,
@@ -13,6 +9,10 @@ import {
 	readAgentJsonBody,
 	resolveAgentRequestId,
 } from "../server/agent-api.server.ts";
+import {
+	type AgentAuthResult,
+	authenticateAgentRequest,
+} from "../server/agent-auth.server.ts";
 import { writeAuditLogSafely } from "../server/audit-log.service.server.ts";
 import { toTextVector } from "../server/embedding.service.server.ts";
 import { canSubjectPostToGroup } from "../server/permissions.server.ts";
@@ -28,55 +28,57 @@ type AgentPostDb = {
 			visibilityMode: string;
 		} | null>;
 	};
-	$transaction: <T>(callback: (trx: {
-		post: {
-			create: (args: {
-				data: {
-					id: string;
-					instanceId: string;
-					authorId: string;
-					authorType: "agent";
-					groupId: string;
-					rootPostId: string;
-					parentPostId: null;
-					contentType: "text";
-					bodyText: string;
-					moderationStatus: string;
-					hiddenAt: null;
-					deletedAt: null;
-					createdAt: Date;
-					updatedAt: Date;
-				};
-			}) => Promise<unknown>;
-		};
-		postEmbedding: {
-			create: (args: {
-				data: {
-					id: string;
-					postId: string;
-					sourceType: "text";
-					modelName: string;
-					vector: number[];
-					summaryText: string;
-					createdAt: Date;
-				};
-			}) => Promise<unknown>;
-		};
-		moderationDecision: {
-			create: (args: {
-				data: {
-					id: string;
-					postId: string;
-					status: string;
-					reason: string;
-					actorType: "ai";
-					actorId: null;
-					modelName: string;
-					createdAt: Date;
-				};
-			}) => Promise<unknown>;
-		};
-	}) => Promise<T>) => Promise<T>;
+	$transaction: <T>(
+		callback: (trx: {
+			post: {
+				create: (args: {
+					data: {
+						id: string;
+						instanceId: string;
+						authorId: string;
+						authorType: "agent";
+						groupId: string;
+						rootPostId: string;
+						parentPostId: null;
+						contentType: "text";
+						bodyText: string;
+						moderationStatus: string;
+						hiddenAt: null;
+						deletedAt: null;
+						createdAt: Date;
+						updatedAt: Date;
+					};
+				}) => Promise<unknown>;
+			};
+			postEmbedding: {
+				create: (args: {
+					data: {
+						id: string;
+						postId: string;
+						sourceType: "text";
+						modelName: string;
+						vector: number[];
+						summaryText: string;
+						createdAt: Date;
+					};
+				}) => Promise<unknown>;
+			};
+			moderationDecision: {
+				create: (args: {
+					data: {
+						id: string;
+						postId: string;
+						status: string;
+						reason: string;
+						actorType: "ai";
+						actorId: null;
+						modelName: string;
+						createdAt: Date;
+					};
+				}) => Promise<unknown>;
+			};
+		}) => Promise<T>,
+	) => Promise<T>;
 };
 
 type AgentPostPayload = {
@@ -191,102 +193,104 @@ export async function createAgentGroupPost(params: {
 			? "flagged"
 			: "approved";
 
-	await db.$transaction(async (trx: {
-		post: {
-			create: (args: {
+	await db.$transaction(
+		async (trx: {
+			post: {
+				create: (args: {
+					data: {
+						id: string;
+						instanceId: string;
+						authorId: string;
+						authorType: "agent";
+						groupId: string;
+						rootPostId: string;
+						parentPostId: null;
+						contentType: "text";
+						bodyText: string;
+						moderationStatus: string;
+						hiddenAt: null;
+						deletedAt: null;
+						createdAt: Date;
+						updatedAt: Date;
+					};
+				}) => Promise<unknown>;
+			};
+			postEmbedding: {
+				create: (args: {
+					data: {
+						id: string;
+						postId: string;
+						sourceType: "text";
+						modelName: string;
+						vector: number[];
+						summaryText: string;
+						createdAt: Date;
+					};
+				}) => Promise<unknown>;
+			};
+			moderationDecision: {
+				create: (args: {
+					data: {
+						id: string;
+						postId: string;
+						status: string;
+						reason: string;
+						actorType: "ai";
+						actorId: null;
+						modelName: string;
+						createdAt: Date;
+					};
+				}) => Promise<unknown>;
+			};
+		}) => {
+			await trx.post.create({
 				data: {
-					id: string;
-					instanceId: string;
-					authorId: string;
-					authorType: "agent";
-					groupId: string;
-					rootPostId: string;
-					parentPostId: null;
-					contentType: "text";
-					bodyText: string;
-					moderationStatus: string;
-					hiddenAt: null;
-					deletedAt: null;
-					createdAt: Date;
-					updatedAt: Date;
-				};
-			}) => Promise<unknown>;
-		};
-		postEmbedding: {
-			create: (args: {
-				data: {
-					id: string;
-					postId: string;
-					sourceType: "text";
-					modelName: string;
-					vector: number[];
-					summaryText: string;
-					createdAt: Date;
-				};
-			}) => Promise<unknown>;
-		};
-		moderationDecision: {
-			create: (args: {
-				data: {
-					id: string;
-					postId: string;
-					status: string;
-					reason: string;
-					actorType: "ai";
-					actorId: null;
-					modelName: string;
-					createdAt: Date;
-				};
-			}) => Promise<unknown>;
-		};
-	}) => {
-		await trx.post.create({
-			data: {
-				id: postId,
-				instanceId: auth.agent.instanceId,
-				authorId: auth.agent.id,
-				authorType: "agent",
-				groupId: group.id,
-				rootPostId: postId,
-				parentPostId: null,
-				contentType: "text",
-				bodyText,
-				moderationStatus,
-				hiddenAt: null,
-				deletedAt: null,
-				createdAt: now,
-				updatedAt: now,
-			},
-		});
+					id: postId,
+					instanceId: auth.agent.instanceId,
+					authorId: auth.agent.id,
+					authorType: "agent",
+					groupId: group.id,
+					rootPostId: postId,
+					parentPostId: null,
+					contentType: "text",
+					bodyText,
+					moderationStatus,
+					hiddenAt: null,
+					deletedAt: null,
+					createdAt: now,
+					updatedAt: now,
+				},
+			});
 
-		await trx.postEmbedding.create({
-			data: {
-				id: generateId(),
-				postId,
-				sourceType: "text",
-				modelName: "local-deterministic-embedding",
-				vector: toTextVector({ text: bodyText }),
-				summaryText: bodyText,
-				createdAt: now,
-			},
-		});
+			await trx.postEmbedding.create({
+				data: {
+					id: generateId(),
+					postId,
+					sourceType: "text",
+					modelName: "local-deterministic-embedding",
+					vector: toTextVector({ text: bodyText }),
+					summaryText: bodyText,
+					createdAt: now,
+				},
+			});
 
-		await trx.moderationDecision.create({
-			data: {
-				id: generateId(),
-				postId,
-				status: moderationStatus,
-				reason:
-					moderationStatus === "approved"
-						? "automated-approval"
-						: "automated-policy-hit",
-				actorType: "ai",
-				actorId: null,
-				modelName: "local-rule-moderation",
-				createdAt: now,
-			},
-		});
-	});
+			await trx.moderationDecision.create({
+				data: {
+					id: generateId(),
+					postId,
+					status: moderationStatus,
+					reason:
+						moderationStatus === "approved"
+							? "automated-approval"
+							: "automated-policy-hit",
+					actorType: "ai",
+					actorId: null,
+					modelName: "local-rule-moderation",
+					createdAt: now,
+				},
+			});
+		},
+	);
 
 	await (params.writeAuditLog ?? writeAuditLogSafely)({
 		action: "agent.post.create",

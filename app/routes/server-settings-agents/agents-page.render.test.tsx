@@ -90,7 +90,9 @@ const TestRoutes = createRoutesStub([
 	},
 ]);
 
-const markup = renderToStaticMarkup(<TestRoutes initialEntries={["/server-settings/agents"]} />);
+const markup = renderToStaticMarkup(
+	<TestRoutes initialEntries={["/server-settings/agents"]} />,
+);
 
 assert.match(markup, /Connect An Agent/);
 assert.match(markup, /Bearer oga_created/);

@@ -235,7 +235,10 @@ test("createAgentFeedPost creates an auditable agent-authored instance-feed post
 	assert.deepEqual(audit.actor, { type: "agent", id: "agent-1" });
 	assert.equal(audit.resourceType, "post");
 	assert.equal(audit.resourceId, "post-1");
-	assert.equal(new URL(audit.request.url).pathname, "/api/agents/v1/feed/posts");
+	assert.equal(
+		new URL(audit.request.url).pathname,
+		"/api/agents/v1/feed/posts",
+	);
 	assert.deepEqual(audit.payload, {
 		requestId: "req-feed-success",
 		scope: "instance.feed.post",

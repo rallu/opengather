@@ -1,5 +1,5 @@
-import type { action, loader } from "./authorize/route.server";
 import { AuthorizePage } from "./authorize/authorize-page";
+import type { action, loader } from "./authorize/route.server";
 
 export { action, loader } from "./authorize/route.server";
 

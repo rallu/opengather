@@ -22,11 +22,7 @@ export function GroupFeedSection(params: {
 	return (
 		<FeedContainer>
 			{params.data.canPost ? (
-				<Form
-					id="group-post-form"
-					method="post"
-					encType="multipart/form-data"
-				>
+				<Form id="group-post-form" method="post" encType="multipart/form-data">
 					<input type="hidden" name="_action" value="post" />
 					<PostComposer
 						name="bodyText"

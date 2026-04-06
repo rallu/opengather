@@ -3,6 +3,7 @@ import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
 import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
 import type { loader } from "./audit-logs.server";
+
 export { loader } from "./audit-logs.server";
 
 export default function AuditLogsPage() {
@@ -68,7 +69,9 @@ export default function AuditLogsPage() {
 						{hasFilters ? (
 							<p className="text-xs text-muted-foreground">
 								Filtered
-								{data.filters.actorType ? ` actorType=${data.filters.actorType}` : ""}
+								{data.filters.actorType
+									? ` actorType=${data.filters.actorType}`
+									: ""}
 								{data.filters.actorId ? ` actorId=${data.filters.actorId}` : ""}
 								{data.filters.resourceType
 									? ` resourceType=${data.filters.resourceType}`

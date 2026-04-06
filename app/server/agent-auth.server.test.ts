@@ -115,12 +115,17 @@ test("authenticateAgentRequest resolves agent subject context and updates lastUs
 	assert.equal(result.subjectContext.scopes.has("instance.feed.read"), true);
 	assert.equal(result.subjectContext.scopes.has("group.post"), true);
 	assert.equal(
-		result.subjectContext.resourceScopes?.get("group")?.get("group-1")?.has("group.post"),
+		result.subjectContext.resourceScopes
+			?.get("group")
+			?.get("group-1")
+			?.has("group.post"),
 		true,
 	);
 	assert.equal(
-		result.subjectContext.resourceScopes?.get("group")?.get("group-2")?.has("group.post") ??
-			false,
+		result.subjectContext.resourceScopes
+			?.get("group")
+			?.get("group-2")
+			?.has("group.post") ?? false,
 		false,
 	);
 	assert.deepEqual(updates, [

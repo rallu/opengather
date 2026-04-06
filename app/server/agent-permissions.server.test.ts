@@ -31,28 +31,40 @@ test("createAgentGrantIndex groups grants by resource and deduplicates scopes", 
 		],
 	});
 
-	assert.equal(hasAgentGrantScope({
-		resourceScopes: grantIndex,
-		resourceType: "group",
-		resourceId: "group-1",
-		scope: "group.read",
-	}), true);
-	assert.equal(hasAgentGrantScope({
-		resourceScopes: grantIndex,
-		resourceType: "group",
-		resourceId: "group-1",
-		scope: "group.post",
-	}), true);
-	assert.equal(hasAgentGrantScope({
-		resourceScopes: grantIndex,
-		resourceType: "group",
-		resourceId: "group-2",
-		scope: "group.read",
-	}), false);
-	assert.equal(hasAgentGrantScope({
-		resourceScopes: grantIndex,
-		resourceType: "profile",
-		resourceId: "user-1",
-		scope: "profile.read.public",
-	}), true);
+	assert.equal(
+		hasAgentGrantScope({
+			resourceScopes: grantIndex,
+			resourceType: "group",
+			resourceId: "group-1",
+			scope: "group.read",
+		}),
+		true,
+	);
+	assert.equal(
+		hasAgentGrantScope({
+			resourceScopes: grantIndex,
+			resourceType: "group",
+			resourceId: "group-1",
+			scope: "group.post",
+		}),
+		true,
+	);
+	assert.equal(
+		hasAgentGrantScope({
+			resourceScopes: grantIndex,
+			resourceType: "group",
+			resourceId: "group-2",
+			scope: "group.read",
+		}),
+		false,
+	);
+	assert.equal(
+		hasAgentGrantScope({
+			resourceScopes: grantIndex,
+			resourceType: "profile",
+			resourceId: "user-1",
+			scope: "profile.read.public",
+		}),
+		true,
+	);
 });

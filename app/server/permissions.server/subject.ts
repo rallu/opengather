@@ -1,9 +1,5 @@
 import { hasAgentGrantScope } from "../agent-permissions.server.ts";
-import {
-	canPostToGroup,
-	canReplyToGroup,
-	canViewGroup,
-} from "./group.ts";
+import { canPostToGroup, canReplyToGroup, canViewGroup } from "./group.ts";
 import {
 	canPostToInstanceFeed,
 	canReplyToPost,

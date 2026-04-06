@@ -1,10 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { ActionFunctionArgs } from "react-router";
 import {
-	type AgentAuthResult,
-	authenticateAgentRequest,
-} from "../server/agent-auth.server.ts";
-import {
 	agentAuthErrorResponse,
 	agentJsonError,
 	agentJsonSuccess,
@@ -13,6 +9,10 @@ import {
 	readAgentJsonBody,
 	resolveAgentRequestId,
 } from "../server/agent-api.server.ts";
+import {
+	type AgentAuthResult,
+	authenticateAgentRequest,
+} from "../server/agent-auth.server.ts";
 import { writeAuditLogSafely } from "../server/audit-log.service.server.ts";
 import { resolveParentPostContext } from "../server/community.service.server/create-support.ts";
 import { toTextVector } from "../server/embedding.service.server.ts";
@@ -22,55 +22,57 @@ import {
 } from "../server/permissions.server.ts";
 
 type AgentReplyDb = {
-	$transaction: <T>(callback: (trx: {
-		post: {
-			create: (args: {
-				data: {
-					id: string;
-					instanceId: string;
-					authorId: string;
-					authorType: "agent";
-					groupId: string | null;
-					rootPostId: string;
-					parentPostId: string;
-					contentType: "text";
-					bodyText: string;
-					moderationStatus: string;
-					hiddenAt: null;
-					deletedAt: null;
-					createdAt: Date;
-					updatedAt: Date;
-				};
-			}) => Promise<unknown>;
-		};
-		postEmbedding: {
-			create: (args: {
-				data: {
-					id: string;
-					postId: string;
-					sourceType: "text";
-					modelName: string;
-					vector: number[];
-					summaryText: string;
-					createdAt: Date;
-				};
-			}) => Promise<unknown>;
-		};
-		moderationDecision: {
-			create: (args: {
-				data: {
-					id: string;
-					postId: string;
-					status: string;
-					reason: string;
-					actorType: "ai";
-					actorId: null;
-					modelName: string;
-					createdAt: Date;
-				};
-			}) => Promise<unknown>;
-		};
-	}) => Promise<T>) => Promise<T>;
+	$transaction: <T>(
+		callback: (trx: {
+			post: {
+				create: (args: {
+					data: {
+						id: string;
+						instanceId: string;
+						authorId: string;
+						authorType: "agent";
+						groupId: string | null;
+						rootPostId: string;
+						parentPostId: string;
+						contentType: "text";
+						bodyText: string;
+						moderationStatus: string;
+						hiddenAt: null;
+						deletedAt: null;
+						createdAt: Date;
+						updatedAt: Date;
+					};
+				}) => Promise<unknown>;
+			};
+			postEmbedding: {
+				create: (args: {
+					data: {
+						id: string;
+						postId: string;
+						sourceType: "text";
+						modelName: string;
+						vector: number[];
+						summaryText: string;
+						createdAt: Date;
+					};
+				}) => Promise<unknown>;
+			};
+			moderationDecision: {
+				create: (args: {
+					data: {
+						id: string;
+						postId: string;
+						status: string;
+						reason: string;
+						actorType: "ai";
+						actorId: null;
+						modelName: string;
+						createdAt: Date;
+					};
+				}) => Promise<unknown>;
+			};
+		}) => Promise<T>,
+	) => Promise<T>;
 };
 
 type ParentContextResult =
@@ -156,16 +158,16 @@ export async function createAgentReply(params: {
 		});
 	}
 
-	const parentContext = await (params.resolveParentContext ??
-		resolveParentPostContext)({
+	const parentContext = await (
+		params.resolveParentContext ?? resolveParentPostContext
+	)({
 		instanceId: auth.agent.instanceId,
 		parentPostId: params.postId,
 	});
 	if (!parentContext.ok) {
 		return agentJsonError({
 			requestId,
-			status:
-				parentContext.error === "Parent post not found" ? 404 : 400,
+			status: parentContext.error === "Parent post not found" ? 404 : 400,
 			code:
 				parentContext.error === "Parent post not found"
 					? "not_found"

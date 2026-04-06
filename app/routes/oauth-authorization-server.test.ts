@@ -5,7 +5,9 @@ import { loader as protectedResourceLoader } from "./oauth-protected-resource-mc
 
 test("OAuth authorization server metadata exposes root authorize and token endpoints", async () => {
 	const response = await authorizationLoader({
-		request: new Request("http://localhost:5173/.well-known/oauth-authorization-server"),
+		request: new Request(
+			"http://localhost:5173/.well-known/oauth-authorization-server",
+		),
 		params: {},
 		context: {},
 		unstable_pattern: "",

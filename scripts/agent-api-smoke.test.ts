@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-	parseAgentApiSmokeArgs,
-	runAgentApiSmoke,
-} from "./agent-api-smoke.ts";
+import { parseAgentApiSmokeArgs, runAgentApiSmoke } from "./agent-api-smoke.ts";
 
 test("parseAgentApiSmokeArgs parses a feed smoke run", () => {
 	assert.deepEqual(
@@ -82,11 +79,7 @@ test("parseAgentApiSmokeArgs returns help and validates required flags", () => {
 		command: "help",
 	});
 	assert.throws(
-		() =>
-			parseAgentApiSmokeArgs([
-				"--base-url",
-				"http://localhost:5173",
-			]),
+		() => parseAgentApiSmokeArgs(["--base-url", "http://localhost:5173"]),
 		/--token is required/,
 	);
 });
@@ -116,10 +109,13 @@ test("runAgentApiSmoke validates me, groups, allowed write, and forbidden route"
 				body: typeof init?.body === "string" ? init.body : undefined,
 			});
 			if (url.endsWith("/api/agents/v1/me")) {
-				return new Response(JSON.stringify({ ok: true, data: { id: "agent-1" } }), {
-					status: 200,
-					headers: { "content-type": "application/json" },
-				});
+				return new Response(
+					JSON.stringify({ ok: true, data: { id: "agent-1" } }),
+					{
+						status: 200,
+						headers: { "content-type": "application/json" },
+					},
+				);
 			}
 			if (url.endsWith("/api/agents/v1/groups")) {
 				return new Response(JSON.stringify({ ok: true, data: [] }), {
@@ -128,10 +124,13 @@ test("runAgentApiSmoke validates me, groups, allowed write, and forbidden route"
 				});
 			}
 			if (url.endsWith("/api/agents/v1/feed/posts")) {
-				return new Response(JSON.stringify({ ok: true, data: { id: "post-1" } }), {
-					status: 201,
-					headers: { "content-type": "application/json" },
-				});
+				return new Response(
+					JSON.stringify({ ok: true, data: { id: "post-1" } }),
+					{
+						status: 201,
+						headers: { "content-type": "application/json" },
+					},
+				);
 			}
 			if (url.endsWith("/api/agents/v1/groups/group-2/posts")) {
 				return new Response(

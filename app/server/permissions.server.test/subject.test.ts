@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
 	canSubjectPostToGroup,
+	canSubjectReplyToGroup,
 	canSubjectViewGroup,
 	canSubjectViewInstanceFeed,
-	canSubjectReplyToGroup,
 	canSubjectViewProfile,
 	createAgentGrantIndex,
 	createAgentSubjectContext,

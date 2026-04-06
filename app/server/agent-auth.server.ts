@@ -1,15 +1,15 @@
 import { createHash } from "node:crypto";
 import {
-	createAgentGrantIndex,
-	createAgentSubjectContext,
-} from "./permissions.server.ts";
-import {
+	type GroupRole,
 	resolveGroupRoleFromMembership,
 	resolveViewerRoleFromMembership,
-	type GroupRole,
 	type SubjectContext,
 	type ViewerRole,
 } from "./permissions.server/shared.ts";
+import {
+	createAgentGrantIndex,
+	createAgentSubjectContext,
+} from "./permissions.server.ts";
 
 export type AgentGrantRecord = {
 	id: string;
@@ -134,16 +134,16 @@ export function hashAgentToken(token: string): string {
 	return createHash("sha256").update(token).digest("hex");
 }
 
-export function parseAgentBearerToken(params: {
-	request: Request;
-}): {
-	ok: true;
-	token: string;
-} | {
-	ok: false;
-	code: "missing_authorization_header" | "invalid_authorization_header";
-	message: string;
-} {
+export function parseAgentBearerToken(params: { request: Request }):
+	| {
+			ok: true;
+			token: string;
+	  }
+	| {
+			ok: false;
+			code: "missing_authorization_header" | "invalid_authorization_header";
+			message: string;
+	  } {
 	const header = params.request.headers.get("authorization");
 	if (!header) {
 		return {
@@ -237,7 +237,9 @@ export async function authenticateAgentRequest(params: {
 	});
 
 	if (!agent) {
-		const { findActiveMcpAccessToken } = await import("./agent-oauth.server.ts");
+		const { findActiveMcpAccessToken } = await import(
+			"./agent-oauth.server.ts"
+		);
 		const mcpAccessToken = await findActiveMcpAccessToken({
 			accessToken: parsed.token,
 			db: db as never,

@@ -72,7 +72,9 @@ const TestRoutes = createRoutesStub([
 	},
 ]);
 
-const markup = renderToStaticMarkup(<TestRoutes initialEntries={["/authorize"]} />);
+const markup = renderToStaticMarkup(
+	<TestRoutes initialEntries={["/authorize"]} />,
+);
 
 assert.match(markup, /Connect Codex to OpenGather/);
 assert.match(markup, /Authorization request/);

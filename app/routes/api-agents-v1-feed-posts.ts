@@ -1,10 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { ActionFunctionArgs } from "react-router";
 import {
-	type AgentAuthResult,
-	authenticateAgentRequest,
-} from "../server/agent-auth.server.ts";
-import {
 	agentAuthErrorResponse,
 	agentJsonError,
 	agentJsonSuccess,
@@ -13,60 +9,66 @@ import {
 	readAgentJsonBody,
 	resolveAgentRequestId,
 } from "../server/agent-api.server.ts";
+import {
+	type AgentAuthResult,
+	authenticateAgentRequest,
+} from "../server/agent-auth.server.ts";
 import { writeAuditLogSafely } from "../server/audit-log.service.server.ts";
 import { toTextVector } from "../server/embedding.service.server.ts";
 import { canSubjectPostToInstanceFeed } from "../server/permissions.server.ts";
 
 type AgentFeedPostDb = {
-	$transaction: <T>(callback: (trx: {
-		post: {
-			create: (args: {
-				data: {
-					id: string;
-					instanceId: string;
-					authorId: string;
-					authorType: "agent";
-					groupId: null;
-					rootPostId: string;
-					parentPostId: null;
-					contentType: "text";
-					bodyText: string;
-					moderationStatus: string;
-					hiddenAt: null;
-					deletedAt: null;
-					createdAt: Date;
-					updatedAt: Date;
-				};
-			}) => Promise<unknown>;
-		};
-		postEmbedding: {
-			create: (args: {
-				data: {
-					id: string;
-					postId: string;
-					sourceType: "text";
-					modelName: string;
-					vector: number[];
-					summaryText: string;
-					createdAt: Date;
-				};
-			}) => Promise<unknown>;
-		};
-		moderationDecision: {
-			create: (args: {
-				data: {
-					id: string;
-					postId: string;
-					status: string;
-					reason: string;
-					actorType: "ai";
-					actorId: null;
-					modelName: string;
-					createdAt: Date;
-				};
-			}) => Promise<unknown>;
-		};
-	}) => Promise<T>) => Promise<T>;
+	$transaction: <T>(
+		callback: (trx: {
+			post: {
+				create: (args: {
+					data: {
+						id: string;
+						instanceId: string;
+						authorId: string;
+						authorType: "agent";
+						groupId: null;
+						rootPostId: string;
+						parentPostId: null;
+						contentType: "text";
+						bodyText: string;
+						moderationStatus: string;
+						hiddenAt: null;
+						deletedAt: null;
+						createdAt: Date;
+						updatedAt: Date;
+					};
+				}) => Promise<unknown>;
+			};
+			postEmbedding: {
+				create: (args: {
+					data: {
+						id: string;
+						postId: string;
+						sourceType: "text";
+						modelName: string;
+						vector: number[];
+						summaryText: string;
+						createdAt: Date;
+					};
+				}) => Promise<unknown>;
+			};
+			moderationDecision: {
+				create: (args: {
+					data: {
+						id: string;
+						postId: string;
+						status: string;
+						reason: string;
+						actorType: "ai";
+						actorId: null;
+						modelName: string;
+						createdAt: Date;
+					};
+				}) => Promise<unknown>;
+			};
+		}) => Promise<T>,
+	) => Promise<T>;
 };
 
 type AgentFeedPostPayload = {

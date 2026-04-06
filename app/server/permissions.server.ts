@@ -1,4 +1,8 @@
 export {
+	createAgentGrantIndex,
+	hasAgentGrantScope,
+} from "./agent-permissions.server.ts";
+export {
 	canParticipateInEvent,
 	canViewEvent,
 	resolveEventVisibilityMode,
@@ -51,10 +55,6 @@ export {
 	getSubjectGroupRole,
 	hasSubjectScope,
 } from "./permissions.server/subject.ts";
-export {
-	createAgentGrantIndex,
-	hasAgentGrantScope,
-} from "./agent-permissions.server.ts";
 export {
 	getInstanceViewerRole,
 	getViewerContext,

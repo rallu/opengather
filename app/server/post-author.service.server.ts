@@ -159,9 +159,10 @@ export async function loadPostAuthorSummaryMap(params: {
 		if (!summaries.has(authorId)) {
 			summaries.set(authorId, {
 				id: authorId,
-				name: authors.find((author) => author.id === authorId)?.type === "agent"
-					? FALLBACK_AGENT_NAME
-					: FALLBACK_AUTHOR_NAME,
+				name:
+					authors.find((author) => author.id === authorId)?.type === "agent"
+						? FALLBACK_AGENT_NAME
+						: FALLBACK_AUTHOR_NAME,
 				kind:
 					authors.find((author) => author.id === authorId)?.type === "agent"
 						? "agent"

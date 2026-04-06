@@ -1,8 +1,5 @@
 import { Form, Link, useActionData, useLoaderData } from "react-router";
-import type {
-	AuthorizeActionData,
-	AuthorizeLoaderData,
-} from "./route.server";
+import type { AuthorizeActionData, AuthorizeLoaderData } from "./route.server";
 
 const INSTANCE_SCOPE_OPTIONS = [
 	{
@@ -72,7 +69,10 @@ export function AuthorizeContent(params: {
 				</dl>
 			</section>
 
-			<Form method="post" className="space-y-6 rounded-xl border border-border bg-card p-5 shadow-sm">
+			<Form
+				method="post"
+				className="space-y-6 rounded-xl border border-border bg-card p-5 shadow-sm"
+			>
 				{params.actionData && !params.actionData.ok ? (
 					<div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
 						{params.actionData.error}
@@ -137,10 +137,15 @@ export function AuthorizeContent(params: {
 						</label>
 					</div>
 					<div className="space-y-2">
-						<p className="text-sm font-medium">Instance scopes for the new agent</p>
+						<p className="text-sm font-medium">
+							Instance scopes for the new agent
+						</p>
 						<div className="grid gap-2">
 							{INSTANCE_SCOPE_OPTIONS.map((option) => (
-								<label key={option.id} className="flex items-center gap-2 text-sm">
+								<label
+									key={option.id}
+									className="flex items-center gap-2 text-sm"
+								>
 									<input
 										type="checkbox"
 										name={option.id}
@@ -170,7 +175,10 @@ export function AuthorizeContent(params: {
 					>
 						Deny
 					</button>
-					<Link to="/server-settings/agents" className="text-sm text-muted-foreground underline underline-offset-4">
+					<Link
+						to="/server-settings/agents"
+						className="text-sm text-muted-foreground underline underline-offset-4"
+					>
 						Manage agents
 					</Link>
 				</div>

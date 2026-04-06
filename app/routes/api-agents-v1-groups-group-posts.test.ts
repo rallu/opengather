@@ -4,14 +4,17 @@ import { createAgentGroupPost } from "./api-agents-v1-groups-group-posts.ts";
 
 test("createAgentGroupPost validates JSON body", async () => {
 	const response = await createAgentGroupPost({
-		request: new Request("http://localhost/api/agents/v1/groups/group-1/posts", {
-			method: "POST",
-			headers: {
-				"content-type": "application/json",
-				"x-request-id": "req-post-validation",
+		request: new Request(
+			"http://localhost/api/agents/v1/groups/group-1/posts",
+			{
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					"x-request-id": "req-post-validation",
+				},
+				body: JSON.stringify({}),
 			},
-			body: JSON.stringify({}),
-		}),
+		),
 		groupId: "group-1",
 		authenticate: async () => ({
 			ok: true,
@@ -67,14 +70,17 @@ test("createAgentGroupPost validates JSON body", async () => {
 
 test("createAgentGroupPost rejects forbidden agent posts", async () => {
 	const response = await createAgentGroupPost({
-		request: new Request("http://localhost/api/agents/v1/groups/group-1/posts", {
-			method: "POST",
-			headers: {
-				"content-type": "application/json",
-				"x-request-id": "req-post-forbidden",
+		request: new Request(
+			"http://localhost/api/agents/v1/groups/group-1/posts",
+			{
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					"x-request-id": "req-post-forbidden",
+				},
+				body: JSON.stringify({ bodyText: "Hello" }),
 			},
-			body: JSON.stringify({ bodyText: "Hello" }),
-		}),
+		),
 		groupId: "group-1",
 		authenticate: async () => ({
 			ok: true,
@@ -140,14 +146,17 @@ test("createAgentGroupPost creates an auditable agent-authored group post", asyn
 	const audits: unknown[] = [];
 	const ids = ["post-1", "embedding-1", "moderation-1"];
 	const response = await createAgentGroupPost({
-		request: new Request("http://localhost/api/agents/v1/groups/group-1/posts", {
-			method: "POST",
-			headers: {
-				"content-type": "application/json",
-				"x-request-id": "req-post-success",
+		request: new Request(
+			"http://localhost/api/agents/v1/groups/group-1/posts",
+			{
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					"x-request-id": "req-post-success",
+				},
+				body: JSON.stringify({ bodyText: "Hello from Codex" }),
 			},
-			body: JSON.stringify({ bodyText: "Hello from Codex" }),
-		}),
+		),
 		groupId: "group-1",
 		now: new Date("2026-04-06T12:00:00.000Z"),
 		generateId: () => ids.shift() ?? "extra-id",
@@ -258,7 +267,10 @@ test("createAgentGroupPost creates an auditable agent-authored group post", asyn
 	assert.equal(audit.resourceType, "post");
 	assert.equal(audit.resourceId, "post-1");
 	assert.equal(audit.request.method, "POST");
-	assert.equal(new URL(audit.request.url).pathname, "/api/agents/v1/groups/group-1/posts");
+	assert.equal(
+		new URL(audit.request.url).pathname,
+		"/api/agents/v1/groups/group-1/posts",
+	);
 	assert.deepEqual(audit.payload, {
 		requestId: "req-post-success",
 		scope: "group.post",
@@ -270,14 +282,17 @@ test("createAgentGroupPost creates an auditable agent-authored group post", asyn
 test("createAgentGroupPost returns 429 before writes when the agent write bucket is exhausted", async () => {
 	let transactionCalled = false;
 	const response = await createAgentGroupPost({
-		request: new Request("http://localhost/api/agents/v1/groups/group-1/posts", {
-			method: "POST",
-			headers: {
-				"content-type": "application/json",
-				"x-request-id": "req-post-rate-limit",
+		request: new Request(
+			"http://localhost/api/agents/v1/groups/group-1/posts",
+			{
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					"x-request-id": "req-post-rate-limit",
+				},
+				body: JSON.stringify({ bodyText: "Hello from Codex" }),
 			},
-			body: JSON.stringify({ bodyText: "Hello from Codex" }),
-		}),
+		),
 		groupId: "group-1",
 		authenticate: async () => ({
 			ok: true,

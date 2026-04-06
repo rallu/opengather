@@ -111,11 +111,7 @@ export function ServerSettingsAgentsPage(params: {
 	}
 
 	return (
-		<AppShell
-			authUser={params.data.authUser}
-			title="Agents"
-			showServerSettings
-		>
+		<AppShell authUser={params.data.authUser} title="Agents" showServerSettings>
 			<ServerSettingsAgentsContent
 				data={params.data}
 				actionData={params.actionData}
@@ -230,7 +226,8 @@ export function ServerSettingsAgentsContent(params: {
 						</div>
 					</Form>
 				</section>
-				{params.actionData?.ok && params.actionData.action === "create-agent" ? (
+				{params.actionData?.ok &&
+				params.actionData.action === "create-agent" ? (
 					<div className="space-y-3 rounded-md border border-emerald-600/20 bg-emerald-500/10 p-4 text-sm">
 						<p className="font-medium text-emerald-700">
 							Agent created. This token is shown only once.
@@ -251,7 +248,8 @@ export function ServerSettingsAgentsContent(params: {
 						</div>
 					</div>
 				) : null}
-				{params.actionData?.ok && params.actionData.action === "rotate-agent" ? (
+				{params.actionData?.ok &&
+				params.actionData.action === "rotate-agent" ? (
 					<div className="space-y-3 rounded-md border border-emerald-600/20 bg-emerald-500/10 p-4 text-sm">
 						<p className="font-medium text-emerald-700">
 							Token rotated. The replacement token is shown only once.
@@ -283,17 +281,20 @@ export function ServerSettingsAgentsContent(params: {
 						{params.actionData.error}
 					</div>
 				) : null}
-				{params.actionData?.ok && params.actionData.action === "disable-agent" ? (
+				{params.actionData?.ok &&
+				params.actionData.action === "disable-agent" ? (
 					<div className="rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700">
 						Agent disabled.
 					</div>
 				) : null}
-				{params.actionData?.ok && params.actionData.action === "update-grants" ? (
+				{params.actionData?.ok &&
+				params.actionData.action === "update-grants" ? (
 					<div className="rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700">
 						Agent grants updated.
 					</div>
 				) : null}
-				{params.actionData?.ok && params.actionData.action === "revoke-session" ? (
+				{params.actionData?.ok &&
+				params.actionData.action === "revoke-session" ? (
 					<div className="rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700">
 						MCP session revoked.
 					</div>
@@ -361,7 +362,10 @@ export function ServerSettingsAgentsContent(params: {
 				) : (
 					<div className="space-y-3">
 						{params.data.agents.map((agent) => (
-							<div key={agent.id} className="rounded-md border border-border p-3">
+							<div
+								key={agent.id}
+								className="rounded-md border border-border p-3"
+							>
 								<div className="flex flex-wrap items-start justify-between gap-3">
 									<div className="space-y-1">
 										<p className="font-medium">
@@ -412,68 +416,82 @@ export function ServerSettingsAgentsContent(params: {
 											</p>
 										) : (
 											<div className="space-y-2">
-												{(sessionsByAgentId.get(agent.id) ?? []).map((session) => (
-													<div
-														key={session.id}
-														className="rounded-md border border-border/70 bg-muted/20 p-3 text-sm"
-													>
-														<div className="flex flex-wrap items-start justify-between gap-3">
-															<div className="space-y-1">
-																<p className="font-medium">
-																	{session.clientId || "Public MCP client"}
-																</p>
-																<p className="text-xs text-muted-foreground">
-																	<code>{session.id}</code>
-																</p>
-																<p className="text-muted-foreground">
-																	User: <code>{session.userId}</code>
-																</p>
+												{(sessionsByAgentId.get(agent.id) ?? []).map(
+													(session) => (
+														<div
+															key={session.id}
+															className="rounded-md border border-border/70 bg-muted/20 p-3 text-sm"
+														>
+															<div className="flex flex-wrap items-start justify-between gap-3">
+																<div className="space-y-1">
+																	<p className="font-medium">
+																		{session.clientId || "Public MCP client"}
+																	</p>
+																	<p className="text-xs text-muted-foreground">
+																		<code>{session.id}</code>
+																	</p>
+																	<p className="text-muted-foreground">
+																		User: <code>{session.userId}</code>
+																	</p>
+																</div>
+																<div className="text-right text-muted-foreground">
+																	<p>
+																		Last used:{" "}
+																		{session.lastUsedAt ? (
+																			<LocalizedTimestamp
+																				value={session.lastUsedAt}
+																			/>
+																		) : (
+																			"never"
+																		)}
+																	</p>
+																	<p>
+																		Expires:{" "}
+																		<LocalizedTimestamp
+																			value={session.expiresAt}
+																		/>
+																	</p>
+																	<p>
+																		Status:{" "}
+																		{session.revokedAt ? "revoked" : "active"}
+																	</p>
+																</div>
 															</div>
-															<div className="text-right text-muted-foreground">
-																<p>
-																	Last used:{" "}
-																	{session.lastUsedAt ? (
-																		<LocalizedTimestamp value={session.lastUsedAt} />
-																	) : (
-																		"never"
-																	)}
+															<div className="mt-3 flex flex-wrap items-center gap-3">
+																<p className="text-xs text-muted-foreground">
+																	Created:{" "}
+																	<LocalizedTimestamp
+																		value={session.createdAt}
+																	/>
 																</p>
-																<p>
-																	Expires: <LocalizedTimestamp value={session.expiresAt} />
-																</p>
-																<p>
-																	Status: {session.revokedAt ? "revoked" : "active"}
-																</p>
+																{session.revokedAt ? (
+																	<p className="text-xs text-muted-foreground">
+																		Revoked:{" "}
+																		<LocalizedTimestamp
+																			value={session.revokedAt}
+																		/>
+																	</p>
+																) : (
+																	<Form method="post">
+																		<input
+																			type="hidden"
+																			name="_action"
+																			value="revoke-session"
+																		/>
+																		<input
+																			type="hidden"
+																			name="sessionId"
+																			value={session.id}
+																		/>
+																		<Button type="submit" variant="outline">
+																			Revoke MCP session
+																		</Button>
+																	</Form>
+																)}
 															</div>
 														</div>
-														<div className="mt-3 flex flex-wrap items-center gap-3">
-															<p className="text-xs text-muted-foreground">
-																Created: <LocalizedTimestamp value={session.createdAt} />
-															</p>
-															{session.revokedAt ? (
-																<p className="text-xs text-muted-foreground">
-																	Revoked: <LocalizedTimestamp value={session.revokedAt} />
-																</p>
-															) : (
-																<Form method="post">
-																	<input
-																		type="hidden"
-																		name="_action"
-																		value="revoke-session"
-																	/>
-																	<input
-																		type="hidden"
-																		name="sessionId"
-																		value={session.id}
-																	/>
-																	<Button type="submit" variant="outline">
-																		Revoke MCP session
-																	</Button>
-																</Form>
-															)}
-														</div>
-													</div>
-												))}
+													),
+												)}
 											</div>
 										)}
 									</div>
@@ -492,9 +510,9 @@ export function ServerSettingsAgentsContent(params: {
 												<div className="space-y-2 text-sm">
 													<p className="font-medium">Edit instance scopes</p>
 													<AgentScopeCheckboxes
-														selectedScopes={new Set(
-															agent.grants.map((grant) => grant.scope),
-														)}
+														selectedScopes={
+															new Set(agent.grants.map((grant) => grant.scope))
+														}
 													/>
 												</div>
 												<Button type="submit" variant="outline">

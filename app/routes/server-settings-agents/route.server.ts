@@ -1,16 +1,16 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { writeAuditLogSafely } from "../../server/audit-log.service.server.ts";
 import {
+	type AgentMcpSessionSummary,
+	type AgentSummary,
 	createAgent,
 	disableAgent,
-	listAgents,
 	listAgentMcpSessions,
+	listAgents,
 	revokeAgentMcpSession,
 	rotateAgentToken,
 	setAgentGrants,
-	type AgentMcpSessionSummary,
-	type AgentSummary,
 } from "../../server/agent.service.server.ts";
+import { writeAuditLogSafely } from "../../server/audit-log.service.server.ts";
 import {
 	canManageInstance,
 	getViewerContext as getPermissionsViewerContext,

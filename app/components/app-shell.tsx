@@ -210,9 +210,7 @@ export function AppShell(props: AppShellProps) {
 					)}
 					size={variant === "desktop" ? "sm" : "default"}
 					data-testid={
-						variant === "desktop"
-							? "shell-sign-out"
-							: "shell-sign-out-mobile"
+						variant === "desktop" ? "shell-sign-out" : "shell-sign-out-mobile"
 					}
 				>
 					Sign Out

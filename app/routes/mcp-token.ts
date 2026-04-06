@@ -1,8 +1,8 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import {
 	exchangeMcpAuthorizationCode,
-	refreshMcpSessionTokens,
 	MCP_ACCESS_TOKEN_TTL_MS,
+	refreshMcpSessionTokens,
 } from "../server/agent-oauth.server.ts";
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
@@ -68,7 +68,9 @@ export async function handleMcpTokenRequest(params: {
 	const grantType = String(form.get("grant_type") ?? "").trim();
 	try {
 		if (grantType === "authorization_code") {
-			const bundle = await (params.exchangeCode ?? exchangeMcpAuthorizationCode)({
+			const bundle = await (
+				params.exchangeCode ?? exchangeMcpAuthorizationCode
+			)({
 				code: String(form.get("code") ?? ""),
 				redirectUri: String(form.get("redirect_uri") ?? ""),
 				codeVerifier: String(form.get("code_verifier") ?? ""),
@@ -115,10 +117,14 @@ export async function handleMcpTokenRequest(params: {
 	}
 }
 
-export async function loader({ request }: LoaderFunctionArgs): Promise<Response> {
+export async function loader({
+	request,
+}: LoaderFunctionArgs): Promise<Response> {
 	return handleMcpTokenRequest({ request });
 }
 
-export async function action({ request }: ActionFunctionArgs): Promise<Response> {
+export async function action({
+	request,
+}: ActionFunctionArgs): Promise<Response> {
 	return handleMcpTokenRequest({ request });
 }

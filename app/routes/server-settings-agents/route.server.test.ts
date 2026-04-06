@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-	action,
-	loader,
-} from "./route.server.ts";
+import { action, loader } from "./route.server.ts";
 
 test("server-settings agents loader returns agents for admins", async () => {
 	const result = await loader(
@@ -225,8 +222,13 @@ test("server-settings agents action creates a token and audits it", async () => 
 	});
 	assert.equal(auditCalls.length, 1);
 	assert.deepEqual(
-		(auditCalls[0] as { action: string; resourceType: string; resourceId: string })
-			.action,
+		(
+			auditCalls[0] as {
+				action: string;
+				resourceType: string;
+				resourceId: string;
+			}
+		).action,
 		"agent.create",
 	);
 });
@@ -287,11 +289,7 @@ test("server-settings agents action updates grants and audits it", async () => {
 		ok: true,
 		action: "update-grants",
 		agentId: "agent-1",
-		scopes: [
-			"instance.feed.read",
-			"instance.feed.post",
-			"instance.feed.reply",
-		],
+		scopes: ["instance.feed.read", "instance.feed.post", "instance.feed.reply"],
 	});
 	assert.deepEqual(grantCalls, [
 		{
@@ -379,10 +377,7 @@ test("server-settings agents action disables an agent and audits it", async () =
 		agentId: "agent-1",
 	});
 	assert.deepEqual(disableCalls, [{ agentId: "agent-1" }]);
-	assert.equal(
-		(auditCalls[0] as { action: string }).action,
-		"agent.disable",
-	);
+	assert.equal((auditCalls[0] as { action: string }).action, "agent.disable");
 });
 
 test("server-settings agents action rotates a token and audits it", async () => {

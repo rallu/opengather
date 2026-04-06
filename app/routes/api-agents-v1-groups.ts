@@ -1,15 +1,15 @@
 import type { LoaderFunctionArgs } from "react-router";
 import {
-	type AgentAuthResult,
-	authenticateAgentRequest,
-} from "../server/agent-auth.server.ts";
-import {
 	agentAuthErrorResponse,
 	agentJsonSuccess,
 	agentRateLimitedResponse,
 	checkAgentRouteRateLimit,
 	resolveAgentRequestId,
 } from "../server/agent-api.server.ts";
+import {
+	type AgentAuthResult,
+	authenticateAgentRequest,
+} from "../server/agent-auth.server.ts";
 import {
 	canSubjectPostToGroup,
 	canSubjectViewGroup,
@@ -93,16 +93,17 @@ export async function loadAgentGroups(params: {
 	return agentJsonSuccess(
 		{
 			groups: groups
-				.filter((group) =>
-					canSubjectViewGroup({
-						subjectContext: auth.subjectContext,
-						groupId: group.id,
-						visibilityMode: group.visibilityMode as
-							| "public"
-							| "instance_members"
-							| "group_members"
-							| "private_invite_only",
-					}).allowed,
+				.filter(
+					(group) =>
+						canSubjectViewGroup({
+							subjectContext: auth.subjectContext,
+							groupId: group.id,
+							visibilityMode: group.visibilityMode as
+								| "public"
+								| "instance_members"
+								| "group_members"
+								| "private_invite_only",
+						}).allowed,
 				)
 				.map((group) => ({
 					id: group.id,
@@ -125,6 +126,8 @@ export async function loadAgentGroups(params: {
 	);
 }
 
-export async function loader({ request }: LoaderFunctionArgs): Promise<Response> {
+export async function loader({
+	request,
+}: LoaderFunctionArgs): Promise<Response> {
 	return loadAgentGroups({ request });
 }

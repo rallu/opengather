@@ -1,5 +1,8 @@
 import type { LoaderFunctionArgs } from "react-router";
-import { canAccessAuditLogs, getViewerContext } from "~/server/permissions.server";
+import {
+	canAccessAuditLogs,
+	getViewerContext,
+} from "~/server/permissions.server";
 
 type AuditLogFilters = {
 	actorType: string;
@@ -51,7 +54,9 @@ function buildAuditWhere(filters: AuditLogFilters): Record<string, string> {
 	return where;
 }
 
-function formatActorLabel(row: Pick<AuditLogRow, "actorType" | "actorId">): string {
+function formatActorLabel(
+	row: Pick<AuditLogRow, "actorType" | "actorId">,
+): string {
 	const typeLabel =
 		row.actorType === "agent"
 			? "Agent"
@@ -97,7 +102,10 @@ export async function loadAuditLogs(
 		};
 	}
 
-	if (!(deps?.canAccess ?? canAccessAuditLogs)({ viewerRole: viewer.viewerRole }).allowed) {
+	if (
+		!(deps?.canAccess ?? canAccessAuditLogs)({ viewerRole: viewer.viewerRole })
+			.allowed
+	) {
 		return {
 			status: "forbidden" as const,
 			authUser: viewer.authUser,

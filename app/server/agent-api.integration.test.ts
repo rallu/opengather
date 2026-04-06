@@ -1,13 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createAgentGroupPost } from "../routes/api-agents-v1-groups-group-posts.ts";
 import { loadAgentGroups } from "../routes/api-agents-v1-groups.ts";
+import { createAgentGroupPost } from "../routes/api-agents-v1-groups-group-posts.ts";
 import { loadAgentMe } from "../routes/api-agents-v1-me.ts";
+import { createAgent, rotateAgentToken } from "./agent.service.server.ts";
 import { authenticateAgentRequest } from "./agent-auth.server.ts";
-import {
-	createAgent,
-	rotateAgentToken,
-} from "./agent.service.server.ts";
 import { loadPostAuthorSummaryMap } from "./post-author.service.server.ts";
 
 type StoredAgent = {
@@ -104,7 +101,7 @@ function createIntegrationHarness() {
 	const nextId = (prefix: string) => `${prefix}-${++sequence}`;
 
 	const db = {
-		$transaction: async <T,>(
+		$transaction: async <T>(
 			callback: (trx: {
 				agent: {
 					create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
@@ -238,9 +235,7 @@ function createIntegrationHarness() {
 				orderBy?: Array<Record<string, unknown>>;
 				include?: { grants: { orderBy: Array<Record<string, unknown>> } };
 			}) => {
-				const idFilter = (
-					args.where.id as { in?: string[] } | undefined
-				)?.in;
+				const idFilter = (args.where.id as { in?: string[] } | undefined)?.in;
 				if (idFilter) {
 					return state.agents
 						.filter((agent) => idFilter.includes(agent.id))
@@ -654,7 +649,10 @@ test("agent API integration returns only granted private groups", async () => {
 	const json = (await response.json()) as {
 		data: { groups: Array<{ id: string }> };
 	};
-	assert.deepEqual(json.data.groups.map((group) => group.id), ["group-1"]);
+	assert.deepEqual(
+		json.data.groups.map((group) => group.id),
+		["group-1"],
+	);
 });
 
 test("agent API integration blocks posting without group.post scope", async () => {

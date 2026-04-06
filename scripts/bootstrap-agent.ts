@@ -82,7 +82,12 @@ function parseGrant(value: string): {
 
 export function parseAgentBootstrapArgs(argv: string[]): ParsedCommand {
 	const [command, ...rest] = argv;
-	if (!command || command === "help" || command === "--help" || command === "-h") {
+	if (
+		!command ||
+		command === "help" ||
+		command === "--help" ||
+		command === "-h"
+	) {
 		return { command: "help" };
 	}
 
@@ -144,7 +149,9 @@ export function parseAgentBootstrapArgs(argv: string[]): ParsedCommand {
 			case "--instance-role": {
 				const value = requireValue(rest[index + 1], flag);
 				if (value !== "member" && value !== "moderator" && value !== "admin") {
-					throw new Error("--instance-role must be member, moderator, or admin.");
+					throw new Error(
+						"--instance-role must be member, moderator, or admin.",
+					);
 				}
 				instanceRole = value;
 				index += 1;

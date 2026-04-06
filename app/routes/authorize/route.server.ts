@@ -1,12 +1,12 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { redirect } from "react-router";
-import { writeAuditLogSafely } from "../../server/audit-log.service.server.ts";
 import {
+	type AgentSummary,
 	createAgent,
 	listAgents,
-	type AgentSummary,
 } from "../../server/agent.service.server.ts";
 import { createMcpAuthorizationCode } from "../../server/agent-oauth.server.ts";
+import { writeAuditLogSafely } from "../../server/audit-log.service.server.ts";
 import {
 	canManageInstance,
 	getViewerContext as getPermissionsViewerContext,
@@ -272,7 +272,9 @@ export async function action(
 			return { ok: false, error: "Selected agent was not found." };
 		}
 		const grantedScopes = getAgentScopeSet(selectedAgent);
-		const missingScopes = oauth.scope.filter((scope) => !grantedScopes.has(scope));
+		const missingScopes = oauth.scope.filter(
+			(scope) => !grantedScopes.has(scope),
+		);
 		if (missingScopes.length > 0) {
 			return {
 				ok: false,
@@ -281,16 +283,16 @@ export async function action(
 		}
 	}
 
-	const code = await (deps?.createAuthorizationCode ?? createMcpAuthorizationCode)(
-		{
-			agentId,
-			userId: viewer.authUser.id,
-			redirectUri: oauth.redirectUri,
-			codeChallenge: oauth.codeChallenge,
-			codeChallengeMethod: oauth.codeChallengeMethod,
-			clientId: oauth.clientId ?? undefined,
-		},
-	);
+	const code = await (
+		deps?.createAuthorizationCode ?? createMcpAuthorizationCode
+	)({
+		agentId,
+		userId: viewer.authUser.id,
+		redirectUri: oauth.redirectUri,
+		codeChallenge: oauth.codeChallenge,
+		codeChallengeMethod: oauth.codeChallengeMethod,
+		clientId: oauth.clientId ?? undefined,
+	});
 	await (deps?.writeAuditLog ?? writeAuditLogSafely)({
 		action: "agent.mcp.authorize",
 		actor: { type: "user", id: viewer.authUser.id },

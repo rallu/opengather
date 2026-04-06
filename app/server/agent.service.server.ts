@@ -2,45 +2,45 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { hashAgentToken } from "./agent-auth.server.ts";
 
 type AgentServiceDb = {
-	$transaction: <T>(callback: (trx: {
-		agent: {
-			create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
-			update: (args: {
-				where: { id: string };
-				data: Record<string, unknown>;
-			}) => Promise<unknown>;
-		};
-		agentGrant: {
-			create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
-			deleteMany: (args: {
-				where: { agentId: string };
-			}) => Promise<unknown>;
-		};
-		instanceMembership: {
-			create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
-		};
-		groupMembership: {
-			create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
-		};
-		agentMcpSession: {
-			update: (args: {
-				where: { id: string };
-				data: Record<string, unknown>;
-			}) => Promise<unknown>;
-		};
-		agentMcpAccessToken: {
-			updateMany: (args: {
-				where: { sessionId: string; revokedAt: null };
-				data: Record<string, unknown>;
-			}) => Promise<unknown>;
-		};
-		agentMcpRefreshToken: {
-			updateMany: (args: {
-				where: { sessionId: string; revokedAt: null };
-				data: Record<string, unknown>;
-			}) => Promise<unknown>;
-		};
-	}) => Promise<T>) => Promise<T>;
+	$transaction: <T>(
+		callback: (trx: {
+			agent: {
+				create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
+				update: (args: {
+					where: { id: string };
+					data: Record<string, unknown>;
+				}) => Promise<unknown>;
+			};
+			agentGrant: {
+				create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
+				deleteMany: (args: { where: { agentId: string } }) => Promise<unknown>;
+			};
+			instanceMembership: {
+				create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
+			};
+			groupMembership: {
+				create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
+			};
+			agentMcpSession: {
+				update: (args: {
+					where: { id: string };
+					data: Record<string, unknown>;
+				}) => Promise<unknown>;
+			};
+			agentMcpAccessToken: {
+				updateMany: (args: {
+					where: { sessionId: string; revokedAt: null };
+					data: Record<string, unknown>;
+				}) => Promise<unknown>;
+			};
+			agentMcpRefreshToken: {
+				updateMany: (args: {
+					where: { sessionId: string; revokedAt: null };
+					data: Record<string, unknown>;
+				}) => Promise<unknown>;
+			};
+		}) => Promise<T>,
+	) => Promise<T>;
 	agent: {
 		findMany: (args: {
 			where: Record<string, unknown>;
@@ -212,89 +212,89 @@ export async function createAgent(params: {
 	const grants = params.grants ?? [];
 	const groupMemberships = params.groupMemberships ?? [];
 
-	await db.$transaction(async (trx: {
-		agent: {
-			create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
-			update: (args: {
-				where: { id: string };
-				data: Record<string, unknown>;
-			}) => Promise<unknown>;
-		};
-		agentGrant: {
-			create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
-			deleteMany: (args: {
-				where: { agentId: string };
-			}) => Promise<unknown>;
-		};
-		instanceMembership: {
-			create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
-		};
-		groupMembership: {
-			create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
-		};
-	}) => {
-		await trx.agent.create({
-			data: {
-				id: agentId,
-				instanceId,
-				createdByUserId: params.createdByUserId ?? null,
-				displayName: params.displayName.trim(),
-				displayLabel: params.displayLabel?.trim() || null,
-				description: params.description?.trim() || null,
-				role: params.role?.trim() || "assistant",
-				apiKeyHash: hashAgentToken(token),
-				isEnabled: true,
-				lastUsedAt: null,
-				deletedAt: null,
-				createdAt: now,
-				updatedAt: now,
-			},
-		});
-
-		if (params.instanceRole) {
-			await trx.instanceMembership.create({
+	await db.$transaction(
+		async (trx: {
+			agent: {
+				create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
+				update: (args: {
+					where: { id: string };
+					data: Record<string, unknown>;
+				}) => Promise<unknown>;
+			};
+			agentGrant: {
+				create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
+				deleteMany: (args: { where: { agentId: string } }) => Promise<unknown>;
+			};
+			instanceMembership: {
+				create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
+			};
+			groupMembership: {
+				create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
+			};
+		}) => {
+			await trx.agent.create({
 				data: {
-					id: generateId(),
+					id: agentId,
 					instanceId,
-					principalId: agentId,
-					principalType: "agent",
-					role: params.instanceRole,
-					approvalStatus: "approved",
+					createdByUserId: params.createdByUserId ?? null,
+					displayName: params.displayName.trim(),
+					displayLabel: params.displayLabel?.trim() || null,
+					description: params.description?.trim() || null,
+					role: params.role?.trim() || "assistant",
+					apiKeyHash: hashAgentToken(token),
+					isEnabled: true,
+					lastUsedAt: null,
+					deletedAt: null,
 					createdAt: now,
 					updatedAt: now,
 				},
 			});
-		}
 
-		for (const membership of groupMemberships) {
-			await trx.groupMembership.create({
-				data: {
-					id: generateId(),
-					groupId: membership.groupId,
-					principalId: agentId,
-					principalType: "agent",
-					role: membership.role,
-					approvalStatus: "approved",
-					createdAt: now,
-					updatedAt: now,
-				},
-			});
-		}
+			if (params.instanceRole) {
+				await trx.instanceMembership.create({
+					data: {
+						id: generateId(),
+						instanceId,
+						principalId: agentId,
+						principalType: "agent",
+						role: params.instanceRole,
+						approvalStatus: "approved",
+						createdAt: now,
+						updatedAt: now,
+					},
+				});
+			}
 
-		for (const grant of grants) {
-			await trx.agentGrant.create({
-				data: {
-					id: generateId(),
-					agentId,
-					resourceType: grant.resourceType,
-					resourceId: grant.resourceId,
-					scope: grant.scope,
-					createdAt: now,
-					updatedAt: now,
-				},
-			});
-		}
-	});
+			for (const membership of groupMemberships) {
+				await trx.groupMembership.create({
+					data: {
+						id: generateId(),
+						groupId: membership.groupId,
+						principalId: agentId,
+						principalType: "agent",
+						role: membership.role,
+						approvalStatus: "approved",
+						createdAt: now,
+						updatedAt: now,
+					},
+				});
+			}
+
+			for (const grant of grants) {
+				await trx.agentGrant.create({
+					data: {
+						id: generateId(),
+						agentId,
+						resourceType: grant.resourceType,
+						resourceId: grant.resourceId,
+						scope: grant.scope,
+						createdAt: now,
+						updatedAt: now,
+					},
+				});
+			}
+		},
+	);
 
 	return { agentId, token };
 }

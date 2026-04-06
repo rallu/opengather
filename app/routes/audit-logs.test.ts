@@ -79,5 +79,8 @@ test("loadAuditLogs applies actor and resource filters and formats labels", asyn
 	assert.equal(result.logs.length, 1);
 	assert.equal(result.logs[0]?.actorLabel, "Agent:agent-1");
 	assert.equal(result.logs[0]?.resourceLabel, "post:post-1");
-	assert.equal(result.logs[0]?.payloadText, JSON.stringify({ reason: "agent-hide-post" }));
+	assert.equal(
+		result.logs[0]?.payloadText,
+		JSON.stringify({ reason: "agent-hide-post" }),
+	);
 });

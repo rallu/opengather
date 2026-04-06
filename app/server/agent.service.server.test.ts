@@ -4,8 +4,8 @@ import {
 	createAgent,
 	disableAgent,
 	generateAgentToken,
-	listAgents,
 	listAgentMcpSessions,
+	listAgents,
 	revokeAgentMcpSession,
 	rotateAgentToken,
 	setAgentGrants,
@@ -20,7 +20,12 @@ test("generateAgentToken uses the oga_ prefix", () => {
 
 test("createAgent stores hashed token, memberships, and grants", async () => {
 	const writes: Array<{ table: string; data: Record<string, unknown> }> = [];
-	const ids = ["agent-1", "instance-membership-1", "group-membership-1", "grant-1"];
+	const ids = [
+		"agent-1",
+		"instance-membership-1",
+		"group-membership-1",
+		"grant-1",
+	];
 	const result = await createAgent({
 		instanceId: "instance-1",
 		createdByUserId: "user-1",
@@ -97,7 +102,10 @@ test("createAgent stores hashed token, memberships, and grants", async () => {
 	});
 	assert.equal(writes[0]?.table, "agent");
 	assert.equal(writes[0]?.data.id, "agent-1");
-	assert.equal(writes[0]?.data.apiKeyHash, result.token ? writes[0]?.data.apiKeyHash : "");
+	assert.equal(
+		writes[0]?.data.apiKeyHash,
+		result.token ? writes[0]?.data.apiKeyHash : "",
+	);
 	assert.notEqual(writes[0]?.data.apiKeyHash, "oga_test_token");
 	assert.equal(writes[1]?.table, "instanceMembership");
 	assert.equal(writes[2]?.table, "groupMembership");
@@ -241,7 +249,10 @@ test("disableAgent revokes active MCP sessions for the agent", async () => {
 					},
 					agentMcpAccessToken: {
 						updateMany: async (args) => {
-							writes.push({ table: "agentMcpAccessToken.updateMany", value: args });
+							writes.push({
+								table: "agentMcpAccessToken.updateMany",
+								value: args,
+							});
 							return args;
 						},
 					},
@@ -354,7 +365,9 @@ test("disableAgent tolerates missing MCP session tables", async () => {
 			},
 			agentMcpSession: {
 				findMany: async () => {
-					const error = new Error('relation "agent_mcp_session" does not exist');
+					const error = new Error(
+						'relation "agent_mcp_session" does not exist',
+					);
 					(error as Error & { code?: string }).code = "P2021";
 					throw error;
 				},
@@ -646,7 +659,10 @@ test("setAgentGrants revokes active MCP sessions after a scope change", async ()
 					},
 					agentMcpAccessToken: {
 						updateMany: async (args) => {
-							writes.push({ table: "agentMcpAccessToken.updateMany", value: args });
+							writes.push({
+								table: "agentMcpAccessToken.updateMany",
+								value: args,
+							});
 							return args;
 						},
 					},
@@ -775,7 +791,9 @@ test("setAgentGrants tolerates missing MCP session tables", async () => {
 			},
 			agentMcpSession: {
 				findMany: async () => {
-					const error = new Error('relation "agent_mcp_session" does not exist');
+					const error = new Error(
+						'relation "agent_mcp_session" does not exist',
+					);
 					(error as Error & { code?: string }).code = "P2021";
 					throw error;
 				},
@@ -920,7 +938,10 @@ test("revokeAgentMcpSession revokes the session and both token families", async 
 					},
 					agentMcpAccessToken: {
 						updateMany: async (args) => {
-							writes.push({ table: "agentMcpAccessToken.updateMany", value: args });
+							writes.push({
+								table: "agentMcpAccessToken.updateMany",
+								value: args,
+							});
 							return args;
 						},
 					},

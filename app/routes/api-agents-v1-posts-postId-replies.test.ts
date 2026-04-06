@@ -4,14 +4,17 @@ import { createAgentReply } from "./api-agents-v1-posts-postId-replies.ts";
 
 test("createAgentReply validates JSON body", async () => {
 	const response = await createAgentReply({
-		request: new Request("http://localhost/api/agents/v1/posts/post-1/replies", {
-			method: "POST",
-			headers: {
-				"content-type": "application/json",
-				"x-request-id": "req-reply-validation",
+		request: new Request(
+			"http://localhost/api/agents/v1/posts/post-1/replies",
+			{
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					"x-request-id": "req-reply-validation",
+				},
+				body: JSON.stringify({}),
 			},
-			body: JSON.stringify({}),
-		}),
+		),
 		postId: "post-1",
 		authenticate: async () => ({
 			ok: true,
@@ -69,14 +72,17 @@ test("createAgentReply validates JSON body", async () => {
 
 test("createAgentReply rejects forbidden group replies without group.reply scope", async () => {
 	const response = await createAgentReply({
-		request: new Request("http://localhost/api/agents/v1/posts/post-1/replies", {
-			method: "POST",
-			headers: {
-				"content-type": "application/json",
-				"x-request-id": "req-reply-group-forbidden",
+		request: new Request(
+			"http://localhost/api/agents/v1/posts/post-1/replies",
+			{
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					"x-request-id": "req-reply-group-forbidden",
+				},
+				body: JSON.stringify({ bodyText: "Hello" }),
 			},
-			body: JSON.stringify({ bodyText: "Hello" }),
-		}),
+		),
 		postId: "post-1",
 		authenticate: async () => ({
 			ok: true,
@@ -140,14 +146,17 @@ test("createAgentReply creates an auditable instance-feed reply", async () => {
 	const audits: unknown[] = [];
 	const ids = ["reply-1", "embedding-1", "moderation-1"];
 	const response = await createAgentReply({
-		request: new Request("http://localhost/api/agents/v1/posts/post-1/replies", {
-			method: "POST",
-			headers: {
-				"content-type": "application/json",
-				"x-request-id": "req-reply-feed-success",
+		request: new Request(
+			"http://localhost/api/agents/v1/posts/post-1/replies",
+			{
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					"x-request-id": "req-reply-feed-success",
+				},
+				body: JSON.stringify({ bodyText: "Hello from Codex" }),
 			},
-			body: JSON.stringify({ bodyText: "Hello from Codex" }),
-		}),
+		),
 		postId: "post-1",
 		now: new Date("2026-04-06T12:00:00.000Z"),
 		generateId: () => ids.shift() ?? "extra-id",
@@ -254,7 +263,10 @@ test("createAgentReply creates an auditable instance-feed reply", async () => {
 	assert.equal(audit.resourceType, "post");
 	assert.equal(audit.resourceId, "reply-1");
 	assert.equal(audit.request.method, "POST");
-	assert.equal(new URL(audit.request.url).pathname, "/api/agents/v1/posts/post-1/replies");
+	assert.equal(
+		new URL(audit.request.url).pathname,
+		"/api/agents/v1/posts/post-1/replies",
+	);
 	assert.deepEqual(audit.payload, {
 		requestId: "req-reply-feed-success",
 		parentPostId: "post-1",
@@ -268,14 +280,17 @@ test("createAgentReply creates an auditable group reply", async () => {
 	const audits: unknown[] = [];
 	const ids = ["reply-2", "embedding-2", "moderation-2"];
 	const response = await createAgentReply({
-		request: new Request("http://localhost/api/agents/v1/posts/post-2/replies", {
-			method: "POST",
-			headers: {
-				"content-type": "application/json",
-				"x-request-id": "req-reply-group-success",
+		request: new Request(
+			"http://localhost/api/agents/v1/posts/post-2/replies",
+			{
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					"x-request-id": "req-reply-group-success",
+				},
+				body: JSON.stringify({ bodyText: "Group reply" }),
 			},
-			body: JSON.stringify({ bodyText: "Group reply" }),
-		}),
+		),
 		postId: "post-2",
 		now: new Date("2026-04-06T12:05:00.000Z"),
 		generateId: () => ids.shift() ?? "extra-id",
@@ -353,11 +368,14 @@ test("createAgentReply creates an auditable group reply", async () => {
 			},
 		},
 	});
-	assert.deepEqual((audits[0] as { payload: Record<string, unknown> }).payload, {
-		requestId: "req-reply-group-success",
-		parentPostId: "post-2",
-		groupId: "group-1",
-		scope: "group.reply",
-		moderationStatus: "approved",
-	});
+	assert.deepEqual(
+		(audits[0] as { payload: Record<string, unknown> }).payload,
+		{
+			requestId: "req-reply-group-success",
+			parentPostId: "post-2",
+			groupId: "group-1",
+			scope: "group.reply",
+			moderationStatus: "approved",
+		},
+	);
 });

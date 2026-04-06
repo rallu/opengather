@@ -89,7 +89,7 @@ export function parseAgentApiSmokeArgs(argv: string[]): ParsedSmokeCommand {
 }
 
 function printHelp(): void {
-console.log(`Usage:
+	console.log(`Usage:
   node --experimental-strip-types scripts/agent-api-smoke.ts --base-url http://localhost:5173 --token oga_xxx [--group-id group-1] [--body "Codex smoke test"] [--skip-write] [--forbidden-path /api/agents/v1/groups/group-2/posts] [--forbidden-status 403]
 
 Behavior:
@@ -111,14 +111,17 @@ export async function requestJson(params: {
 	status: number;
 	body: unknown;
 }> {
-	const response = await (params.fetchFn ?? fetch)(`${params.baseUrl}${params.path}`, {
-		method: params.method ?? "GET",
-		headers: {
-			authorization: `Bearer ${params.token}`,
-			"content-type": "application/json",
+	const response = await (params.fetchFn ?? fetch)(
+		`${params.baseUrl}${params.path}`,
+		{
+			method: params.method ?? "GET",
+			headers: {
+				authorization: `Bearer ${params.token}`,
+				"content-type": "application/json",
+			},
+			body: params.body ? JSON.stringify(params.body) : undefined,
 		},
-		body: params.body ? JSON.stringify(params.body) : undefined,
-	});
+	);
 
 	const data = await response.json();
 	return {

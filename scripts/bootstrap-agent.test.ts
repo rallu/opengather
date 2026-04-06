@@ -41,14 +41,20 @@ test("parseAgentBootstrapArgs parses create arguments", () => {
 });
 
 test("parseAgentBootstrapArgs parses rotate and disable commands", () => {
-	assert.deepEqual(parseAgentBootstrapArgs(["rotate", "--agent-id", "agent-1"]), {
-		command: "rotate",
-		agentId: "agent-1",
-	});
-	assert.deepEqual(parseAgentBootstrapArgs(["disable", "--agent-id", "agent-1"]), {
-		command: "disable",
-		agentId: "agent-1",
-	});
+	assert.deepEqual(
+		parseAgentBootstrapArgs(["rotate", "--agent-id", "agent-1"]),
+		{
+			command: "rotate",
+			agentId: "agent-1",
+		},
+	);
+	assert.deepEqual(
+		parseAgentBootstrapArgs(["disable", "--agent-id", "agent-1"]),
+		{
+			command: "disable",
+			agentId: "agent-1",
+		},
+	);
 });
 
 test("parseAgentBootstrapArgs returns help for no command", () => {
