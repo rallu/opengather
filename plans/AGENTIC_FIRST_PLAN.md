@@ -104,6 +104,20 @@ For this project, the reference client is OpenAI Codex.
 6. a human user can see that the resulting action came from an agent
 7. an admin can verify the same action in audit logs
 
+This remains the minimum bootstrap slice.
+
+It should not remain the long-term UX for Codex.
+
+### Stage 2 Scenario
+
+1. Codex connects to the OpenGather HTTP MCP endpoint
+2. OpenGather presents an auth challenge instead of requiring a pasted bearer token in plugin config
+3. the user signs in once and approves which local agent Codex may act as
+4. OpenGather issues a short-lived access token plus a longer-lived refresh token
+5. Codex stores the refresh credential and silently refreshes access without further user action
+6. Codex can reconnect later and continue acting until the user revokes consent, disables the agent, or the long-lived refresh session expires
+7. the user is not asked to reauthenticate during normal use
+
 ### Stage 1 Definition Of Done
 
 - the API is callable by a generic HTTP client
@@ -111,6 +125,16 @@ For this project, the reference client is OpenAI Codex.
 - error responses are stable and machine-readable
 - the minimum required endpoints are documented with request and response examples
 - the flow is simple enough that Codex can execute it without custom glue code inside OpenGather
+
+### Stage 2 Definition Of Done
+
+- Codex can connect to the remote HTTP MCP endpoint without a pasted bearer token in plugin files
+- the initial auth step requires explicit user approval exactly once per consented session
+- access tokens are short-lived
+- refresh tokens are long-lived enough that normal daily use does not require repeated user action
+- token refresh happens silently from Codex without browser interaction
+- the user can revoke access from OpenGather and that revocation blocks future refresh or tool calls
+- the auth flow still resolves to a specific OpenGather agent principal with explicit scopes and grants
 
 This matters because "agentic first" is not real until an external agent can actually connect and do useful work.
 
@@ -227,7 +251,7 @@ Profile scopes:
 
 ## Authentication Model
 
-Use bearer tokens:
+V1 bootstrap can use bearer tokens:
 
 ```text
 Authorization: Bearer oga_xxx
@@ -247,6 +271,35 @@ For the first usable milestone, the token flow must be easy for an external clie
 - one base URL
 - standard JSON requests
 - no hidden cookie or browser dependency
+
+For the durable Codex experience, move from pasted static bearer tokens to MCP-compatible delegated auth:
+
+- use OAuth 2.1 style authorization with PKCE if the MCP client supports it cleanly
+- use device-code flow as the fallback for desktop MCP clients if browser redirect support is weak
+- authenticate the human once in OpenGather
+- let that human choose or create the specific local agent Codex will act as
+- issue short-lived access tokens and long-lived refresh tokens
+- refresh silently without user interaction during normal use
+- require user action again only when:
+  - the user revokes consent
+  - the agent is disabled
+  - requested scopes change materially
+  - the refresh session reaches its hard expiry
+
+Design requirement:
+
+- the common path must not require the user to reauthenticate frequently
+- after initial approval, Codex should continue working unattended until an explicit security or lifecycle boundary is hit
+
+### Auth Flow Requirements
+
+- expose authorization and token endpoints owned by OpenGather
+- associate each consented session with one specific `Agent`
+- bind granted scopes to both the OAuth grant and the underlying `AgentGrant` data
+- support refresh token rotation
+- support admin-visible revocation of active Codex sessions
+- keep browser session auth separate from MCP access tokens
+- avoid storing long-lived raw bearer tokens in plugin files
 
 ## API Boundary
 
@@ -358,7 +411,7 @@ Users should never need to guess whether a human or agent performed an action.
 
 - [x] Extend `Agent` with the V1 lifecycle and attribution fields.
 - [x] Add the `AgentGrant` model and generate/update Prisma client output.
-- [ ] Add `actorType = agent` support to audit logging and audit-log display.
+- [x] Add `actorType = agent` support to audit logging and audit-log display.
 - [x] Introduce shared `Subject` and `SubjectContext` types.
 - [x] Extend permission resolution to support agent subjects without changing human behavior.
 - [x] Add `app/server/agent-auth.server.ts` for bearer-token authentication.
@@ -431,11 +484,30 @@ Reason:
 - [x] Add rotate token from the UI and show the replacement token exactly once.
 - [x] Add grant editing from the UI.
 - [x] Support create, disable, rotate, and grant management from the UI.
-- [ ] Expose last-used data and audit-log links in the UI.
+- [x] Expose last-used data and audit-log links in the UI.
 
 Reason:
 
 - by this point the backend model and external API are stable enough for UI wiring
+
+### Milestone 7: Durable MCP Authentication
+
+- [x] Expose MCP auth metadata and authorization endpoints for remote HTTP MCP clients.
+- [x] Implement OAuth 2.1 with PKCE for the preferred Codex auth path.
+- [ ] Add device-code auth as a fallback if the MCP client cannot complete browser redirects cleanly.
+- [x] Add a consent screen that lets the user pick or create the specific local agent Codex will act as.
+- [x] Issue short-lived access tokens and long-lived refresh tokens for MCP sessions.
+- [x] Rotate refresh tokens and revoke the token family on suspected replay or explicit revocation.
+- [x] Add admin UI to list and revoke active Codex or MCP sessions.
+- [x] Remove the requirement to paste bearer tokens into local plugin files.
+- [x] Document the plugin install plus one-time auth flow for Codex.
+- [ ] Verify Codex can reconnect on a later day without another manual auth step.
+
+Reason:
+
+- pasted bearer tokens are acceptable for bootstrap but not for a durable agentic workflow
+- the target experience is one approval, then unattended operation
+- this is the step that makes the OpenGather MCP server feel like a real product integration rather than a developer workaround
 
 ## Service Layer
 
@@ -451,16 +523,34 @@ Responsibilities:
 - `agent-auth.server.ts`
   - [x] authenticate bearer token
   - [x] return subject context
+  - [x] authenticate MCP access tokens and refresh-token backed sessions
 - `agent.service.server.ts`
   - [x] create agent
   - [x] rotate token
   - [x] disable agent
   - [x] list agents
   - [x] set grants
+  - [x] list and revoke active MCP auth sessions
 - `agent-permissions.server.ts`
   - [x] resolve scopes plus structural access
 - `agent-api.server.ts`
   - [ ] provide shared JSON responses, errors, and request validation
+
+Add:
+
+- [x] `app/server/agent-oauth.server.ts`
+- [ ] `app/server/agent-session.server.ts`
+
+Responsibilities:
+
+- `agent-oauth.server.ts`
+  - [x] issue auth challenges and authorization codes
+  - [x] mint access and refresh tokens
+  - [x] rotate refresh tokens
+- `agent-session.server.ts`
+  - [ ] persist MCP consent sessions
+  - [ ] bind a consent session to one `Agent`
+  - [ ] revoke active sessions
 
 Reuse existing domain services for actual post, group, notification, and moderation work where possible.
 
@@ -493,10 +583,10 @@ The first client should be able to succeed with plain HTTP examples or an HTTP M
 
 Smoke-test:
 
-- [ ] Smoke-test `GET /api/agents/v1/me`.
-- [ ] Smoke-test `GET /api/agents/v1/groups`.
-- [ ] Smoke-test one allowed write route.
-- [ ] Smoke-test one forbidden route.
+- [x] Smoke-test `GET /api/agents/v1/me`.
+- [x] Smoke-test `GET /api/agents/v1/groups`.
+- [x] Smoke-test one allowed write route.
+- [x] Smoke-test one forbidden route.
 
 Add one scripted verification path that uses plain HTTP requests, not in-process helpers.
 
@@ -504,12 +594,20 @@ Reason:
 
 - the first success condition is external connectivity, so at least one test path should behave like a real external client
 
+Add one scripted verification path for silent refresh:
+
+- [ ] verify an expired access token can be refreshed without user interaction
+- [ ] verify a revoked refresh session can no longer mint new access tokens
+- [ ] verify scope changes force a new consent flow when required
+
 ### Operational Verification
 
 - [ ] Verify a real Codex session can execute the documented stage-1 scenario against a running local instance.
+- [ ] Verify a real Codex session can complete the one-time MCP auth flow and later reconnect silently.
 - [ ] Verify the created content is visible in the UI with agent labeling.
 - [ ] Verify the same action appears in audit logs with `actorType = agent`.
 - [ ] Verify disabling the agent blocks subsequent external API calls.
+- [ ] Verify revoking the MCP session blocks subsequent refresh and tool calls.
 
 ## Suggested First Concrete Use Cases
 
@@ -527,14 +625,16 @@ These should be left explicit in review:
 
 1. whether wildcard group grants are allowed in V1
 2. whether agents can read profile data in the first release
-3. whether agent tokens support expiration in V1
-4. whether `authorType = agent` is used directly in content records or hidden behind a broader principal abstraction
+3. what the hard lifetime should be for long-lived refresh sessions
+4. whether device-code fallback is necessary for every Codex client variant
+5. whether `authorType = agent` is used directly in content records or hidden behind a broader principal abstraction
 
 ## Acceptance Criteria
 
 - an admin can create and disable a local agent
 - an agent authenticates without browser sessions
 - OpenAI Codex can complete the stage-1 scenario against a running instance using only the published HTTP contract
+- after one explicit approval, Codex can reconnect without repeated manual authentication during normal use
 - an agent cannot act outside its granted scopes
 - an agent cannot see private resources without structural access
 - all agent write actions are auditable as agent actions

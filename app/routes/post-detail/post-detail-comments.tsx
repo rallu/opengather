@@ -104,7 +104,11 @@ export function PostDetailComments(params: {
 				comments={comments}
 				renderReplyComposer={(comment) =>
 					params.activeReplyId === comment.id ? (
-						<Form method="post" encType="multipart/form-data">
+						<Form
+							id={`post-detail-inline-reply-form-${comment.id}`}
+							method="post"
+							encType="multipart/form-data"
+						>
 							<input type="hidden" name="_action" value="post" />
 							<input type="hidden" name="parentPostId" value={comment.id} />
 							<PostComposer
@@ -120,6 +124,7 @@ export function PostDetailComments(params: {
 								resetKey={params.replyResetKey}
 								footer={
 									<PostAssetInput
+										formId={`post-detail-inline-reply-form-${comment.id}`}
 										previousAlbums={params.previousAlbums}
 										inputTestId={`post-detail-inline-assets-input-${comment.id}`}
 										albumInputTestId={`post-detail-inline-albums-input-${comment.id}`}

@@ -75,12 +75,59 @@ test("MCP HTTP route requires bearer auth for tool calls", async () => {
 	});
 
 	assert.equal(response.status, 401);
+	assert.equal(
+		response.headers.get("www-authenticate"),
+		'Bearer realm="OpenGather MCP", resource_metadata="http://localhost:5173/.well-known/oauth-protected-resource/mcp"',
+	);
 	assert.deepEqual(await response.json(), {
 		jsonrpc: "2.0",
 		id: 2,
 		error: {
 			code: -32001,
 			message: "Bearer token is required for tool calls.",
+		},
+	});
+});
+
+test("MCP HTTP route rejects invalid bearer auth with an OAuth challenge", async () => {
+	const response = await handleAgentMcpHttpRequest({
+		request: new Request("http://localhost:5173/mcp", {
+			method: "POST",
+			headers: {
+				authorization: "Bearer ogmca_invalid",
+				"content-type": "application/json",
+			},
+			body: JSON.stringify({
+				jsonrpc: "2.0",
+				id: 9,
+				method: "tools/call",
+				params: {
+					name: "get_me",
+				},
+			}),
+		}),
+		authenticateRequest: async () => ({
+			ok: false,
+			code: "invalid_token",
+			message: "Invalid agent token.",
+		}),
+	});
+
+	assert.equal(response.status, 401);
+	assert.equal(
+		response.headers.get("www-authenticate"),
+		'Bearer realm="OpenGather MCP", error="invalid_token", error_description="Invalid agent token.", resource_metadata="http://localhost:5173/.well-known/oauth-protected-resource/mcp"',
+	);
+	assert.deepEqual(await response.json(), {
+		jsonrpc: "2.0",
+		id: 9,
+		error: {
+			code: -32001,
+			message: "Bearer token is invalid or expired.",
+			data: {
+				code: "invalid_token",
+				message: "Invalid agent token.",
+			},
 		},
 	});
 });
@@ -124,6 +171,31 @@ test("MCP HTTP route passes bearer-derived config to tool handling", async () =>
 				},
 			};
 		},
+		authenticateRequest: async () => ({
+			ok: true,
+			agent: {
+				instanceId: "instance-1",
+				createdByUserId: "user-1",
+				id: "agent-1",
+				displayName: "Codex",
+				displayLabel: null,
+				description: null,
+				role: "assistant",
+				isEnabled: true,
+				lastUsedAt: null,
+				deletedAt: null,
+				grants: [],
+			},
+			subjectContext: {
+				subject: { kind: "agent", agentId: "agent-1" },
+				scopes: new Set(),
+				instanceRole: "member",
+				groupRoles: new Map(),
+				isAuthenticated: true,
+			},
+			instanceRole: "member",
+			groupRoles: new Map(),
+		}),
 	});
 
 	assert.equal(response.status, 200);

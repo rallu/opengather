@@ -1,4 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import { authenticateAgentRequest } from "../server/agent-auth.server.ts";
+import { createMcpWwwAuthenticateHeader } from "../server/agent-oauth-metadata.server.ts";
 import {
 	type AgentMcpConfig,
 	handleAgentMcpRequest,
@@ -14,12 +16,14 @@ type JsonRpcRequestShape = {
 function createJsonRpcResponse(
 	body: Record<string, unknown>,
 	status: number,
+	headers?: Record<string, string>,
 ): Response {
 	return new Response(JSON.stringify(body), {
 		status,
 		headers: {
 			"cache-control": "no-store",
 			"content-type": "application/json; charset=utf-8",
+			...(headers ?? {}),
 		},
 	});
 }
@@ -30,6 +34,7 @@ function createJsonRpcErrorResponse(params: {
 	code: number;
 	message: string;
 	data?: unknown;
+	headers?: Record<string, string>;
 }): Response {
 	return createJsonRpcResponse(
 		{
@@ -42,6 +47,7 @@ function createJsonRpcErrorResponse(params: {
 			},
 		},
 		params.status,
+		params.headers,
 	);
 }
 
@@ -100,6 +106,7 @@ export async function handleAgentMcpHttpRequest(params: {
 		message: JsonRpcRequestShape;
 		config: AgentMcpConfig;
 	}) => Promise<Record<string, unknown> | null>;
+	authenticateRequest?: typeof authenticateAgentRequest;
 }): Promise<Response> {
 	if (params.request.method === "GET") {
 		return new Response("Method Not Allowed", {
@@ -149,7 +156,39 @@ export async function handleAgentMcpHttpRequest(params: {
 			status: 401,
 			code: -32001,
 			message: "Bearer token is required for tool calls.",
+			headers: {
+				"www-authenticate": createMcpWwwAuthenticateHeader({
+					request: params.request,
+				}),
+			},
 		});
+	}
+
+	if (message.method === "tools/call") {
+		const authResult = await (
+			params.authenticateRequest ?? authenticateAgentRequest
+		)({
+			request: params.request,
+		});
+		if (!authResult.ok) {
+			return createJsonRpcErrorResponse({
+				id: message.id ?? null,
+				status: 401,
+				code: -32001,
+				message: "Bearer token is invalid or expired.",
+				data: {
+					code: authResult.code,
+					message: authResult.message,
+				},
+				headers: {
+					"www-authenticate": createMcpWwwAuthenticateHeader({
+						request: params.request,
+						error: "invalid_token",
+						errorDescription: authResult.message,
+					}),
+				},
+			});
+		}
 	}
 
 	try {

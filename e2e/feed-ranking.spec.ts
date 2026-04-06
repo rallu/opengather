@@ -208,6 +208,7 @@ test.describe("thread-aware feed ranking", () => {
 
 		await page.goto("/feed");
 		const newFeedBody = `fresh-feed-thread-${now}`;
+		await page.getByTestId("feed-composer").click();
 		await page.getByTestId("feed-composer").fill(newFeedBody);
 		await expect(page.getByTestId("feed-composer")).toHaveValue(newFeedBody);
 		await page.getByTestId("feed-post-button").click();
@@ -239,6 +240,7 @@ test.describe("thread-aware feed ranking", () => {
 
 		await page.goto(groupUrl);
 		const newGroupBody = `fresh-group-thread-${now}`;
+		await page.getByTestId("group-post-body").click();
 		await page.getByTestId("group-post-body").fill(newGroupBody);
 		await expect(page.getByTestId("group-post-body")).toHaveValue(newGroupBody);
 		await page.getByTestId("group-post-submit").click();
@@ -262,6 +264,7 @@ test.describe("thread-aware feed ranking", () => {
 
 		const bodyText = `shortcut-post-${Date.now()}`;
 		await page.goto("/feed");
+		await page.getByTestId("feed-composer").click();
 		await page.getByTestId("feed-composer").fill(bodyText);
 		await page.getByTestId("feed-composer").press("Control+Enter");
 		await expect(page.getByTestId("feed-post-list")).toContainText(bodyText);
@@ -357,8 +360,17 @@ test.describe("thread-aware feed ranking", () => {
 			.locator('[data-testid="feed-post-list"] > [data-testid^="feed-post-"]')
 			.filter({ hasText: feedPrefix });
 		await expect(feedItems).toHaveCount(10);
-		await page.getByTestId("feed-post-list-sentinel").scrollIntoViewIfNeeded();
-		await expect(feedItems).toHaveCount(12);
+		await expect
+			.poll(async () => {
+				const sentinel = page.getByTestId("feed-post-list-sentinel");
+				if ((await sentinel.count()) > 0) {
+					await sentinel.evaluate((element) => {
+						element.scrollIntoView({ block: "end" });
+					});
+				}
+				return feedItems.count();
+			})
+			.toBe(12);
 
 		const groupId = await createPublicGroup(`Scroll Group ${now}`);
 		const groupBaseCreatedAt = await getMaxPostCreatedAt();
@@ -378,7 +390,16 @@ test.describe("thread-aware feed ranking", () => {
 			.locator('[data-testid="group-post-list"] > [data-testid^="group-post-"]')
 			.filter({ hasText: groupPrefix });
 		await expect(groupItems).toHaveCount(10);
-		await page.getByTestId("group-post-list-sentinel").scrollIntoViewIfNeeded();
-		await expect(groupItems).toHaveCount(12);
+		await expect
+			.poll(async () => {
+				const sentinel = page.getByTestId("group-post-list-sentinel");
+				if ((await sentinel.count()) > 0) {
+					await sentinel.evaluate((element) => {
+						element.scrollIntoView({ block: "end" });
+					});
+				}
+				return groupItems.count();
+			})
+			.toBe(12);
 	});
 });

@@ -22,6 +22,24 @@ type AgentServiceDb = {
 		groupMembership: {
 			create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
 		};
+		agentMcpSession: {
+			update: (args: {
+				where: { id: string };
+				data: Record<string, unknown>;
+			}) => Promise<unknown>;
+		};
+		agentMcpAccessToken: {
+			updateMany: (args: {
+				where: { sessionId: string; revokedAt: null };
+				data: Record<string, unknown>;
+			}) => Promise<unknown>;
+		};
+		agentMcpRefreshToken: {
+			updateMany: (args: {
+				where: { sessionId: string; revokedAt: null };
+				data: Record<string, unknown>;
+			}) => Promise<unknown>;
+		};
 	}) => Promise<T>) => Promise<T>;
 	agent: {
 		findMany: (args: {
@@ -37,6 +55,13 @@ type AgentServiceDb = {
 			where: { id: string };
 			data: Record<string, unknown>;
 		}) => Promise<unknown>;
+	};
+	agentMcpSession: {
+		findMany: (args: {
+			where: Record<string, unknown>;
+			orderBy: Array<Record<string, unknown>>;
+			select: Record<string, unknown>;
+		}) => Promise<AgentMcpSessionSummary[]>;
 	};
 };
 
@@ -66,6 +91,41 @@ export type AgentSummary = {
 };
 
 type AgentRecord = AgentSummary;
+
+export type AgentMcpSessionSummary = {
+	id: string;
+	agentId: string;
+	userId: string;
+	clientId: string | null;
+	expiresAt: Date;
+	revokedAt: Date | null;
+	lastUsedAt: Date | null;
+	createdAt: Date;
+	updatedAt: Date;
+	agent: {
+		displayName: string;
+		displayLabel: string | null;
+	};
+};
+
+function isMissingAgentMcpStorageError(error: unknown): boolean {
+	if (!error || typeof error !== "object") {
+		return false;
+	}
+
+	const candidate = error as { code?: unknown; message?: unknown };
+	if (candidate.code === "P2021") {
+		return true;
+	}
+
+	const message =
+		typeof candidate.message === "string" ? candidate.message : "";
+	return (
+		message.includes("agent_mcp_session") ||
+		message.includes("agent_mcp_access_token") ||
+		message.includes("agent_mcp_refresh_token")
+	);
+}
 
 export type CreateAgentGrantInput = {
 	resourceType: string;
@@ -266,13 +326,25 @@ export async function disableAgent(params: {
 	now?: Date;
 }): Promise<{ agentId: string; disabled: true }> {
 	const db = params.db ?? (await import("./db.server.ts")).getDb();
+	const now = params.now ?? new Date();
 	await db.agent.update({
 		where: { id: params.agentId },
 		data: {
 			isEnabled: false,
-			updatedAt: params.now ?? new Date(),
+			updatedAt: now,
 		},
 	});
+	try {
+		await revokeAgentMcpSessionsForAgent({
+			agentId: params.agentId,
+			db: db as AgentServiceDb,
+			now,
+		});
+	} catch (error) {
+		if (!isMissingAgentMcpStorageError(error)) {
+			throw error;
+		}
+	}
 	return {
 		agentId: params.agentId,
 		disabled: true,
@@ -308,6 +380,49 @@ export async function listAgents(params?: {
 					{ scope: "asc" },
 					{ id: "asc" },
 				],
+			},
+		},
+	});
+}
+
+export async function listAgentMcpSessions(params?: {
+	instanceId?: string;
+	db?: AgentServiceDb;
+}): Promise<AgentMcpSessionSummary[]> {
+	const db = (params?.db ??
+		(await import("./db.server.ts")).getDb()) as AgentServiceDb;
+	const instanceId =
+		params?.instanceId ??
+		(await import("./setup.service.server.ts").then((module) =>
+			module.getSetupInstanceId(),
+		));
+	if (!instanceId) {
+		throw new Error("Setup must be completed before listing MCP sessions.");
+	}
+
+	return db.agentMcpSession.findMany({
+		where: {
+			agent: {
+				instanceId,
+				deletedAt: null,
+			},
+		},
+		orderBy: [{ lastUsedAt: "desc" }, { createdAt: "desc" }, { id: "asc" }],
+		select: {
+			id: true,
+			agentId: true,
+			userId: true,
+			clientId: true,
+			expiresAt: true,
+			revokedAt: true,
+			lastUsedAt: true,
+			createdAt: true,
+			updatedAt: true,
+			agent: {
+				select: {
+					displayName: true,
+					displayLabel: true,
+				},
 			},
 		},
 	});
@@ -362,9 +477,110 @@ export async function setAgentGrants(params: {
 			},
 		});
 	});
+	try {
+		await revokeAgentMcpSessionsForAgent({
+			agentId: params.agentId,
+			db,
+			now,
+		});
+	} catch (error) {
+		if (!isMissingAgentMcpStorageError(error)) {
+			throw error;
+		}
+	}
 
 	return {
 		agentId: params.agentId,
 		grants: createdGrants,
+	};
+}
+
+export async function revokeAgentMcpSessionsForAgent(params: {
+	agentId: string;
+	db?: AgentServiceDb;
+	now?: Date;
+}): Promise<{ agentId: string; revokedSessionIds: string[] }> {
+	const db = (params.db ??
+		(await import("./db.server.ts")).getDb()) as AgentServiceDb;
+	const now = params.now ?? new Date();
+	const sessions = await db.agentMcpSession.findMany({
+		where: {
+			agentId: params.agentId,
+			revokedAt: null,
+		},
+		orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+		select: {
+			id: true,
+			agentId: true,
+			userId: true,
+			clientId: true,
+			expiresAt: true,
+			revokedAt: true,
+			lastUsedAt: true,
+			createdAt: true,
+			updatedAt: true,
+			agent: {
+				select: {
+					displayName: true,
+					displayLabel: true,
+				},
+			},
+		},
+	});
+
+	for (const session of sessions) {
+		await revokeAgentMcpSession({
+			sessionId: session.id,
+			db,
+			now,
+		});
+	}
+
+	return {
+		agentId: params.agentId,
+		revokedSessionIds: sessions.map((session) => session.id),
+	};
+}
+
+export async function revokeAgentMcpSession(params: {
+	sessionId: string;
+	db?: AgentServiceDb;
+	now?: Date;
+}): Promise<{ sessionId: string; revoked: true }> {
+	const db = (params.db ??
+		(await import("./db.server.ts")).getDb()) as AgentServiceDb;
+	const now = params.now ?? new Date();
+
+	await db.$transaction(async (trx) => {
+		await trx.agentMcpSession.update({
+			where: { id: params.sessionId },
+			data: {
+				revokedAt: now,
+				updatedAt: now,
+			},
+		});
+		await trx.agentMcpAccessToken.updateMany({
+			where: {
+				sessionId: params.sessionId,
+				revokedAt: null,
+			},
+			data: {
+				revokedAt: now,
+			},
+		});
+		await trx.agentMcpRefreshToken.updateMany({
+			where: {
+				sessionId: params.sessionId,
+				revokedAt: null,
+			},
+			data: {
+				revokedAt: now,
+			},
+		});
+	});
+
+	return {
+		sessionId: params.sessionId,
+		revoked: true,
 	};
 }

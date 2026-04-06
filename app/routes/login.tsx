@@ -1,8 +1,8 @@
 import { useState } from "react";
 import type { LoaderFunctionArgs } from "react-router";
-import { Link, redirect, useLoaderData, useNavigate } from "react-router";
+import { Link, redirect, useLoaderData } from "react-router";
 import { Button } from "~/components/ui/button";
-import { signIn } from "~/lib/auth-client";
+import { getSession, signIn } from "~/lib/auth-client";
 import { formatAuthErrorMessage } from "~/lib/auth-error";
 import { getServerConfig } from "~/server/config.service.server";
 import { isHubUiEnabled } from "~/server/hub-config.server";
@@ -54,7 +54,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export default function Login() {
 	const { googleAuthEnabled, hubAuthEnabled, nextPath, reason, serverName } =
 		useLoaderData<typeof loader>();
-	const navigate = useNavigate();
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
@@ -62,6 +61,18 @@ export default function Login() {
 	const [socialLoading, setSocialLoading] = useState(false);
 	const [hubLoading, setHubLoading] = useState(false);
 	const isAnyLoading = loading || socialLoading || hubLoading;
+
+	const finishLocalSignIn = async () => {
+		for (let attempt = 0; attempt < 10; attempt += 1) {
+			const session = await getSession();
+			if (session?.data?.session && session.data.user) {
+				window.location.assign(nextPath);
+				return;
+			}
+			await new Promise((resolve) => window.setTimeout(resolve, 100));
+		}
+		throw new Error("Signed in, but the session did not become active.");
+	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -79,10 +90,12 @@ export default function Login() {
 					formatAuthErrorMessage(result.error.message) || "Failed to sign in",
 				);
 			} else {
-				navigate(nextPath);
+				await finishLocalSignIn();
 			}
 		} catch (_err) {
-			setError("An unexpected error occurred");
+			setError(
+				_err instanceof Error ? _err.message : "An unexpected error occurred",
+			);
 		} finally {
 			setLoading(false);
 		}

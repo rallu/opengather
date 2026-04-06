@@ -14,6 +14,10 @@ const routes: RouteConfig = [
 		file: "routes/register.tsx",
 	},
 	{
+		path: "/logout",
+		file: "routes/logout.ts",
+	},
+	{
 		path: "/auth/hub/login",
 		file: "routes/hub-login.tsx",
 	},
@@ -52,6 +56,26 @@ const routes: RouteConfig = [
 	{
 		path: "/mcp",
 		file: "routes/mcp.ts",
+	},
+	{
+		path: "/authorize",
+		file: "routes/authorize.tsx",
+	},
+	{
+		path: "/token",
+		file: "routes/token.ts",
+	},
+	{
+		path: "/mcp/token",
+		file: "routes/mcp-token.ts",
+	},
+	{
+		path: "/.well-known/oauth-authorization-server",
+		file: "routes/oauth-authorization-server.ts",
+	},
+	{
+		path: "/.well-known/oauth-protected-resource/mcp",
+		file: "routes/oauth-protected-resource-mcp.ts",
 	},
 	{
 		path: "/api/auth/*",

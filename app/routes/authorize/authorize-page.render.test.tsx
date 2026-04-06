@@ -1,20 +1,13 @@
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRoutesStub } from "react-router";
-import { ServerSettingsAgentsContent } from "./agents-page.tsx";
+import { AuthorizeContent } from "./authorize-page.tsx";
 
 const TestRoutes = createRoutesStub([
 	{
-		path: "/server-settings/agents",
+		path: "/authorize",
 		Component: () => (
-			<ServerSettingsAgentsContent
-				actionData={{
-					ok: true,
-					action: "create-agent",
-					agentId: "agent-1",
-					token: "oga_created",
-					baseUrl: "http://localhost:5173",
-				}}
+			<AuthorizeContent
 				data={{
 					authUser: {
 						id: "user-1",
@@ -31,7 +24,14 @@ const TestRoutes = createRoutesStub([
 							approvalMode: "automatic",
 						},
 					},
-					baseUrl: "http://localhost:5173",
+					oauth: {
+						clientId: "codex",
+						redirectUri: "http://localhost:8080/callback",
+						state: "xyz",
+						codeChallenge: "challenge-123",
+						codeChallengeMethod: "S256",
+						scope: ["instance.feed.read", "instance.feed.reply"],
+					},
 					agents: [
 						{
 							id: "agent-1",
@@ -51,7 +51,7 @@ const TestRoutes = createRoutesStub([
 									id: "grant-1",
 									resourceType: "instance",
 									resourceId: "instance-1",
-									scope: "instance.feed.reply",
+									scope: "instance.feed.read",
 									createdAt: new Date("2026-04-06T12:00:00.000Z"),
 									updatedAt: new Date("2026-04-06T12:00:00.000Z"),
 								},
@@ -59,49 +59,26 @@ const TestRoutes = createRoutesStub([
 									id: "grant-2",
 									resourceType: "instance",
 									resourceId: "instance-1",
-									scope: "instance.feed.post",
+									scope: "instance.feed.reply",
 									createdAt: new Date("2026-04-06T12:00:00.000Z"),
 									updatedAt: new Date("2026-04-06T12:00:00.000Z"),
 								},
 							],
 						},
 					],
-					sessions: [
-						{
-							id: "session-1",
-							agentId: "agent-1",
-							userId: "user-1",
-							clientId: "codex",
-							expiresAt: new Date("2026-05-06T12:00:00.000Z"),
-							revokedAt: null,
-							lastUsedAt: new Date("2026-04-06T12:30:00.000Z"),
-							createdAt: new Date("2026-04-06T12:00:00.000Z"),
-							updatedAt: new Date("2026-04-06T12:30:00.000Z"),
-							agent: {
-								displayName: "Codex",
-								displayLabel: "Codex agent",
-							},
-						},
-					],
-					mcpSessionsAvailable: true,
 				}}
 			/>
 		),
 	},
 ]);
 
-const markup = renderToStaticMarkup(<TestRoutes initialEntries={["/server-settings/agents"]} />);
+const markup = renderToStaticMarkup(<TestRoutes initialEntries={["/authorize"]} />);
 
-assert.match(markup, /Connect An Agent/);
-assert.match(markup, /Bearer oga_created/);
-assert.match(markup, /Existing Agents/);
+assert.match(markup, /Connect Codex to OpenGather/);
+assert.match(markup, /Authorization request/);
 assert.match(markup, /Codex agent/);
-assert.match(markup, /Rotate token/);
-assert.match(markup, /Disable agent/);
-assert.match(markup, /Reply in instance feed/);
-assert.match(markup, /Save grants/);
-assert.match(markup, /Active MCP sessions/);
-assert.match(markup, /Revoke MCP session/);
-assert.match(markup, /View audit history/);
+assert.match(markup, /Create a new agent for this MCP client/);
+assert.match(markup, /Approve once/);
+assert.match(markup, /instance\.feed\.read, instance\.feed\.reply/);
 
-console.log("server-settings-agents render validation passed");
+console.log("authorize-page render validation passed");

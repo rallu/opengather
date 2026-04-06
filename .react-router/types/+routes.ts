@@ -20,6 +20,9 @@ type Pages = {
   "/register": {
     params: {};
   };
+  "/logout": {
+    params: {};
+  };
   "/auth/hub/login": {
     params: {};
   };
@@ -54,6 +57,21 @@ type Pages = {
     };
   };
   "/mcp": {
+    params: {};
+  };
+  "/authorize": {
+    params: {};
+  };
+  "/token": {
+    params: {};
+  };
+  "/mcp/token": {
+    params: {};
+  };
+  "/.well-known/oauth-authorization-server": {
+    params: {};
+  };
+  "/.well-known/oauth-protected-resource/mcp": {
     params: {};
   };
   "/api/auth/*": {
@@ -164,7 +182,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/register" | "/auth/hub/login" | "/auth/hub/callback" | "/api/agents/v1/me" | "/api/agents/v1/groups" | "/api/agents/v1/feed/posts" | "/api/agents/v1/notifications" | "/api/agents/v1/posts/:postId/replies" | "/api/agents/v1/posts/:postId/hide" | "/api/agents/v1/groups/:groupId/posts" | "/mcp" | "/api/auth/*" | "/api/post-list" | "/api/search" | "/api/notifications/summary" | "/api/notifications/push-subscriptions" | "/.well-known/appspecific/com.chrome.devtools.json" | "/media/:assetId/:variantKey" | "/profile-images/:userId" | "/profile-images/:userId/:size" | "/metrics" | "/up" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles" | "/profiles/:userId" | "/notifications" | "/approvals" | "/settings" | "/server-settings" | "/server-settings/agents" | "/audit-logs";
+    page: "/" | "/login" | "/register" | "/logout" | "/auth/hub/login" | "/auth/hub/callback" | "/api/agents/v1/me" | "/api/agents/v1/groups" | "/api/agents/v1/feed/posts" | "/api/agents/v1/notifications" | "/api/agents/v1/posts/:postId/replies" | "/api/agents/v1/posts/:postId/hide" | "/api/agents/v1/groups/:groupId/posts" | "/mcp" | "/authorize" | "/token" | "/mcp/token" | "/.well-known/oauth-authorization-server" | "/.well-known/oauth-protected-resource/mcp" | "/api/auth/*" | "/api/post-list" | "/api/search" | "/api/notifications/summary" | "/api/notifications/push-subscriptions" | "/.well-known/appspecific/com.chrome.devtools.json" | "/media/:assetId/:variantKey" | "/profile-images/:userId" | "/profile-images/:userId/:size" | "/metrics" | "/up" | "/debug/error-monitoring" | "/setup" | "/database-required" | "/style-guide" | "/feed" | "/community" | "/posts/:postId" | "/groups" | "/groups/:groupId" | "/profile" | "/profiles" | "/profiles/:userId" | "/notifications" | "/approvals" | "/settings" | "/server-settings" | "/server-settings/agents" | "/audit-logs";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -177,6 +195,10 @@ type RouteFiles = {
   "routes/register.tsx": {
     id: "routes/register";
     page: "/register";
+  };
+  "routes/logout.ts": {
+    id: "routes/logout";
+    page: "/logout";
   };
   "routes/hub-login.tsx": {
     id: "routes/hub-login";
@@ -217,6 +239,26 @@ type RouteFiles = {
   "routes/mcp.ts": {
     id: "routes/mcp";
     page: "/mcp";
+  };
+  "routes/authorize.tsx": {
+    id: "routes/authorize";
+    page: "/authorize";
+  };
+  "routes/token.ts": {
+    id: "routes/token";
+    page: "/token";
+  };
+  "routes/mcp-token.ts": {
+    id: "routes/mcp-token";
+    page: "/mcp/token";
+  };
+  "routes/oauth-authorization-server.ts": {
+    id: "routes/oauth-authorization-server";
+    page: "/.well-known/oauth-authorization-server";
+  };
+  "routes/oauth-protected-resource-mcp.ts": {
+    id: "routes/oauth-protected-resource-mcp";
+    page: "/.well-known/oauth-protected-resource/mcp";
   };
   "routes/api-auth.ts": {
     id: "routes/api-auth";
@@ -341,6 +383,7 @@ type RouteModules = {
   "routes/home": typeof import("./app/routes/home.tsx");
   "routes/login": typeof import("./app/routes/login.tsx");
   "routes/register": typeof import("./app/routes/register.tsx");
+  "routes/logout": typeof import("./app/routes/logout.ts");
   "routes/hub-login": typeof import("./app/routes/hub-login.tsx");
   "routes/hub-callback": typeof import("./app/routes/hub-callback.tsx");
   "routes/api-agents-v1-me": typeof import("./app/routes/api-agents-v1-me.ts");
@@ -351,6 +394,11 @@ type RouteModules = {
   "routes/api-agents-v1-posts-postId-hide": typeof import("./app/routes/api-agents-v1-posts-postId-hide.ts");
   "routes/api-agents-v1-groups-group-posts": typeof import("./app/routes/api-agents-v1-groups-group-posts.ts");
   "routes/mcp": typeof import("./app/routes/mcp.ts");
+  "routes/authorize": typeof import("./app/routes/authorize.tsx");
+  "routes/token": typeof import("./app/routes/token.ts");
+  "routes/mcp-token": typeof import("./app/routes/mcp-token.ts");
+  "routes/oauth-authorization-server": typeof import("./app/routes/oauth-authorization-server.ts");
+  "routes/oauth-protected-resource-mcp": typeof import("./app/routes/oauth-protected-resource-mcp.ts");
   "routes/api-auth": typeof import("./app/routes/api-auth.ts");
   "routes/api-post-list": typeof import("./app/routes/api-post-list.tsx");
   "routes/api-search": typeof import("./app/routes/api-search.tsx");

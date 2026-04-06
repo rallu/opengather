@@ -5,6 +5,8 @@ import {
 	disableAgent,
 	generateAgentToken,
 	listAgents,
+	listAgentMcpSessions,
+	revokeAgentMcpSession,
 	rotateAgentToken,
 	setAgentGrants,
 } from "./agent.service.server.ts";
@@ -69,10 +71,22 @@ test("createAgent stores hashed token, memberships, and grants", async () => {
 							return args;
 						},
 					},
+					agentMcpSession: {
+						update: async () => null,
+					},
+					agentMcpAccessToken: {
+						updateMany: async () => null,
+					},
+					agentMcpRefreshToken: {
+						updateMany: async () => null,
+					},
 				}),
 			agent: {
 				findMany: async () => [],
 				update: async () => null,
+			},
+			agentMcpSession: {
+				findMany: async () => [],
 			},
 		},
 	});
@@ -113,6 +127,15 @@ test("rotateAgentToken replaces the stored token hash", async () => {
 					groupMembership: {
 						create: async () => null,
 					},
+					agentMcpSession: {
+						update: async () => null,
+					},
+					agentMcpAccessToken: {
+						updateMany: async () => null,
+					},
+					agentMcpRefreshToken: {
+						updateMany: async () => null,
+					},
 				}),
 			agent: {
 				findMany: async () => [],
@@ -120,6 +143,9 @@ test("rotateAgentToken replaces the stored token hash", async () => {
 					updates.push(args);
 					return args;
 				},
+			},
+			agentMcpSession: {
+				findMany: async () => [],
 			},
 		},
 	});
@@ -153,12 +179,184 @@ test("disableAgent marks the agent disabled", async () => {
 					groupMembership: {
 						create: async () => null,
 					},
+					agentMcpSession: {
+						update: async () => null,
+					},
+					agentMcpAccessToken: {
+						updateMany: async () => null,
+					},
+					agentMcpRefreshToken: {
+						updateMany: async () => null,
+					},
 				}),
 			agent: {
 				findMany: async () => [],
 				update: async (args) => {
 					updates.push(args);
 					return args;
+				},
+			},
+			agentMcpSession: {
+				findMany: async () => [],
+			},
+		},
+	});
+
+	assert.deepEqual(result, {
+		agentId: "agent-1",
+		disabled: true,
+	});
+	assert.equal(updates.length, 1);
+});
+
+test("disableAgent revokes active MCP sessions for the agent", async () => {
+	const writes: Array<{ table: string; value: unknown }> = [];
+	const now = new Date("2026-04-06T12:00:00.000Z");
+
+	await disableAgent({
+		agentId: "agent-1",
+		now,
+		db: {
+			$transaction: async (callback) =>
+				callback({
+					agent: {
+						create: async () => null,
+						update: async () => null,
+					},
+					agentGrant: {
+						create: async () => null,
+						deleteMany: async () => null,
+					},
+					instanceMembership: {
+						create: async () => null,
+					},
+					groupMembership: {
+						create: async () => null,
+					},
+					agentMcpSession: {
+						update: async (args) => {
+							writes.push({ table: "agentMcpSession.update", value: args });
+							return args;
+						},
+					},
+					agentMcpAccessToken: {
+						updateMany: async (args) => {
+							writes.push({ table: "agentMcpAccessToken.updateMany", value: args });
+							return args;
+						},
+					},
+					agentMcpRefreshToken: {
+						updateMany: async (args) => {
+							writes.push({
+								table: "agentMcpRefreshToken.updateMany",
+								value: args,
+							});
+							return args;
+						},
+					},
+				}),
+			agent: {
+				findMany: async () => [],
+				update: async () => null,
+			},
+			agentMcpSession: {
+				findMany: async () => [
+					{
+						id: "session-1",
+						agentId: "agent-1",
+						userId: "user-1",
+						clientId: "codex",
+						expiresAt: new Date("2026-05-06T12:00:00.000Z"),
+						revokedAt: null,
+						lastUsedAt: null,
+						createdAt: new Date("2026-04-06T11:00:00.000Z"),
+						updatedAt: new Date("2026-04-06T11:00:00.000Z"),
+						agent: {
+							displayName: "Codex",
+							displayLabel: "Codex agent",
+						},
+					},
+				],
+			},
+		},
+	});
+
+	assert.deepEqual(writes, [
+		{
+			table: "agentMcpSession.update",
+			value: {
+				where: { id: "session-1" },
+				data: {
+					revokedAt: now,
+					updatedAt: now,
+				},
+			},
+		},
+		{
+			table: "agentMcpAccessToken.updateMany",
+			value: {
+				where: { sessionId: "session-1", revokedAt: null },
+				data: {
+					revokedAt: now,
+				},
+			},
+		},
+		{
+			table: "agentMcpRefreshToken.updateMany",
+			value: {
+				where: { sessionId: "session-1", revokedAt: null },
+				data: {
+					revokedAt: now,
+				},
+			},
+		},
+	]);
+});
+
+test("disableAgent tolerates missing MCP session tables", async () => {
+	const updates: unknown[] = [];
+	const result = await disableAgent({
+		agentId: "agent-1",
+		now: new Date("2026-04-06T12:00:00.000Z"),
+		db: {
+			$transaction: async (callback) =>
+				callback({
+					agent: {
+						create: async () => null,
+						update: async () => null,
+					},
+					agentGrant: {
+						create: async () => null,
+						deleteMany: async () => null,
+					},
+					instanceMembership: {
+						create: async () => null,
+					},
+					groupMembership: {
+						create: async () => null,
+					},
+					agentMcpSession: {
+						update: async () => null,
+					},
+					agentMcpAccessToken: {
+						updateMany: async () => null,
+					},
+					agentMcpRefreshToken: {
+						updateMany: async () => null,
+					},
+				}),
+			agent: {
+				findMany: async () => [],
+				update: async (args) => {
+					updates.push(args);
+					return args;
+				},
+			},
+			agentMcpSession: {
+				findMany: async () => {
+					const error = new Error('relation "agent_mcp_session" does not exist');
+					(error as Error & { code?: string }).code = "P2021";
+					throw error;
 				},
 			},
 		},
@@ -192,6 +390,15 @@ test("listAgents returns non-deleted agents with sorted grants", async () => {
 					groupMembership: {
 						create: async () => null,
 					},
+					agentMcpSession: {
+						update: async () => null,
+					},
+					agentMcpAccessToken: {
+						updateMany: async () => null,
+					},
+					agentMcpRefreshToken: {
+						updateMany: async () => null,
+					},
 				}),
 			agent: {
 				findMany: async (args) => {
@@ -224,6 +431,9 @@ test("listAgents returns non-deleted agents with sorted grants", async () => {
 					];
 				},
 				update: async () => null,
+			},
+			agentMcpSession: {
+				findMany: async () => [],
 			},
 		},
 	});
@@ -303,10 +513,22 @@ test("setAgentGrants replaces existing grants with a normalized set", async () =
 					groupMembership: {
 						create: async () => null,
 					},
+					agentMcpSession: {
+						update: async () => null,
+					},
+					agentMcpAccessToken: {
+						updateMany: async () => null,
+					},
+					agentMcpRefreshToken: {
+						updateMany: async () => null,
+					},
 				}),
 			agent: {
 				findMany: async () => [],
 				update: async () => null,
+			},
+			agentMcpSession: {
+				findMany: async () => [],
 			},
 		},
 	});
@@ -373,4 +595,387 @@ test("setAgentGrants replaces existing grants with a normalized set", async () =
 			},
 		],
 	});
+});
+
+test("setAgentGrants revokes active MCP sessions after a scope change", async () => {
+	const writes: Array<{ table: string; value: unknown }> = [];
+	const now = new Date("2026-04-06T12:00:00.000Z");
+
+	await setAgentGrants({
+		agentId: "agent-1",
+		now,
+		generateId: () => "grant-1",
+		grants: [
+			{
+				resourceType: "instance",
+				resourceId: "instance-1",
+				scope: "instance.feed.read",
+			},
+		],
+		db: {
+			$transaction: async (callback) =>
+				callback({
+					agent: {
+						create: async () => null,
+						update: async (args) => {
+							writes.push({ table: "agent.update", value: args });
+							return args;
+						},
+					},
+					agentGrant: {
+						create: async (args) => {
+							writes.push({ table: "agentGrant.create", value: args });
+							return args;
+						},
+						deleteMany: async (args) => {
+							writes.push({ table: "agentGrant.deleteMany", value: args });
+							return args;
+						},
+					},
+					instanceMembership: {
+						create: async () => null,
+					},
+					groupMembership: {
+						create: async () => null,
+					},
+					agentMcpSession: {
+						update: async (args) => {
+							writes.push({ table: "agentMcpSession.update", value: args });
+							return args;
+						},
+					},
+					agentMcpAccessToken: {
+						updateMany: async (args) => {
+							writes.push({ table: "agentMcpAccessToken.updateMany", value: args });
+							return args;
+						},
+					},
+					agentMcpRefreshToken: {
+						updateMany: async (args) => {
+							writes.push({
+								table: "agentMcpRefreshToken.updateMany",
+								value: args,
+							});
+							return args;
+						},
+					},
+				}),
+			agent: {
+				findMany: async () => [],
+				update: async () => null,
+			},
+			agentMcpSession: {
+				findMany: async () => [
+					{
+						id: "session-1",
+						agentId: "agent-1",
+						userId: "user-1",
+						clientId: "codex",
+						expiresAt: new Date("2026-05-06T12:00:00.000Z"),
+						revokedAt: null,
+						lastUsedAt: null,
+						createdAt: new Date("2026-04-06T11:00:00.000Z"),
+						updatedAt: new Date("2026-04-06T11:00:00.000Z"),
+						agent: {
+							displayName: "Codex",
+							displayLabel: "Codex agent",
+						},
+					},
+				],
+			},
+		},
+	});
+
+	assert.deepEqual(writes.slice(-3), [
+		{
+			table: "agentMcpSession.update",
+			value: {
+				where: { id: "session-1" },
+				data: {
+					revokedAt: now,
+					updatedAt: now,
+				},
+			},
+		},
+		{
+			table: "agentMcpAccessToken.updateMany",
+			value: {
+				where: { sessionId: "session-1", revokedAt: null },
+				data: {
+					revokedAt: now,
+				},
+			},
+		},
+		{
+			table: "agentMcpRefreshToken.updateMany",
+			value: {
+				where: { sessionId: "session-1", revokedAt: null },
+				data: {
+					revokedAt: now,
+				},
+			},
+		},
+	]);
+});
+
+test("setAgentGrants tolerates missing MCP session tables", async () => {
+	const writes: Array<{ table: string; value: unknown }> = [];
+	const now = new Date("2026-04-06T12:00:00.000Z");
+
+	const result = await setAgentGrants({
+		agentId: "agent-1",
+		now,
+		generateId: () => "grant-1",
+		grants: [
+			{
+				resourceType: "instance",
+				resourceId: "instance-1",
+				scope: "instance.feed.read",
+			},
+		],
+		db: {
+			$transaction: async (callback) =>
+				callback({
+					agent: {
+						create: async () => null,
+						update: async (args) => {
+							writes.push({ table: "agent.update", value: args });
+							return args;
+						},
+					},
+					agentGrant: {
+						create: async (args) => {
+							writes.push({ table: "agentGrant.create", value: args });
+							return args;
+						},
+						deleteMany: async (args) => {
+							writes.push({ table: "agentGrant.deleteMany", value: args });
+							return args;
+						},
+					},
+					instanceMembership: {
+						create: async () => null,
+					},
+					groupMembership: {
+						create: async () => null,
+					},
+					agentMcpSession: {
+						update: async () => null,
+					},
+					agentMcpAccessToken: {
+						updateMany: async () => null,
+					},
+					agentMcpRefreshToken: {
+						updateMany: async () => null,
+					},
+				}),
+			agent: {
+				findMany: async () => [],
+				update: async () => null,
+			},
+			agentMcpSession: {
+				findMany: async () => {
+					const error = new Error('relation "agent_mcp_session" does not exist');
+					(error as Error & { code?: string }).code = "P2021";
+					throw error;
+				},
+			},
+		},
+	});
+
+	assert.deepEqual(result, {
+		agentId: "agent-1",
+		grants: [
+			{
+				id: "grant-1",
+				resourceType: "instance",
+				resourceId: "instance-1",
+				scope: "instance.feed.read",
+				createdAt: now,
+				updatedAt: now,
+			},
+		],
+	});
+});
+
+test("listAgentMcpSessions returns sessions scoped to the current instance", async () => {
+	const findManyCalls: unknown[] = [];
+	const result = await listAgentMcpSessions({
+		instanceId: "instance-1",
+		db: {
+			$transaction: async (callback) =>
+				callback({
+					agent: {
+						create: async () => null,
+						update: async () => null,
+					},
+					agentGrant: {
+						create: async () => null,
+						deleteMany: async () => null,
+					},
+					instanceMembership: {
+						create: async () => null,
+					},
+					groupMembership: {
+						create: async () => null,
+					},
+					agentMcpSession: {
+						update: async () => null,
+					},
+					agentMcpAccessToken: {
+						updateMany: async () => null,
+					},
+					agentMcpRefreshToken: {
+						updateMany: async () => null,
+					},
+				}),
+			agent: {
+				findMany: async () => [],
+				update: async () => null,
+			},
+			agentMcpSession: {
+				findMany: async (args) => {
+					findManyCalls.push(args);
+					return [
+						{
+							id: "session-1",
+							agentId: "agent-1",
+							userId: "user-1",
+							clientId: "codex",
+							expiresAt: new Date("2026-05-06T12:00:00.000Z"),
+							revokedAt: null,
+							lastUsedAt: new Date("2026-04-06T12:30:00.000Z"),
+							createdAt: new Date("2026-04-06T12:00:00.000Z"),
+							updatedAt: new Date("2026-04-06T12:30:00.000Z"),
+							agent: {
+								displayName: "Codex",
+								displayLabel: "Codex agent",
+							},
+						},
+					];
+				},
+			},
+		},
+	});
+
+	assert.deepEqual(findManyCalls[0], {
+		where: {
+			agent: {
+				instanceId: "instance-1",
+				deletedAt: null,
+			},
+		},
+		orderBy: [{ lastUsedAt: "desc" }, { createdAt: "desc" }, { id: "asc" }],
+		select: {
+			id: true,
+			agentId: true,
+			userId: true,
+			clientId: true,
+			expiresAt: true,
+			revokedAt: true,
+			lastUsedAt: true,
+			createdAt: true,
+			updatedAt: true,
+			agent: {
+				select: {
+					displayName: true,
+					displayLabel: true,
+				},
+			},
+		},
+	});
+	assert.equal(result.length, 1);
+	assert.equal(result[0]?.id, "session-1");
+});
+
+test("revokeAgentMcpSession revokes the session and both token families", async () => {
+	const writes: Array<{ table: string; value: unknown }> = [];
+	const now = new Date("2026-04-06T12:00:00.000Z");
+
+	const result = await revokeAgentMcpSession({
+		sessionId: "session-1",
+		now,
+		db: {
+			$transaction: async (callback) =>
+				callback({
+					agent: {
+						create: async () => null,
+						update: async () => null,
+					},
+					agentGrant: {
+						create: async () => null,
+						deleteMany: async () => null,
+					},
+					instanceMembership: {
+						create: async () => null,
+					},
+					groupMembership: {
+						create: async () => null,
+					},
+					agentMcpSession: {
+						update: async (args) => {
+							writes.push({ table: "agentMcpSession.update", value: args });
+							return args;
+						},
+					},
+					agentMcpAccessToken: {
+						updateMany: async (args) => {
+							writes.push({ table: "agentMcpAccessToken.updateMany", value: args });
+							return args;
+						},
+					},
+					agentMcpRefreshToken: {
+						updateMany: async (args) => {
+							writes.push({
+								table: "agentMcpRefreshToken.updateMany",
+								value: args,
+							});
+							return args;
+						},
+					},
+				}),
+			agent: {
+				findMany: async () => [],
+				update: async () => null,
+			},
+			agentMcpSession: {
+				findMany: async () => [],
+			},
+		},
+	});
+
+	assert.deepEqual(result, {
+		sessionId: "session-1",
+		revoked: true,
+	});
+	assert.deepEqual(writes, [
+		{
+			table: "agentMcpSession.update",
+			value: {
+				where: { id: "session-1" },
+				data: {
+					revokedAt: now,
+					updatedAt: now,
+				},
+			},
+		},
+		{
+			table: "agentMcpAccessToken.updateMany",
+			value: {
+				where: { sessionId: "session-1", revokedAt: null },
+				data: {
+					revokedAt: now,
+				},
+			},
+		},
+		{
+			table: "agentMcpRefreshToken.updateMany",
+			value: {
+				where: { sessionId: "session-1", revokedAt: null },
+				data: {
+					revokedAt: now,
+				},
+			},
+		},
+	]);
 });

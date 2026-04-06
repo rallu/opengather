@@ -4,8 +4,11 @@ import {
 	createAgent,
 	disableAgent,
 	listAgents,
+	listAgentMcpSessions,
+	revokeAgentMcpSession,
 	rotateAgentToken,
 	setAgentGrants,
+	type AgentMcpSessionSummary,
 	type AgentSummary,
 } from "../../server/agent.service.server.ts";
 import {
@@ -22,6 +25,8 @@ export type ServerSettingsAgentsLoaderData = {
 	setup: ViewerContext["setup"];
 	baseUrl: string;
 	agents: AgentSummary[];
+	sessions: AgentMcpSessionSummary[];
+	mcpSessionsAvailable: boolean;
 };
 
 export type ServerSettingsAgentsActionData =
@@ -51,12 +56,18 @@ export type ServerSettingsAgentsActionData =
 			scopes: string[];
 	  }
 	| {
+			ok: true;
+			action: "revoke-session";
+			sessionId: string;
+	  }
+	| {
 			ok: false;
 			action?:
 				| "create-agent"
 				| "disable-agent"
 				| "rotate-agent"
-				| "update-grants";
+				| "update-grants"
+				| "revoke-session";
 			error: string;
 	  }
 	| undefined;
@@ -67,6 +78,25 @@ async function resolveViewerRole(params: { request: Request }): Promise<{
 	viewerRole: ViewerContext["viewerRole"];
 }> {
 	return getPermissionsViewerContext({ request: params.request });
+}
+
+function isMissingAgentMcpStorageError(error: unknown): boolean {
+	if (!error || typeof error !== "object") {
+		return false;
+	}
+
+	const candidate = error as { code?: unknown; message?: unknown };
+	if (candidate.code === "P2021") {
+		return true;
+	}
+
+	const message =
+		typeof candidate.message === "string" ? candidate.message : "";
+	return (
+		message.includes("agent_mcp_session") ||
+		message.includes("agent_mcp_access_token") ||
+		message.includes("agent_mcp_refresh_token")
+	);
 }
 
 function parseRequestedScopes(formData: FormData): string[] {
@@ -94,6 +124,7 @@ export async function action(
 		resolveViewerRole?: typeof resolveViewerRole;
 		createAgent?: typeof createAgent;
 		disableAgent?: typeof disableAgent;
+		revokeAgentMcpSession?: typeof revokeAgentMcpSession;
 		rotateAgentToken?: typeof rotateAgentToken;
 		setAgentGrants?: typeof setAgentGrants;
 		writeAuditLog?: typeof writeAuditLogSafely;
@@ -121,7 +152,8 @@ export async function action(
 			actionType !== "create-agent" &&
 			actionType !== "disable-agent" &&
 			actionType !== "rotate-agent" &&
-			actionType !== "update-grants"
+			actionType !== "update-grants" &&
+			actionType !== "revoke-session"
 		) {
 			return { ok: false, error: "Unsupported action." };
 		}
@@ -233,6 +265,36 @@ export async function action(
 				scopes,
 			};
 		}
+		if (actionType === "revoke-session") {
+			const sessionId = String(formData.get("sessionId") ?? "").trim();
+			if (!sessionId) {
+				return {
+					ok: false,
+					action: "revoke-session",
+					error: "Session ID is required.",
+				};
+			}
+
+			await (deps?.revokeAgentMcpSession ?? revokeAgentMcpSession)({
+				sessionId,
+			});
+			await (deps?.writeAuditLog ?? writeAuditLogSafely)({
+				action: "agent.revoke_mcp_session",
+				actor: { type: "user", id: authUser.id },
+				resourceType: "agent_mcp_session",
+				resourceId: sessionId,
+				request: params.request,
+				payload: {
+					outcome: "success",
+				},
+			});
+
+			return {
+				ok: true,
+				action: "revoke-session",
+				sessionId,
+			};
+		}
 
 		const displayName = String(formData.get("displayName") ?? "").trim();
 		const displayLabel = String(formData.get("displayLabel") ?? "").trim();
@@ -315,6 +377,7 @@ export async function loader(
 	deps?: {
 		resolveViewerRole?: typeof resolveViewerRole;
 		listAgents?: typeof listAgents;
+		listAgentMcpSessions?: typeof listAgentMcpSessions;
 	},
 ): Promise<ServerSettingsAgentsLoaderData> {
 	try {
@@ -323,12 +386,29 @@ export async function loader(
 		)({
 			request: params.request,
 		});
-		const agents =
-			setup.isSetup && setup.instance && canManageInstance({ viewerRole }).allowed
-				? await (deps?.listAgents ?? listAgents)({
-						instanceId: setup.instance.id,
-					})
-				: [];
+		let agents: AgentSummary[] = [];
+		let sessions: AgentMcpSessionSummary[] = [];
+		let mcpSessionsAvailable = true;
+		if (
+			setup.isSetup &&
+			setup.instance &&
+			canManageInstance({ viewerRole }).allowed
+		) {
+			agents = await (deps?.listAgents ?? listAgents)({
+				instanceId: setup.instance.id,
+			});
+			try {
+				sessions = await (deps?.listAgentMcpSessions ?? listAgentMcpSessions)({
+					instanceId: setup.instance.id,
+				});
+			} catch (error) {
+				if (!isMissingAgentMcpStorageError(error)) {
+					throw error;
+				}
+				sessions = [];
+				mcpSessionsAvailable = false;
+			}
+		}
 
 		return {
 			authUser,
@@ -336,6 +416,8 @@ export async function loader(
 			setup,
 			baseUrl: getPublicOrigin(params.request),
 			agents,
+			sessions,
+			mcpSessionsAvailable,
 		};
 	} catch {
 		return {
@@ -344,6 +426,8 @@ export async function loader(
 			setup: { isSetup: false },
 			baseUrl: getPublicOrigin(params.request),
 			agents: [],
+			sessions: [],
+			mcpSessionsAvailable: false,
 		};
 	}
 }

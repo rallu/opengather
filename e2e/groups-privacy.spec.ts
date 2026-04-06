@@ -293,6 +293,7 @@ async function createGroup(params: {
 	await expect(params.page).toHaveURL(/\/groups\/.+$/);
 	const groupId = params.page.url().split("/groups/")[1] ?? "";
 	await expect(params.page.getByTestId("group-post-body")).toBeVisible();
+	await params.page.getByTestId("group-post-body").click();
 	await params.page.getByTestId("group-post-body").fill(params.initialPost);
 	await params.page.getByTestId("group-post-submit").click();
 	await expect(params.page.getByTestId("group-post-list")).toContainText(
@@ -432,6 +433,7 @@ test.describe("group privacy", () => {
 			privatePostText,
 		);
 		const memberFollowUp = `Member-only follow-up ${Date.now()}`;
+		await page.getByTestId("group-post-body").click();
 		await page.getByTestId("group-post-body").fill(memberFollowUp);
 		await page.getByTestId("group-post-submit").click();
 		await expect(page.getByTestId("group-post-list")).toContainText(
@@ -473,6 +475,7 @@ test.describe("group privacy", () => {
 		});
 		const secretPostText = `Secret group ping ${Date.now()} ${outsiderUser.email}`;
 		await page.goto(`/groups/${privateGroupId}`);
+		await page.getByTestId("group-post-body").click();
 		await page.getByTestId("group-post-body").fill(secretPostText);
 		await expect(page.getByTestId("group-post-body")).toHaveValue(secretPostText);
 		await page.getByTestId("group-post-body").press("Control+Enter");

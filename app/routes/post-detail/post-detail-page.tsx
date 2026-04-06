@@ -103,7 +103,11 @@ export function PostDetailPage(params: {
 				</Container>
 
 				{canReply ? (
-					<Form method="post" encType="multipart/form-data">
+					<Form
+						id="post-detail-reply-form"
+						method="post"
+						encType="multipart/form-data"
+					>
 						<input type="hidden" name="_action" value="post" />
 						<input type="hidden" name="parentPostId" value={post.id} />
 						<PostComposer
@@ -118,6 +122,7 @@ export function PostDetailPage(params: {
 							resetKey={replyResetKey}
 							footer={
 								<PostAssetInput
+									formId="post-detail-reply-form"
 									previousAlbums={params.data.previousAlbums}
 									inputTestId="post-detail-assets-input"
 									albumInputTestId="post-detail-albums-input"

@@ -57,13 +57,89 @@ test("server-settings agents loader returns agents for admins", async () => {
 					],
 				},
 			],
+			listAgentMcpSessions: async () => [
+				{
+					id: "session-1",
+					agentId: "agent-1",
+					userId: "user-1",
+					clientId: "codex",
+					expiresAt: new Date("2026-05-06T12:00:00.000Z"),
+					revokedAt: null,
+					lastUsedAt: new Date("2026-04-06T12:30:00.000Z"),
+					createdAt: new Date("2026-04-06T12:00:00.000Z"),
+					updatedAt: new Date("2026-04-06T12:30:00.000Z"),
+					agent: {
+						displayName: "Codex",
+						displayLabel: "Codex agent",
+					},
+				},
+			],
 		},
 	);
 
 	assert.equal(result.viewerRole, "admin");
 	assert.equal(result.baseUrl, "http://localhost:5173");
 	assert.equal(result.agents.length, 1);
+	assert.equal(result.sessions.length, 1);
 	assert.equal(result.agents[0]?.displayLabel, "Codex agent");
+});
+
+test("server-settings agents loader keeps admin access when MCP session tables are missing", async () => {
+	const result = await loader(
+		{
+			request: new Request("http://localhost:5173/server-settings/agents"),
+			params: {},
+			context: {},
+			unstable_pattern: "",
+		} as never,
+		{
+			resolveViewerRole: async () => ({
+				authUser: {
+					id: "user-1",
+					name: "Admin",
+					email: "admin@example.com",
+				},
+				viewerRole: "admin",
+				setup: {
+					isSetup: true,
+					instance: {
+						id: "instance-1",
+						name: "OpenGather Local",
+						visibilityMode: "public",
+						approvalMode: "automatic",
+					},
+				},
+			}),
+			listAgents: async () => [
+				{
+					id: "agent-1",
+					instanceId: "instance-1",
+					createdByUserId: "user-1",
+					displayName: "Codex",
+					displayLabel: "Codex agent",
+					description: null,
+					role: "assistant",
+					isEnabled: true,
+					lastUsedAt: null,
+					deletedAt: null,
+					createdAt: new Date("2026-04-06T12:00:00.000Z"),
+					updatedAt: new Date("2026-04-06T12:00:00.000Z"),
+					grants: [],
+				},
+			],
+			listAgentMcpSessions: async () => {
+				const error = new Error('relation "agent_mcp_session" does not exist');
+				(error as Error & { code?: string }).code = "P2021";
+				throw error;
+			},
+		},
+	);
+
+	assert.equal(result.viewerRole, "admin");
+	assert.equal(result.authUser?.id, "user-1");
+	assert.equal(result.agents.length, 1);
+	assert.equal(result.sessions.length, 0);
+	assert.equal(result.mcpSessionsAvailable, false);
 });
 
 test("server-settings agents action creates a token and audits it", async () => {
@@ -375,5 +451,66 @@ test("server-settings agents action rotates a token and audits it", async () => 
 	assert.equal(
 		(auditCalls[0] as { action: string }).action,
 		"agent.rotate_secret",
+	);
+});
+
+test("server-settings agents action revokes an MCP session and audits it", async () => {
+	const auditCalls: unknown[] = [];
+	const revokeCalls: unknown[] = [];
+	const request = new Request("http://localhost:5173/server-settings/agents", {
+		method: "POST",
+		headers: {
+			"content-type": "application/x-www-form-urlencoded",
+		},
+		body: new URLSearchParams({
+			_action: "revoke-session",
+			sessionId: "session-1",
+		}),
+	});
+
+	const result = await action(
+		{
+			request,
+			params: {},
+			context: {},
+			unstable_pattern: "",
+		} as never,
+		{
+			resolveViewerRole: async () => ({
+				authUser: {
+					id: "user-1",
+					name: "Admin",
+					email: "admin@example.com",
+				},
+				viewerRole: "admin",
+				setup: {
+					isSetup: true,
+					instance: {
+						id: "instance-1",
+						name: "OpenGather Local",
+						visibilityMode: "public",
+						approvalMode: "automatic",
+					},
+				},
+			}),
+			revokeAgentMcpSession: async (params) => {
+				revokeCalls.push(params);
+				return { sessionId: "session-1", revoked: true };
+			},
+			writeAuditLog: async (params) => {
+				auditCalls.push(params);
+			},
+		},
+	);
+
+	assert.deepEqual(result, {
+		ok: true,
+		action: "revoke-session",
+		sessionId: "session-1",
+	});
+	assert.deepEqual(revokeCalls, [{ sessionId: "session-1" }]);
+	assert.equal(
+		(auditCalls[0] as { action: string }).action,
+		"agent.revoke_mcp_session",
 	);
 });

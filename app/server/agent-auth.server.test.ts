@@ -62,10 +62,18 @@ test("authenticateAgentRequest resolves agent subject context and updates lastUs
 					},
 				],
 			}),
+			findFirst: async () => null,
 			update: async (args: unknown) => {
 				updates.push(args);
 				return args;
 			},
+		},
+		agentMcpAccessToken: {
+			findUnique: async () => null,
+			updateMany: async () => null,
+		},
+		agentMcpSession: {
+			update: async () => null,
 		},
 		instanceMembership: {
 			findFirst: async () => ({
@@ -136,6 +144,14 @@ test("authenticateAgentRequest rejects invalid and disabled agents", async () =>
 		db: {
 			agent: {
 				findUnique: async () => null,
+				findFirst: async () => null,
+				update: async () => null,
+			},
+			agentMcpAccessToken: {
+				findUnique: async () => null,
+				updateMany: async () => null,
+			},
+			agentMcpSession: {
 				update: async () => null,
 			},
 			instanceMembership: {
@@ -169,6 +185,14 @@ test("authenticateAgentRequest rejects invalid and disabled agents", async () =>
 					deletedAt: null,
 					grants: [],
 				}),
+				findFirst: async () => null,
+				update: async () => null,
+			},
+			agentMcpAccessToken: {
+				findUnique: async () => null,
+				updateMany: async () => null,
+			},
+			agentMcpSession: {
 				update: async () => null,
 			},
 			instanceMembership: {
@@ -184,4 +208,87 @@ test("authenticateAgentRequest rejects invalid and disabled agents", async () =>
 		code: "disabled_agent",
 		message: "Agent is disabled.",
 	});
+});
+
+test("authenticateAgentRequest accepts active MCP access tokens", async () => {
+	const token = "ogmca_token";
+	const now = new Date("2026-04-06T12:05:00.000Z");
+	const sessionUpdates: unknown[] = [];
+	const result = await authenticateAgentRequest({
+		request: new Request("http://localhost/api/agents/v1/me", {
+			headers: {
+				authorization: `Bearer ${token}`,
+			},
+		}),
+		now,
+		db: {
+			agent: {
+				findUnique: async () => null,
+				findFirst: async () => ({
+					id: "agent-1",
+					instanceId: "instance-1",
+					createdByUserId: "user-1",
+					displayName: "Codex",
+					displayLabel: "Codex agent",
+					description: null,
+					role: "assistant",
+					isEnabled: true,
+					lastUsedAt: null,
+					deletedAt: null,
+					grants: [
+						{
+							id: "grant-1",
+							resourceType: "instance",
+							resourceId: "instance-1",
+							scope: "instance.feed.read",
+						},
+					],
+				}),
+				update: async () => null,
+			},
+			agentMcpAccessToken: {
+				findUnique: async () => ({
+					id: "access-1",
+					sessionId: "session-1",
+					tokenHash: "hash",
+					expiresAt: new Date("2026-04-06T12:20:00.000Z"),
+					revokedAt: null,
+					lastUsedAt: null,
+					session: {
+						id: "session-1",
+						agentId: "agent-1",
+						userId: "user-1",
+						clientId: "codex",
+						expiresAt: new Date("2026-04-07T12:00:00.000Z"),
+						revokedAt: null,
+						lastUsedAt: null,
+					},
+				}),
+				updateMany: async () => null,
+			},
+			agentMcpSession: {
+				update: async (args) => {
+					sessionUpdates.push(args);
+					return args;
+				},
+			},
+			instanceMembership: {
+				findFirst: async () => ({
+					role: "member",
+					approvalStatus: "approved",
+				}),
+			},
+			groupMembership: {
+				findMany: async () => [],
+			},
+		},
+	});
+
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+	assert.equal(result.agent.id, "agent-1");
+	assert.equal(result.subjectContext.scopes.has("instance.feed.read"), true);
+	assert.equal(sessionUpdates.length, 1);
 });

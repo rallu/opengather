@@ -186,6 +186,8 @@ model Agent {
   createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
   grants          AgentGrant[]
+  mcpAuthorizationCodes AgentMcpAuthorizationCode[]
+  mcpSessions     AgentMcpSession[]
   @@map("agent")
   @@index([instanceId], map: "idx_agent_instance_id")
   @@index([createdByUserId], map: "idx_agent_created_by_user_id")
@@ -206,6 +208,83 @@ model AgentGrant {
   @@index([agentId], map: "idx_agent_grant_agent_id")
   @@index([resourceType, resourceId], map: "idx_agent_grant_resource")
   @@unique([agentId, resourceType, resourceId, scope], map: "agent_grant_agent_resource_scope_unique")
+}
+
+model AgentMcpAuthorizationCode {
+  id                 String   @id @db.Text
+  agentId            String   @map("agent_id") @db.Text
+  userId             String   @map("user_id") @db.Text
+  clientId           String?  @map("client_id") @db.Text
+  redirectUri        String   @map("redirect_uri") @db.Text
+  codeHash           String   @map("code_hash") @unique(map: "idx_agent_mcp_authorization_code_hash") @db.Text
+  codeChallenge      String   @map("code_challenge") @db.Text
+  codeChallengeMethod String  @map("code_challenge_method") @db.Text
+  expiresAt          DateTime @map("expires_at") @db.Timestamptz(6)
+  consumedAt         DateTime? @map("consumed_at") @db.Timestamptz(6)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  agent              Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@map("agent_mcp_authorization_code")
+  @@index([agentId], map: "idx_agent_mcp_authorization_code_agent_id")
+  @@index([userId], map: "idx_agent_mcp_authorization_code_user_id")
+  @@index([expiresAt], map: "idx_agent_mcp_authorization_code_expires_at")
+}
+
+model AgentMcpSession {
+  id              String   @id @db.Text
+  agentId         String   @map("agent_id") @db.Text
+  userId          String   @map("user_id") @db.Text
+  clientId        String?  @map("client_id") @db.Text
+  expiresAt       DateTime @map("expires_at") @db.Timestamptz(6)
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(6)
+  lastUsedAt      DateTime? @map("last_used_at") @db.Timestamptz(6)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  agent           Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  accessTokens    AgentMcpAccessToken[]
+  refreshTokens   AgentMcpRefreshToken[]
+
+  @@map("agent_mcp_session")
+  @@index([agentId], map: "idx_agent_mcp_session_agent_id")
+  @@index([userId], map: "idx_agent_mcp_session_user_id")
+  @@index([expiresAt], map: "idx_agent_mcp_session_expires_at")
+  @@index([revokedAt], map: "idx_agent_mcp_session_revoked_at")
+}
+
+model AgentMcpAccessToken {
+  id              String   @id @db.Text
+  sessionId       String   @map("session_id") @db.Text
+  tokenHash       String   @map("token_hash") @unique(map: "idx_agent_mcp_access_token_hash") @db.Text
+  expiresAt       DateTime @map("expires_at") @db.Timestamptz(6)
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(6)
+  lastUsedAt      DateTime? @map("last_used_at") @db.Timestamptz(6)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  session         AgentMcpSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("agent_mcp_access_token")
+  @@index([sessionId], map: "idx_agent_mcp_access_token_session_id")
+  @@index([expiresAt], map: "idx_agent_mcp_access_token_expires_at")
+  @@index([revokedAt], map: "idx_agent_mcp_access_token_revoked_at")
+}
+
+model AgentMcpRefreshToken {
+  id              String   @id @db.Text
+  sessionId       String   @map("session_id") @db.Text
+  familyId        String   @map("family_id") @db.Text
+  tokenHash       String   @map("token_hash") @unique(map: "idx_agent_mcp_refresh_token_hash") @db.Text
+  expiresAt       DateTime @map("expires_at") @db.Timestamptz(6)
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(6)
+  rotatedAt       DateTime? @map("rotated_at") @db.Timestamptz(6)
+  replacedById    String?  @map("replaced_by_id") @db.Text
+  lastUsedAt      DateTime? @map("last_used_at") @db.Timestamptz(6)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  session         AgentMcpSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("agent_mcp_refresh_token")
+  @@index([sessionId], map: "idx_agent_mcp_refresh_token_session_id")
+  @@index([familyId], map: "idx_agent_mcp_refresh_token_family_id")
+  @@index([expiresAt], map: "idx_agent_mcp_refresh_token_expires_at")
+  @@index([revokedAt], map: "idx_agent_mcp_refresh_token_revoked_at")
 }
 
 model CommunityGroup {

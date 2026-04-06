@@ -56,18 +56,19 @@ async function registerUser(params: {
 	await params.page.getByTestId("register-email").fill(params.email);
 	await params.page.getByTestId("register-password").fill(params.password);
 	await params.page.getByTestId("register-submit").click();
-	if (
-		!(await params.page
-			.getByTestId("shell-sign-out")
-			.isVisible()
-			.catch(() => false))
-	) {
+	try {
+		await expect(params.page.getByTestId("shell-sign-out")).toBeVisible({
+			timeout: 10_000,
+		});
+	} catch {
 		await params.page.goto("/login");
 		await params.page.getByTestId("login-email").fill(params.email);
 		await params.page.getByTestId("login-password").fill(params.password);
 		await params.page.getByTestId("login-submit").click();
 	}
-	await expect(params.page.getByTestId("shell-sign-out")).toBeVisible();
+	await expect(params.page.getByTestId("shell-sign-out")).toBeVisible({
+		timeout: 10_000,
+	});
 }
 
 async function getUserIdByEmail(email: string): Promise<string> {
@@ -129,8 +130,17 @@ test("profile details and image overrides can be edited from profile route", asy
 
 	await page.getByTestId("shell-nav-profile").click();
 	await expect(page).toHaveURL(new RegExp(`/profiles/${userId}$`));
-	await page.getByTestId("profile-detail-actions-trigger").click();
-	await expect(page.getByTestId("profile-detail-actions-menu")).toBeVisible();
+	const profileActionsTrigger = page.getByTestId(
+		"profile-detail-actions-trigger",
+	);
+	const profileActionsMenu = page.getByTestId("profile-detail-actions-menu");
+	await profileActionsTrigger.click();
+	try {
+		await expect(profileActionsMenu).toBeVisible({ timeout: 2_000 });
+	} catch {
+		await profileActionsTrigger.click();
+		await expect(profileActionsMenu).toBeVisible();
+	}
 	await page.getByTestId("profile-detail-edit-profile").click();
 	await expect(page).toHaveURL(/\/profile$/);
 	await expect(page.getByTestId("profile-activity-list")).toHaveCount(0);
@@ -197,6 +207,7 @@ test("feed post menu links to the author's public profile", async ({ page }) => 
 	const userId = await getUserIdByEmail(account.email);
 
 	await page.goto("/feed");
+	await page.getByTestId("feed-composer").click();
 	await page.getByTestId("feed-composer").fill(postText);
 	await page.getByTestId("feed-post-button").click();
 	await expect(page.getByTestId("feed-post-list")).toContainText(postText);

@@ -128,6 +128,16 @@ export function ServerSettingsAgentsContent(params: {
 	data: ServerSettingsAgentsLoaderData;
 	actionData: ServerSettingsAgentsActionData;
 }) {
+	const sessionsByAgentId = new Map<
+		string,
+		ServerSettingsAgentsLoaderData["sessions"]
+	>();
+	for (const session of params.data.sessions) {
+		const existing = sessionsByAgentId.get(session.agentId) ?? [];
+		existing.push(session);
+		sessionsByAgentId.set(session.agentId, existing);
+	}
+
 	return (
 		<>
 			<section className="space-y-3 rounded-md border border-border p-4">
@@ -143,6 +153,83 @@ export function ServerSettingsAgentsContent(params: {
 						<Link to="/server-settings">Back to Server Settings</Link>
 					</Button>
 				</div>
+				<section className="rounded-md border border-border/70 bg-muted/20 p-4">
+					<div className="space-y-2">
+						<h3 className="text-sm font-semibold">Start MCP Authorization</h3>
+						<p className="text-sm text-muted-foreground">
+							Launch the visual consent screen from settings instead of
+							constructing the `/authorize` URL manually. Paste the client PKCE
+							code challenge, then open the approval page.
+						</p>
+					</div>
+					<Form
+						method="get"
+						action="/authorize"
+						className="mt-4 grid gap-4 md:grid-cols-2"
+					>
+						<input type="hidden" name="response_type" value="code" />
+						<input type="hidden" name="code_challenge_method" value="S256" />
+						<label className="block space-y-2 text-sm">
+							<span className="font-medium">Client ID</span>
+							<input
+								name="client_id"
+								type="text"
+								defaultValue="codex"
+								className="w-full rounded-md border border-input bg-background px-3 py-2"
+							/>
+						</label>
+						<label className="block space-y-2 text-sm">
+							<span className="font-medium">Redirect URI</span>
+							<input
+								name="redirect_uri"
+								type="url"
+								defaultValue="http://localhost:8080/callback"
+								className="w-full rounded-md border border-input bg-background px-3 py-2"
+							/>
+						</label>
+						<label className="block space-y-2 text-sm md:col-span-2">
+							<span className="font-medium">PKCE code challenge</span>
+							<input
+								name="code_challenge"
+								type="text"
+								required
+								placeholder="Paste the S256 PKCE code challenge from the client"
+								className="w-full rounded-md border border-input bg-background px-3 py-2"
+							/>
+						</label>
+						<label className="block space-y-2 text-sm">
+							<span className="font-medium">Requested scopes</span>
+							<input
+								name="scope"
+								type="text"
+								defaultValue="instance.feed.read instance.feed.post"
+								className="w-full rounded-md border border-input bg-background px-3 py-2"
+							/>
+						</label>
+						<label className="block space-y-2 text-sm">
+							<span className="font-medium">State</span>
+							<input
+								name="state"
+								type="text"
+								placeholder="Optional client state value"
+								className="w-full rounded-md border border-input bg-background px-3 py-2"
+							/>
+						</label>
+						<div className="md:col-span-2 flex flex-wrap gap-3">
+							<Button type="submit">Open consent screen</Button>
+							<Button variant="outline" asChild>
+								<Link to="/.well-known/oauth-authorization-server">
+									View auth metadata
+								</Link>
+							</Button>
+							<Button variant="outline" asChild>
+								<Link to="/.well-known/oauth-protected-resource/mcp">
+									View MCP resource metadata
+								</Link>
+							</Button>
+						</div>
+					</Form>
+				</section>
 				{params.actionData?.ok && params.actionData.action === "create-agent" ? (
 					<div className="space-y-3 rounded-md border border-emerald-600/20 bg-emerald-500/10 p-4 text-sm">
 						<p className="font-medium text-emerald-700">
@@ -190,7 +277,8 @@ export function ServerSettingsAgentsContent(params: {
 				(params.actionData.action === "create-agent" ||
 					params.actionData.action === "disable-agent" ||
 					params.actionData.action === "rotate-agent" ||
-					params.actionData.action === "update-grants") ? (
+					params.actionData.action === "update-grants" ||
+					params.actionData.action === "revoke-session") ? (
 					<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
 						{params.actionData.error}
 					</div>
@@ -203,6 +291,18 @@ export function ServerSettingsAgentsContent(params: {
 				{params.actionData?.ok && params.actionData.action === "update-grants" ? (
 					<div className="rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700">
 						Agent grants updated.
+					</div>
+				) : null}
+				{params.actionData?.ok && params.actionData.action === "revoke-session" ? (
+					<div className="rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700">
+						MCP session revoked.
+					</div>
+				) : null}
+				{!params.data.mcpSessionsAvailable ? (
+					<div className="rounded-md border border-amber-600/20 bg-amber-500/10 p-3 text-sm text-amber-800">
+						MCP session storage is not available on this database yet. Agent
+						management still works, but session listing and revocation are
+						unavailable until the MCP tables are created.
 					</div>
 				) : null}
 				<Form method="post" className="grid gap-4 md:grid-cols-2">
@@ -287,6 +387,16 @@ export function ServerSettingsAgentsContent(params: {
 										<p>
 											Created: <LocalizedTimestamp value={agent.createdAt} />
 										</p>
+										<p>
+											<Link
+												to={`/audit-logs?actorType=agent&actorId=${encodeURIComponent(
+													agent.id,
+												)}`}
+												className="underline underline-offset-4"
+											>
+												View audit history
+											</Link>
+										</p>
 									</div>
 								</div>
 								<div className="mt-3 space-y-2">
@@ -294,6 +404,79 @@ export function ServerSettingsAgentsContent(params: {
 									<AgentScopeList
 										scopes={agent.grants.map((grant) => grant.scope)}
 									/>
+									<div className="space-y-2 pt-2">
+										<p className="text-sm font-medium">Active MCP sessions</p>
+										{(sessionsByAgentId.get(agent.id) ?? []).length === 0 ? (
+											<p className="text-sm text-muted-foreground">
+												No active or historical MCP sessions for this agent.
+											</p>
+										) : (
+											<div className="space-y-2">
+												{(sessionsByAgentId.get(agent.id) ?? []).map((session) => (
+													<div
+														key={session.id}
+														className="rounded-md border border-border/70 bg-muted/20 p-3 text-sm"
+													>
+														<div className="flex flex-wrap items-start justify-between gap-3">
+															<div className="space-y-1">
+																<p className="font-medium">
+																	{session.clientId || "Public MCP client"}
+																</p>
+																<p className="text-xs text-muted-foreground">
+																	<code>{session.id}</code>
+																</p>
+																<p className="text-muted-foreground">
+																	User: <code>{session.userId}</code>
+																</p>
+															</div>
+															<div className="text-right text-muted-foreground">
+																<p>
+																	Last used:{" "}
+																	{session.lastUsedAt ? (
+																		<LocalizedTimestamp value={session.lastUsedAt} />
+																	) : (
+																		"never"
+																	)}
+																</p>
+																<p>
+																	Expires: <LocalizedTimestamp value={session.expiresAt} />
+																</p>
+																<p>
+																	Status: {session.revokedAt ? "revoked" : "active"}
+																</p>
+															</div>
+														</div>
+														<div className="mt-3 flex flex-wrap items-center gap-3">
+															<p className="text-xs text-muted-foreground">
+																Created: <LocalizedTimestamp value={session.createdAt} />
+															</p>
+															{session.revokedAt ? (
+																<p className="text-xs text-muted-foreground">
+																	Revoked: <LocalizedTimestamp value={session.revokedAt} />
+																</p>
+															) : (
+																<Form method="post">
+																	<input
+																		type="hidden"
+																		name="_action"
+																		value="revoke-session"
+																	/>
+																	<input
+																		type="hidden"
+																		name="sessionId"
+																		value={session.id}
+																	/>
+																	<Button type="submit" variant="outline">
+																		Revoke MCP session
+																	</Button>
+																</Form>
+															)}
+														</div>
+													</div>
+												))}
+											</div>
+										)}
+									</div>
 									<div className="pt-1">
 										<div className="flex flex-wrap gap-2">
 											<Form

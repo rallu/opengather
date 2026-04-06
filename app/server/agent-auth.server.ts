@@ -47,9 +47,45 @@ type AgentAuthDb = {
 			where: { apiKeyHash: string };
 			select: Record<string, unknown>;
 		}) => Promise<AgentAuthRecord | null>;
+		findFirst: (args: {
+			where: { id: string };
+			select: Record<string, unknown>;
+		}) => Promise<AgentAuthRecord | null>;
 		update: (args: {
 			where: { id: string };
 			data: { lastUsedAt: Date };
+		}) => Promise<unknown>;
+	};
+	agentMcpAccessToken: {
+		findUnique: (args: {
+			where: { tokenHash: string };
+			select: Record<string, unknown>;
+		}) => Promise<{
+			id: string;
+			sessionId: string;
+			tokenHash: string;
+			expiresAt: Date;
+			revokedAt: Date | null;
+			lastUsedAt: Date | null;
+			session?: {
+				id: string;
+				agentId: string;
+				userId: string;
+				clientId: string | null;
+				expiresAt: Date;
+				revokedAt: Date | null;
+				lastUsedAt: Date | null;
+			} | null;
+		} | null>;
+		updateMany: (args: {
+			where: { sessionId: string; revokedAt: null };
+			data: Record<string, unknown>;
+		}) => Promise<unknown>;
+	};
+	agentMcpSession: {
+		update: (args: {
+			where: { id: string };
+			data: Record<string, unknown>;
 		}) => Promise<unknown>;
 	};
 	instanceMembership: {
@@ -132,6 +168,37 @@ export function parseAgentBearerToken(params: {
 	};
 }
 
+async function loadAgentRecordById(params: {
+	db: AgentAuthDb;
+	agentId: string;
+}): Promise<AgentAuthRecord | null> {
+	return params.db.agent.findFirst({
+		where: {
+			id: params.agentId,
+		},
+		select: {
+			id: true,
+			instanceId: true,
+			createdByUserId: true,
+			displayName: true,
+			displayLabel: true,
+			description: true,
+			role: true,
+			isEnabled: true,
+			lastUsedAt: true,
+			deletedAt: true,
+			grants: {
+				select: {
+					id: true,
+					resourceType: true,
+					resourceId: true,
+					scope: true,
+				},
+			},
+		},
+	});
+}
+
 export async function authenticateAgentRequest(params: {
 	request: Request;
 	db?: AgentAuthDb;
@@ -145,7 +212,7 @@ export async function authenticateAgentRequest(params: {
 
 	const db = params.db ?? (await import("./db.server.ts")).getDb();
 	const tokenHash = hashAgentToken(parsed.token);
-	const agent = await db.agent.findUnique({
+	let agent = await db.agent.findUnique({
 		where: { apiKeyHash: tokenHash },
 		select: {
 			id: true,
@@ -168,6 +235,22 @@ export async function authenticateAgentRequest(params: {
 			},
 		},
 	});
+
+	if (!agent) {
+		const { findActiveMcpAccessToken } = await import("./agent-oauth.server.ts");
+		const mcpAccessToken = await findActiveMcpAccessToken({
+			accessToken: parsed.token,
+			db: db as never,
+			now: params.now,
+			updateLastUsedAt: params.updateLastUsedAt,
+		});
+		if (mcpAccessToken?.session?.agentId) {
+			agent = await loadAgentRecordById({
+				db: db as AgentAuthDb,
+				agentId: mcpAccessToken.session.agentId,
+			});
+		}
+	}
 
 	if (!agent) {
 		return {
