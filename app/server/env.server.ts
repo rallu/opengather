@@ -23,8 +23,39 @@ export type AppEnv = {
 	APP_BASE_URL: string;
 	DISABLE_SSL: string;
 	MEDIA_LOCAL_ROOT: string;
+	OPENGATHER_BOOTSTRAP: string;
+	OPENGATHER_BREAK_GLASS_EMAIL: string;
+	OPENGATHER_BREAK_GLASS_PASSWORD: string;
+	OPENGATHER_OWNER_HUB_USER_ID: string;
+	OPENGATHER_SERVER_DESCRIPTION: string;
+	OPENGATHER_SERVER_NAME: string;
+	OPENGATHER_VISIBILITY_MODE: string;
+	OPENGATHER_APPROVAL_MODE: string;
+	HUB_CLIENT_ID: string;
+	HUB_CLIENT_SECRET: string;
+	HUB_REDIRECT_URI: string;
 	SECRET_KEY_BASE: string;
 	STORAGE_ROOT: string;
+};
+
+export type HostedBootstrapEnv = {
+	enabled: boolean;
+	appBaseUrl: string;
+	databaseUrl: string;
+	authSecret: string;
+	vapidPublicKey: string;
+	vapidPrivateKey: string;
+	serverName: string;
+	serverDescription: string;
+	visibilityMode: string;
+	approvalMode: string;
+	hubBaseUrl: string;
+	hubClientId: string;
+	hubClientSecret: string;
+	hubRedirectUri: string;
+	ownerHubUserId: string;
+	breakGlassEmail: string;
+	breakGlassPassword: string;
 };
 
 type RuntimeEnv = Partial<DatabaseEnv & HubEnv & AuthEnv & PushEnv & AppEnv>;
@@ -138,6 +169,35 @@ export function getAppEnv(): AppEnv {
 		MEDIA_LOCAL_ROOT:
 			getRuntimeEnvValue("MEDIA_LOCAL_ROOT", "") ||
 			(storageRoot ? path.posix.join(storageRoot, "media") : "./storage/media"),
+		OPENGATHER_BOOTSTRAP: getRuntimeEnvValue("OPENGATHER_BOOTSTRAP", ""),
+		OPENGATHER_BREAK_GLASS_EMAIL: getRuntimeEnvValue(
+			"OPENGATHER_BREAK_GLASS_EMAIL",
+			"",
+		),
+		OPENGATHER_BREAK_GLASS_PASSWORD: getRuntimeEnvValue(
+			"OPENGATHER_BREAK_GLASS_PASSWORD",
+			"",
+		),
+		OPENGATHER_OWNER_HUB_USER_ID: getRuntimeEnvValue(
+			"OPENGATHER_OWNER_HUB_USER_ID",
+			"",
+		),
+		OPENGATHER_SERVER_DESCRIPTION: getRuntimeEnvValue(
+			"OPENGATHER_SERVER_DESCRIPTION",
+			"",
+		),
+		OPENGATHER_SERVER_NAME: getRuntimeEnvValue("OPENGATHER_SERVER_NAME", ""),
+		OPENGATHER_VISIBILITY_MODE: getRuntimeEnvValue(
+			"OPENGATHER_VISIBILITY_MODE",
+			"",
+		),
+		OPENGATHER_APPROVAL_MODE: getRuntimeEnvValue(
+			"OPENGATHER_APPROVAL_MODE",
+			"",
+		),
+		HUB_CLIENT_ID: getRuntimeEnvValue("HUB_CLIENT_ID", ""),
+		HUB_CLIENT_SECRET: getRuntimeEnvValue("HUB_CLIENT_SECRET", ""),
+		HUB_REDIRECT_URI: getRuntimeEnvValue("HUB_REDIRECT_URI", ""),
 		SECRET_KEY_BASE: getRuntimeEnvValue("SECRET_KEY_BASE", ""),
 		STORAGE_ROOT: storageRoot || "./storage",
 	};
@@ -146,4 +206,37 @@ export function getAppEnv(): AppEnv {
 export function isSslDisabled(): boolean {
 	const value = getAppEnv().DISABLE_SSL.trim().toLowerCase();
 	return value === "1" || value === "true" || value === "yes";
+}
+
+export function isHostedBootstrapEnabled(): boolean {
+	const value = getAppEnv().OPENGATHER_BOOTSTRAP.trim().toLowerCase();
+	return value === "1" || value === "true" || value === "yes";
+}
+
+export function getHostedBootstrapEnv(): HostedBootstrapEnv {
+	const appEnv = getAppEnv();
+	const databaseEnv = getDatabaseEnv();
+	const authEnv = getAuthEnv();
+	const pushEnv = getPushEnv();
+	const hubEnv = getHubEnv();
+
+	return {
+		enabled: isHostedBootstrapEnabled(),
+		appBaseUrl: appEnv.APP_BASE_URL.trim(),
+		databaseUrl: databaseEnv.DATABASE_URL.trim(),
+		authSecret: authEnv.BETTER_AUTH_SECRET.trim(),
+		vapidPublicKey: pushEnv.VAPID_PUBLIC_KEY.trim(),
+		vapidPrivateKey: pushEnv.VAPID_PRIVATE_KEY.trim(),
+		serverName: appEnv.OPENGATHER_SERVER_NAME.trim(),
+		serverDescription: appEnv.OPENGATHER_SERVER_DESCRIPTION.trim(),
+		visibilityMode: appEnv.OPENGATHER_VISIBILITY_MODE.trim(),
+		approvalMode: appEnv.OPENGATHER_APPROVAL_MODE.trim(),
+		hubBaseUrl: hubEnv.HUB_BASE_URL.trim(),
+		hubClientId: appEnv.HUB_CLIENT_ID.trim(),
+		hubClientSecret: appEnv.HUB_CLIENT_SECRET.trim(),
+		hubRedirectUri: appEnv.HUB_REDIRECT_URI.trim(),
+		ownerHubUserId: appEnv.OPENGATHER_OWNER_HUB_USER_ID.trim(),
+		breakGlassEmail: appEnv.OPENGATHER_BREAK_GLASS_EMAIL.trim().toLowerCase(),
+		breakGlassPassword: appEnv.OPENGATHER_BREAK_GLASS_PASSWORD,
+	};
 }

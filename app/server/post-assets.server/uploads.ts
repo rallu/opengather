@@ -1,4 +1,8 @@
-import { cleanupParsedMultipartForm } from "../multipart-form.server.ts";
+import {
+	cleanupParsedMultipartForm,
+	parseMultipartForm,
+	type ParsedMultipartForm,
+} from "../multipart-form.server.ts";
 import {
 	MAX_IMAGES_PER_POST,
 	MAX_VIDEO_BYTES,
@@ -13,12 +17,9 @@ export async function extractPostUploadsFromMultipartRequest(params: {
 	bodyText: string;
 	parentPostId?: string;
 	albumTags: string[];
-	uploads: Awaited<
-		ReturnType<typeof import("../multipart-form.server.ts").parseMultipartForm>
-	>["files"];
+	uploads: ParsedMultipartForm["files"];
 	cleanup(): Promise<void>;
 }> {
-	const { parseMultipartForm } = await import("../multipart-form.server.ts");
 	const parsed = await parseMultipartForm({
 		request: params.request,
 		maxFiles: params.maxFiles ?? MAX_IMAGES_PER_POST,

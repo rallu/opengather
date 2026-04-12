@@ -91,6 +91,7 @@ export async function initializeSetup(params: {
 		redirectUri: string;
 		instanceName: string;
 		instanceBaseUrl: string;
+		ownerHubUserId?: string;
 	};
 }): Promise<{ ok: true } | { ok: false; error: string }> {
 	const db = getDb();
@@ -110,6 +111,7 @@ export async function initializeSetup(params: {
 		setConfig("hub_redirect_uri", params.hub.redirectUri),
 		setConfig("hub_instance_name", params.hub.instanceName),
 		setConfig("hub_instance_base_url", params.hub.instanceBaseUrl),
+		setConfig("hosted_owner_hub_user_id", params.hub.ownerHubUserId ?? ""),
 	]);
 
 	writePersistedAppBaseUrl(params.betterAuthUrl);
@@ -195,9 +197,9 @@ export async function initializeSetup(params: {
 			setConfig("server_approval_mode", params.approvalMode),
 		]);
 
-		if (params.hub.enabled) {
+		if (params.hub.enabled && params.hub.ownerHubUserId) {
 			await linkHubInstanceForUser({
-				hubUserId: adminUser.id,
+				hubUserId: params.hub.ownerHubUserId,
 			});
 		}
 	} catch (error) {

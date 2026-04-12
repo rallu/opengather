@@ -11,6 +11,7 @@ test("default notification preferences enable hub only for mentions and replies"
 
 	assert.equal(preferences.matrix.mention.hub, true);
 	assert.equal(preferences.matrix.reply_to_post.hub, true);
+	assert.equal(preferences.matrix.agent_message.hub, false);
 	assert.equal(preferences.matrix.event_reminder.hub, false);
 	assert.equal(preferences.matrix.mention.push, false);
 	assert.equal(preferences.matrix.mention.email, false);

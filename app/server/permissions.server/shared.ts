@@ -2,6 +2,25 @@ export type ViewerRole = "guest" | "member" | "moderator" | "admin";
 
 export type GroupRole = "guest" | "member" | "moderator" | "admin" | "owner";
 
+export type Subject =
+	| { kind: "anonymous" }
+	| { kind: "user"; userId: string }
+	| { kind: "agent"; agentId: string };
+
+export type SubjectResourceScopes = ReadonlyMap<
+	string,
+	ReadonlyMap<string, ReadonlySet<string>>
+>;
+
+export type SubjectContext = {
+	subject: Subject;
+	isAuthenticated: boolean;
+	instanceRole: ViewerRole;
+	groupRoles: ReadonlyMap<string, GroupRole>;
+	scopes: ReadonlySet<string>;
+	resourceScopes?: SubjectResourceScopes;
+};
+
 export type MembershipRecord = {
 	role: string;
 	approvalStatus: string;

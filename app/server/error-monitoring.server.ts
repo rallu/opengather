@@ -1,3 +1,4 @@
+import { getConfig } from "./config.service.server.ts";
 import { logError, logInfo } from "./logger.server.ts";
 
 type ErrorMonitoringConfig = {
@@ -80,8 +81,6 @@ function severityForEvent(event: string): "high" | "medium" | "low" {
 }
 
 export async function loadErrorMonitoringConfig(): Promise<ErrorMonitoringConfig> {
-	const { getConfig } = await import("./config.service.server.ts");
-
 	const [
 		enabled,
 		webhookUrl,

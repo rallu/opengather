@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+	getHostedBootstrapEnv,
 	getHubEnv,
 	getPushEnv,
 	hasHubBaseUrlConfigured,
+	isHostedBootstrapEnabled,
 	hasPushConfig,
 	setRuntimeEnv,
 } from "./env.server.ts";
@@ -76,4 +78,49 @@ test("getPushEnv falls back to a localhost mailto subject", () => {
 		VAPID_SUBJECT: "mailto:admin@localhost",
 	});
 	assert.equal(hasPushConfig(), false);
+});
+
+test("getHostedBootstrapEnv reads hosted bootstrap settings from runtime env", () => {
+	setRuntimeEnv({
+		OPENGATHER_BOOTSTRAP: "true",
+		APP_BASE_URL: "https://garden.opengather.net",
+		DATABASE_URL: "postgres://db.example/opengather",
+		BETTER_AUTH_SECRET: "secret-value",
+		VAPID_PUBLIC_KEY: "vapid-public",
+		VAPID_PRIVATE_KEY: "vapid-private",
+		OPENGATHER_SERVER_NAME: "Garden Club",
+		OPENGATHER_SERVER_DESCRIPTION: "Local garden community",
+		OPENGATHER_VISIBILITY_MODE: "approval",
+		OPENGATHER_APPROVAL_MODE: "manual",
+		HUB_BASE_URL: "https://hub.opengather.net/",
+		HUB_CLIENT_ID: "hub-client",
+		HUB_CLIENT_SECRET: "hub-secret",
+		HUB_REDIRECT_URI:
+			"https://garden.opengather.net/api/auth/oauth2/callback/hub",
+		OPENGATHER_OWNER_HUB_USER_ID: "hub-user-1",
+		OPENGATHER_BREAK_GLASS_EMAIL: "ADMIN@EXAMPLE.COM",
+		OPENGATHER_BREAK_GLASS_PASSWORD: "break-glass-password",
+	});
+
+	assert.equal(isHostedBootstrapEnabled(), true);
+	assert.deepEqual(getHostedBootstrapEnv(), {
+		enabled: true,
+		appBaseUrl: "https://garden.opengather.net",
+		databaseUrl: "postgres://db.example/opengather",
+		authSecret: "secret-value",
+		vapidPublicKey: "vapid-public",
+		vapidPrivateKey: "vapid-private",
+		serverName: "Garden Club",
+		serverDescription: "Local garden community",
+		visibilityMode: "approval",
+		approvalMode: "manual",
+		hubBaseUrl: "https://hub.opengather.net",
+		hubClientId: "hub-client",
+		hubClientSecret: "hub-secret",
+		hubRedirectUri:
+			"https://garden.opengather.net/api/auth/oauth2/callback/hub",
+		ownerHubUserId: "hub-user-1",
+		breakGlassEmail: "admin@example.com",
+		breakGlassPassword: "break-glass-password",
+	});
 });

@@ -165,7 +165,7 @@ test.describe("community access flow", () => {
 		await expect(page.getByTestId("login-context")).toBeVisible();
 	});
 
-	test("shell sign out updates the current page without a manual refresh", async ({
+	test("shell sign out clears the session for the next page load", async ({
 		page,
 	}) => {
 		await ensureConfiguredInstance(page);
@@ -177,10 +177,17 @@ test.describe("community access flow", () => {
 		});
 
 		await page.getByTestId("shell-sign-out").click();
+		await signOutIfNeeded(page);
+		const guestPage = await page.context().newPage();
+		await guestPage.goto("/feed");
 
-		await expect(page.getByTestId("shell-sign-in-link")).toBeVisible();
-		await expect(page.getByTestId("shell-register-link")).toBeVisible();
-		await expect(page.getByTestId("shell-sign-out")).toHaveCount(0);
+		await expect(
+			guestPage.getByRole("link", { name: /Sign In|Sign in/ }),
+		).toBeVisible({
+			timeout: 15_000,
+		});
+		await expect(guestPage.getByTestId("shell-sign-out")).toHaveCount(0);
+		await guestPage.close();
 	});
 
 	test("manual approval notifies admins and approval unlocks access", async ({

@@ -13,6 +13,9 @@ export type NotificationPayloadByKind = {
 		actorUserId: string;
 		postId: string;
 	};
+	agent_message: {
+		agentId: string;
+	};
 	event_reminder: {
 		eventId: string;
 		startsAt: string;

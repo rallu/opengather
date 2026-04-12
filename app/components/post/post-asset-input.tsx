@@ -19,6 +19,7 @@ import { cn } from "~/lib/utils";
 type PostAssetInputProps = {
 	name?: string;
 	albumFieldName?: string;
+	formId?: string;
 	previousAlbums?: string[];
 	inputTestId?: string;
 	albumInputTestId?: string;
@@ -53,6 +54,7 @@ function summarizeSelection(selection: FileSelection) {
 export function PostAssetInput({
 	name = "assets",
 	albumFieldName = "assetAlbums",
+	formId,
 	previousAlbums = [],
 	inputTestId,
 	albumInputTestId,
@@ -101,6 +103,7 @@ export function PostAssetInput({
 			<input
 				type="hidden"
 				name={albumFieldName}
+				form={formId}
 				value={selectedAlbums.join(", ")}
 			/>
 
@@ -134,6 +137,7 @@ export function PostAssetInput({
 							ref={imageInputRef}
 							id={`${name}-images`}
 							name={name}
+							form={formId}
 							type="file"
 							accept="image/*"
 							multiple
@@ -205,6 +209,7 @@ export function PostAssetInput({
 							ref={videoInputRef}
 							id={`${name}-video`}
 							name={name}
+							form={formId}
 							type="file"
 							accept="video/*"
 							data-testid={videoInputTestId}

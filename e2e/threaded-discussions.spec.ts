@@ -283,7 +283,11 @@ test.describe("threaded discussions", () => {
 		await page.goto(`/posts/${thread.rootId}`);
 
 		const rootReplyText = `root-reply-${now}`;
+		await page.getByTestId("post-detail-reply-body").click();
 		await page.getByTestId("post-detail-reply-body").fill(rootReplyText);
+		await expect(page.getByTestId("post-detail-reply-body")).toHaveValue(
+			rootReplyText,
+		);
 		await page.getByTestId("post-detail-reply-submit").click();
 		await expect(page).toHaveURL(new RegExp(`/posts/${thread.rootId}$`));
 		await expect(page.getByTestId("post-detail-reply-body")).toHaveValue("");
@@ -301,7 +305,9 @@ test.describe("threaded discussions", () => {
 		await expect(inlineComposer).toBeVisible();
 
 		const nestedReplyText = `nested-reply-${now}`;
+		await inlineComposer.click();
 		await inlineComposer.fill(nestedReplyText);
+		await expect(inlineComposer).toHaveValue(nestedReplyText);
 		await page
 			.getByTestId(`post-detail-inline-reply-submit-${thread.depth1Id}`)
 			.click();

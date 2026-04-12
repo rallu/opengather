@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { Link, useFetcher, useLocation, useRevalidator } from "react-router";
+import { Link, useFetcher, useLocation } from "react-router";
 import { ShellSearch } from "~/components/search/shell-search";
 import { Button } from "~/components/ui/button";
 import { Container } from "~/components/ui/container";
@@ -13,7 +13,6 @@ import {
 	DialogTitle,
 } from "~/components/ui/dialog";
 import { Icon } from "~/components/ui/icon";
-import { signOut } from "~/lib/auth-client";
 import { cn } from "~/lib/utils";
 
 type NotificationSummaryData = {
@@ -104,35 +103,16 @@ function ShellPanel(props: { children?: ReactNode; className?: string }) {
 
 export function AppShell(props: AppShellProps) {
 	const location = useLocation();
-	const revalidator = useRevalidator();
 	const notificationSummaryFetcher = useFetcher<NotificationSummaryData>();
 	const notificationRefreshKey = `${location.pathname}:${location.search}`;
 	const lastNotificationRefreshKeyRef = useRef<string | null>(null);
 	const lastRouteKeyRef = useRef(notificationRefreshKey);
 	const [mobileNavOpen, setMobileNavOpen] = useState(false);
 	const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
-	const [isSigningOut, setIsSigningOut] = useState(false);
-	const authUser = isSigningOut ? null : props.authUser;
-
-	useEffect(() => {
-		if (!props.authUser) {
-			setIsSigningOut(false);
-		}
-	}, [props.authUser]);
-
-	const handleSignOut = async () => {
-		if (isSigningOut) {
-			return;
-		}
-
-		setIsSigningOut(true);
-		try {
-			await signOut();
-			revalidator.revalidate();
-		} catch {
-			setIsSigningOut(false);
-		}
-	};
+	const authUser = props.authUser;
+	const logoutAction = `/logout?next=${encodeURIComponent(
+		`${location.pathname}${location.search}`,
+	)}`;
 
 	useEffect(() => {
 		if (!authUser) {
@@ -220,22 +200,22 @@ export function AppShell(props: AppShellProps) {
 
 	const authControls = (variant: "desktop" | "mobile") =>
 		authUser ? (
-			<Button
-				variant="ghost"
-				className={cn(
-					"justify-center",
-					variant === "desktop" ? "shrink-0 px-2 sm:px-3" : "w-full",
-				)}
-				size={variant === "desktop" ? "sm" : "default"}
-				onClick={() => {
-					void handleSignOut();
-				}}
-				data-testid={
-					variant === "desktop" ? "shell-sign-out" : "shell-sign-out-mobile"
-				}
-			>
-				Sign Out
-			</Button>
+			<form method="post" action={logoutAction}>
+				<Button
+					type="submit"
+					variant="ghost"
+					className={cn(
+						"justify-center",
+						variant === "desktop" ? "shrink-0 px-2 sm:px-3" : "w-full",
+					)}
+					size={variant === "desktop" ? "sm" : "default"}
+					data-testid={
+						variant === "desktop" ? "shell-sign-out" : "shell-sign-out-mobile"
+					}
+				>
+					Sign Out
+				</Button>
+			</form>
 		) : (
 			<div
 				className={cn(

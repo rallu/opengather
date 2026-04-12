@@ -2,7 +2,10 @@ import {
 	readPersistedAppBaseUrl,
 	writePersistedAppBaseUrl,
 } from "./app-base-url-storage.server.ts";
+import { resetBetterAuthSingleton } from "./auth.server.ts";
+import { getConfig } from "./config.service.server.ts";
 import { hasDatabaseConfig } from "./env.server.ts";
+import { ensureHostedBootstrapReady } from "./hosted-bootstrap.server.ts";
 import { logError } from "./logger.server.ts";
 
 let inFlight: Promise<void> | null = null;
@@ -20,6 +23,8 @@ export function ensureAppBaseUrlReady(): Promise<void> {
 	if (!inFlight) {
 		inFlight = (async () => {
 			try {
+				await ensureHostedBootstrapReady();
+
 				if (readPersistedAppBaseUrl()) {
 					return;
 				}
@@ -28,14 +33,12 @@ export function ensureAppBaseUrlReady(): Promise<void> {
 					return;
 				}
 
-				const { getConfig } = await import("./config.service.server.ts");
 				const fromDb = (await getConfig("better_auth_url")).replace(/\/+$/, "");
 				if (!fromDb) {
 					return;
 				}
 
 				writePersistedAppBaseUrl(fromDb);
-				const { resetBetterAuthSingleton } = await import("./auth.server.ts");
 				resetBetterAuthSingleton();
 			} catch (error) {
 				logError({

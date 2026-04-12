@@ -71,7 +71,9 @@ async function uploadImageToComposer(params: {
 	albums?: string;
 }) {
 	const pngBuffer = await buildPngBuffer();
+	await params.page.getByTestId(params.bodyTestId).click();
 	await params.page.getByTestId(params.bodyTestId).fill(params.text);
+	await expect(params.page.getByTestId(params.bodyTestId)).toHaveValue(params.text);
 	await params.page.getByTestId(params.imageButtonTestId).click();
 	if (params.albumInputTestId && params.albums) {
 		for (const albumName of params.albums
@@ -122,8 +124,8 @@ test("media endpoint keeps public images public and private group images private
 		.filter({ hasText: publicPostText })
 		.first();
 	const publicImageSrc = await publicPost
-		.locator("img")
-		.first()
+		.locator("figure img")
+		.last()
 		.getAttribute("src");
 	expect(publicImageSrc).toBeTruthy();
 	if (!publicImageSrc) {
@@ -166,8 +168,8 @@ test("media endpoint keeps public images public and private group images private
 		.filter({ hasText: privatePostText })
 		.first();
 	const privateImageSrc = await privatePost
-		.locator("img")
-		.first()
+		.locator("figure img")
+		.last()
 		.getAttribute("src");
 	expect(privateImageSrc).toBeTruthy();
 	if (!privateImageSrc) {
@@ -213,6 +215,7 @@ test("image uploads can be tagged into albums", async ({ page }) => {
 	await expect(post).toContainText("Volunteers");
 
 	const followUpPostText = `Album suggestion post ${Date.now()}`;
+	await page.getByTestId("feed-composer").click();
 	await page.getByTestId("feed-composer").fill(followUpPostText);
 	await page.getByTestId("feed-image-button").click();
 	await expect(

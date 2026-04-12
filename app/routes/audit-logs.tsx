@@ -1,69 +1,10 @@
-import type { LoaderFunctionArgs } from "react-router";
 import { Link, useLoaderData } from "react-router";
 import { AppShell } from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
 import { LocalizedTimestamp } from "~/components/ui/localized-timestamp";
-import { getDb } from "~/server/db.server";
-import {
-	canAccessAuditLogs,
-	getViewerContext,
-} from "~/server/permissions.server";
+import type { loader } from "./audit-logs.server";
 
-export async function loader({ request }: LoaderFunctionArgs) {
-	try {
-		const viewer = await getViewerContext({ request });
-		if (!viewer.authUser) {
-			return {
-				status: "unauthenticated" as const,
-				authUser: null,
-				viewerRole: "guest" as const,
-				logs: [],
-			};
-		}
-
-		if (!canAccessAuditLogs({ viewerRole: viewer.viewerRole }).allowed) {
-			return {
-				status: "forbidden" as const,
-				authUser: viewer.authUser,
-				viewerRole: viewer.viewerRole,
-				logs: [],
-			};
-		}
-
-		const db = getDb();
-		const logRows = await db.auditLog.findMany({
-			orderBy: { createdAt: "desc" },
-			take: 200,
-			select: {
-				id: true,
-				createdAt: true,
-				action: true,
-				actorId: true,
-				actorType: true,
-				resourceType: true,
-				resourceId: true,
-				payload: true,
-			},
-		});
-
-		return {
-			status: "ok" as const,
-			authUser: viewer.authUser,
-			viewerRole: viewer.viewerRole,
-			logs: logRows.map((row) => ({
-				...row,
-				payloadText: row.payload ? JSON.stringify(row.payload) : "",
-			})),
-		};
-	} catch {
-		return {
-			status: "error" as const,
-			authUser: null,
-			viewerRole: "guest" as const,
-			logs: [],
-		};
-	}
-}
+export { loader } from "./audit-logs.server";
 
 export default function AuditLogsPage() {
 	const data = useLoaderData<typeof loader>();
@@ -110,16 +51,48 @@ export default function AuditLogsPage() {
 		);
 	}
 
+	const hasFilters =
+		Boolean(data.filters.actorType) ||
+		Boolean(data.filters.actorId) ||
+		Boolean(data.filters.resourceType) ||
+		Boolean(data.filters.resourceId) ||
+		Boolean(data.filters.action);
+
 	return (
 		<AppShell authUser={data.authUser} title="Audit Logs" showServerSettings>
 			<section className="rounded-md border border-border p-4">
-				<div className="mb-3 flex items-center justify-between">
-					<p className="text-sm text-muted-foreground">
-						Showing latest {data.logs.length} entries.
-					</p>
-					<Button variant="outline" asChild>
-						<Link to="/server-settings">Back to Server Settings</Link>
-					</Button>
+				<div className="mb-3 flex items-center justify-between gap-3">
+					<div className="space-y-1">
+						<p className="text-sm text-muted-foreground">
+							Showing latest {data.logs.length} entries.
+						</p>
+						{hasFilters ? (
+							<p className="text-xs text-muted-foreground">
+								Filtered
+								{data.filters.actorType
+									? ` actorType=${data.filters.actorType}`
+									: ""}
+								{data.filters.actorId ? ` actorId=${data.filters.actorId}` : ""}
+								{data.filters.resourceType
+									? ` resourceType=${data.filters.resourceType}`
+									: ""}
+								{data.filters.resourceId
+									? ` resourceId=${data.filters.resourceId}`
+									: ""}
+								{data.filters.action ? ` action=${data.filters.action}` : ""}
+							</p>
+						) : null}
+					</div>
+					<div className="flex gap-2">
+						{hasFilters ? (
+							<Button variant="outline" asChild>
+								<Link to="/audit-logs">Clear filters</Link>
+							</Button>
+						) : null}
+						<Button variant="outline" asChild>
+							<Link to="/server-settings">Back to Server Settings</Link>
+						</Button>
+					</div>
 				</div>
 				<div className="overflow-x-auto">
 					<table className="w-full min-w-[900px] border-collapse text-sm">
@@ -152,18 +125,10 @@ export default function AuditLogsPage() {
 											<code>{row.action}</code>
 										</td>
 										<td className="px-2 py-2">
-											<code>{row.actorType}</code>
-											{row.actorId ? `:${row.actorId}` : ""}
+											<code>{row.actorLabel}</code>
 										</td>
 										<td className="px-2 py-2">
-											{row.resourceType ? (
-												<>
-													<code>{row.resourceType}</code>
-													{row.resourceId ? `:${row.resourceId}` : ""}
-												</>
-											) : (
-												"-"
-											)}
+											<code>{row.resourceLabel}</code>
 										</td>
 										<td className="px-2 py-2 text-xs text-muted-foreground">
 											{row.payloadText || "-"}

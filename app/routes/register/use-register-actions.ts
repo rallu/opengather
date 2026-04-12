@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { signIn, signUp } from "~/lib/auth-client";
+import { getSession, signIn, signUp } from "~/lib/auth-client";
 import { formatAuthErrorMessage } from "~/lib/auth-error";
 
 export function useRegisterActions(params: {
@@ -8,7 +7,6 @@ export function useRegisterActions(params: {
 	hubAuthEnabled: boolean;
 	nextPath: string;
 }) {
-	const navigate = useNavigate();
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -16,6 +14,19 @@ export function useRegisterActions(params: {
 	const [loading, setLoading] = useState(false);
 	const [socialLoading, setSocialLoading] = useState(false);
 	const [hubLoading, setHubLoading] = useState(false);
+
+	const finishLocalRegistration = async () => {
+		for (let attempt = 0; attempt < 10; attempt += 1) {
+			const session = await getSession();
+			if (session?.data?.session && session.data.user) {
+				window.location.assign(params.nextPath);
+				return;
+			}
+			await new Promise((resolve) => window.setTimeout(resolve, 100));
+		}
+
+		throw new Error("Registered, but the session did not become active.");
+	};
 
 	const handleSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
@@ -32,9 +43,11 @@ export function useRegisterActions(params: {
 				return;
 			}
 
-			navigate(params.nextPath);
-		} catch {
-			setError("An unexpected error occurred");
+			await finishLocalRegistration();
+		} catch (error) {
+			setError(
+				error instanceof Error ? error.message : "An unexpected error occurred",
+			);
 		} finally {
 			setLoading(false);
 		}

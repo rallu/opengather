@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
+import { getDb } from "./db.server.ts";
 import { logError } from "./logger.server.ts";
 import { getRequestIp } from "./rate-limit.server.ts";
+import { getSetupInstanceId } from "./setup.service.server.ts";
 
 export type AuditActor = {
 	id?: string;
-	type: "user" | "system";
+	type: "agent" | "user" | "system";
 };
 
 export async function writeAuditLog(params: {
@@ -21,7 +23,7 @@ export async function writeAuditLog(params: {
 					id: string;
 					instanceId: string | null;
 					actorId: string | undefined;
-					actorType: "user" | "system";
+					actorType: "agent" | "user" | "system";
 					action: string;
 					resourceType: string | undefined;
 					resourceId: string | undefined;
@@ -32,15 +34,11 @@ export async function writeAuditLog(params: {
 	};
 	instanceId?: string | null;
 }): Promise<void> {
-	const db = params.db ?? (await import("./db.server.ts")).getDb();
-	const instanceId = (() => {
-		if (params.instanceId !== undefined) {
-			return Promise.resolve(params.instanceId);
-		}
-		return import("./setup.service.server.ts").then((module) =>
-			module.getSetupInstanceId(),
-		);
-	})();
+	const db = params.db ?? getDb();
+	const instanceId =
+		params.instanceId !== undefined
+			? params.instanceId
+			: await getSetupInstanceId();
 	const requestContext = params.request
 		? {
 				method: params.request.method,
@@ -53,7 +51,7 @@ export async function writeAuditLog(params: {
 	await db.auditLog.create({
 		data: {
 			id: randomUUID(),
-			instanceId: await instanceId,
+			instanceId,
 			actorId: params.actor.id,
 			actorType: params.actor.type,
 			action: params.action,
@@ -81,7 +79,7 @@ export async function writeAuditLogSafely(params: {
 					id: string;
 					instanceId: string | null;
 					actorId: string | undefined;
-					actorType: "user" | "system";
+					actorType: "agent" | "user" | "system";
 					action: string;
 					resourceType: string | undefined;
 					resourceId: string | undefined;

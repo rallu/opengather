@@ -4,6 +4,7 @@ import type {
 	GroupRole,
 	GroupVisibilityMode,
 } from "../permissions.server.ts";
+import { getGroupMembership } from "../group-membership.service.server.ts";
 
 export type AuthUser = {
 	id: string;
@@ -57,9 +58,6 @@ export async function getMembershipStatus(params: {
 		return "none";
 	}
 
-	const { getGroupMembership } = await import(
-		"../group-membership.service.server.ts"
-	);
 	const membership = await getGroupMembership({
 		groupId: params.groupId,
 		userId: params.userId,

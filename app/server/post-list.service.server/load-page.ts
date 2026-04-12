@@ -124,6 +124,7 @@ export async function loadPostListPage(params: {
 				p.id,
 				p.parent_post_id,
 				p.author_id,
+				p.author_type,
 				p.body_text,
 				p.group_id,
 				p.moderation_status,
@@ -150,6 +151,7 @@ export async function loadPostListPage(params: {
 				v.id,
 				v.parent_post_id,
 				v.author_id,
+				v.author_type,
 				v.body_text,
 				v.group_id,
 				g.name AS group_name,
@@ -168,6 +170,7 @@ export async function loadPostListPage(params: {
 			root_posts.id,
 			root_posts.parent_post_id AS "parentPostId",
 			root_posts.author_id AS "authorId",
+			root_posts.author_type AS "authorType",
 			root_posts.body_text AS "bodyText",
 			root_posts.group_id AS "groupId",
 			root_posts.group_name AS "groupName",
@@ -189,13 +192,20 @@ export async function loadPostListPage(params: {
 		postIds: pageRows.map((row) => row.id),
 	});
 	const authorMap = await loadPostAuthorSummaryMap({
-		authorIds: pageRows.map((row) => row.authorId),
+		authors: pageRows.map((row) => ({
+			id: row.authorId,
+			type: row.authorType,
+		})),
 	});
 	const items = pageRows.map((row) => ({
 		...mapPostListItem(
 			row,
 			params.sortMode,
-			authorMap.get(row.authorId) ?? { id: row.authorId, name: "Member" },
+			authorMap.get(row.authorId) ?? {
+				id: row.authorId,
+				name: row.authorType === "agent" ? "Agent" : "Member",
+				kind: row.authorType === "agent" ? "agent" : "user",
+			},
 		),
 		assets: assetMap.get(row.id) ?? [],
 	}));

@@ -1,3 +1,4 @@
+import { getDb } from "./db.server.ts";
 type LabelValue = string | number | boolean;
 
 type LabelSet = Record<string, LabelValue>;
@@ -172,7 +173,6 @@ export async function getMetricsSnapshot(): Promise<string> {
 
 	let databaseUp = false;
 	try {
-		const { getDb } = await import("./db.server.ts");
 		await getDb().$queryRaw`SELECT 1`;
 		databaseUp = true;
 	} catch {
