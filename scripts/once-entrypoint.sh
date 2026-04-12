@@ -122,6 +122,7 @@ SQL
 fi
 
 npm run prisma:sync
+npm run bootstrap:hosted
 
 npm run worker:media &
 WORKER_PID=$!

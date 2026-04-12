@@ -1,9 +1,11 @@
 import { ensureAppBaseUrlReady } from "./app-base-url-bootstrap.server.ts";
 import { getBetterAuth } from "./auth.server.ts";
+import { ensureHostedOwnerAdminClaim } from "./hosted-owner-claim.server.ts";
 import {
 	getHubIdentityForLocalUser,
 	linkHubInstanceForUser,
 } from "./hub.service.server.ts";
+import { logError } from "./logger.server.ts";
 import { ensureUserHasStoredProfileImage } from "./profile-defaults.server.ts";
 
 export function parseCookieHeader(params: {
@@ -52,11 +54,28 @@ export async function getAuthUserFromRequest(params: {
 		const hubIdentity = await getHubIdentityForLocalUser({
 			localUserId: session.user.id,
 		});
-		if (hubIdentity?.hubAccessToken && hubIdentity.hubUserId) {
-			await linkHubInstanceForUser({
-				hubAccessToken: hubIdentity.hubAccessToken,
-				hubUserId: hubIdentity.hubUserId,
-			});
+		if (hubIdentity?.hubUserId) {
+			try {
+				await ensureHostedOwnerAdminClaim({
+					localUserId: session.user.id,
+					hubUserId: hubIdentity.hubUserId,
+				});
+				if (hubIdentity.hubAccessToken) {
+					await linkHubInstanceForUser({
+						hubAccessToken: hubIdentity.hubAccessToken,
+						hubUserId: hubIdentity.hubUserId,
+					});
+				}
+			} catch (error) {
+				logError({
+					event: "session.hub_identity_sync_failed",
+					data: {
+						localUserId: session.user.id,
+						hubUserId: hubIdentity.hubUserId,
+						error: error instanceof Error ? error.message : "unknown error",
+					},
+				});
+			}
 		}
 
 		return {

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { getDb } from "./db.server.ts";
 import { revokeAgentMcpSessionsForAgent } from "./agent.service.server.mcp.ts";
 import {
 	type AgentGrantSummary,
@@ -46,8 +47,7 @@ export async function createAgent(params: {
 	generateId?: () => string;
 	generateToken?: () => string;
 }): Promise<{ agentId: string; token: string }> {
-	const db = (params.db ??
-		(await import("./db.server.ts")).getDb()) as AgentServiceDb;
+	const db = (params.db ?? getDb()) as AgentServiceDb;
 	const instanceId = await resolveAgentInstanceId({
 		instanceId: params.instanceId,
 	});
@@ -152,7 +152,7 @@ export async function rotateAgentToken(params: {
 	now?: Date;
 	generateToken?: () => string;
 }): Promise<{ agentId: string; token: string }> {
-	const db = params.db ?? (await import("./db.server.ts")).getDb();
+	const db = params.db ?? getDb();
 	const token = (params.generateToken ?? (() => generateAgentToken()))();
 	await db.agent.update({
 		where: { id: params.agentId },
@@ -172,7 +172,7 @@ export async function disableAgent(params: {
 	db?: AgentServiceDb;
 	now?: Date;
 }): Promise<{ agentId: string; disabled: true }> {
-	const db = params.db ?? (await import("./db.server.ts")).getDb();
+	const db = params.db ?? getDb();
 	const now = params.now ?? new Date();
 	await db.agent.update({
 		where: { id: params.agentId },
@@ -202,8 +202,7 @@ export async function listAgents(params?: {
 	instanceId?: string;
 	db?: AgentServiceDb;
 }): Promise<AgentSummary[]> {
-	const db = (params?.db ??
-		(await import("./db.server.ts")).getDb()) as AgentServiceDb;
+	const db = (params?.db ?? getDb()) as AgentServiceDb;
 	const instanceId = await resolveAgentInstanceId({
 		instanceId: params?.instanceId,
 	});
@@ -234,8 +233,7 @@ export async function setAgentGrants(params: {
 	now?: Date;
 	generateId?: () => string;
 }): Promise<{ agentId: string; grants: AgentGrantSummary[] }> {
-	const db = (params.db ??
-		(await import("./db.server.ts")).getDb()) as AgentServiceDb;
+	const db = (params.db ?? getDb()) as AgentServiceDb;
 	const now = params.now ?? new Date();
 	const generateId = params.generateId ?? randomUUID;
 	const grants = normalizeGrantInputs(params.grants);

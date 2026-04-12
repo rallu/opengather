@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { loadAgentGroups } from "../routes/api-agents-v1-groups.ts";
-import { createAgentGroupPost } from "../routes/api-agents-v1-groups-group-posts.ts";
-import { loadAgentMe } from "../routes/api-agents-v1-me.ts";
+import { loadAgentGroups } from "../routes/api-agents-v1-groups.server.ts";
+import { createAgentGroupPost } from "../routes/api-agents-v1-groups-group-posts.server.ts";
+import { loadAgentMe } from "../routes/api-agents-v1-me.server.ts";
 import { createAgent, rotateAgentToken } from "./agent.service.server.ts";
 import { authenticateAgentRequest } from "./agent-auth.server.ts";
 import { loadPostAuthorSummaryMap } from "./post-author.service.server.ts";
@@ -287,6 +287,13 @@ function createIntegrationHarness() {
 				return { count: 1 };
 			},
 		},
+		agentMcpAccessToken: {
+			findUnique: async () => null,
+			updateMany: async () => ({ count: 0 }),
+		},
+		agentMcpSession: {
+			update: async () => null,
+		},
 		instanceMembership: {
 			create: async (args: { data: Record<string, unknown> }) => {
 				state.instanceMemberships.push(
@@ -540,7 +547,8 @@ test("agent API integration supports a Codex-style client flow", async () => {
 			token,
 			requestId: "req-integration-me",
 		}),
-		authenticate: ({ request }) => harness.authenticate(request),
+		authenticate: ({ request }: { request: Request }) =>
+			harness.authenticate(request),
 		rateLimit: harness.allowRateLimit,
 	});
 	assert.equal(meResponse.status, 200);
@@ -564,7 +572,8 @@ test("agent API integration supports a Codex-style client flow", async () => {
 			token,
 			requestId: "req-integration-groups",
 		}),
-		authenticate: ({ request }) => harness.authenticate(request),
+		authenticate: ({ request }: { request: Request }) =>
+			harness.authenticate(request),
 		db: harness.db as never,
 		rateLimit: harness.allowRateLimit,
 	});
@@ -593,7 +602,8 @@ test("agent API integration supports a Codex-style client flow", async () => {
 			requestId: "req-integration-post",
 		}),
 		groupId: "group-1",
-		authenticate: ({ request }) => harness.authenticate(request),
+		authenticate: ({ request }: { request: Request }) =>
+			harness.authenticate(request),
 		db: harness.db as never,
 		rateLimit: harness.allowRateLimit,
 		writeAuditLog: harness.writeAuditLog as never,
@@ -640,7 +650,8 @@ test("agent API integration returns only granted private groups", async () => {
 			token,
 			requestId: "req-private-groups",
 		}),
-		authenticate: ({ request }) => harness.authenticate(request),
+		authenticate: ({ request }: { request: Request }) =>
+			harness.authenticate(request),
 		db: harness.db as never,
 		rateLimit: harness.allowRateLimit,
 	});
@@ -683,7 +694,8 @@ test("agent API integration blocks posting without group.post scope", async () =
 			requestId: "req-no-group-post",
 		}),
 		groupId: "group-1",
-		authenticate: ({ request }) => harness.authenticate(request),
+		authenticate: ({ request }: { request: Request }) =>
+			harness.authenticate(request),
 		db: harness.db as never,
 		rateLimit: harness.allowRateLimit,
 		writeAuditLog: harness.writeAuditLog as never,
@@ -725,7 +737,8 @@ test("agent API integration revokes old bearer tokens immediately after rotation
 			token: created.token,
 			requestId: "req-old-token-before-rotate",
 		}),
-		authenticate: ({ request }) => harness.authenticate(request),
+		authenticate: ({ request }: { request: Request }) =>
+			harness.authenticate(request),
 		rateLimit: harness.allowRateLimit,
 	});
 	assert.equal(initialResponse.status, 200);
@@ -744,7 +757,8 @@ test("agent API integration revokes old bearer tokens immediately after rotation
 			token: created.token,
 			requestId: "req-old-token-after-rotate",
 		}),
-		authenticate: ({ request }) => harness.authenticate(request),
+		authenticate: ({ request }: { request: Request }) =>
+			harness.authenticate(request),
 		rateLimit: harness.allowRateLimit,
 	});
 	assert.equal(revokedResponse.status, 401);
@@ -765,7 +779,8 @@ test("agent API integration revokes old bearer tokens immediately after rotation
 			token: rotated.token,
 			requestId: "req-new-token-after-rotate",
 		}),
-		authenticate: ({ request }) => harness.authenticate(request),
+		authenticate: ({ request }: { request: Request }) =>
+			harness.authenticate(request),
 		rateLimit: harness.allowRateLimit,
 	});
 	assert.equal(replacementResponse.status, 200);
@@ -799,7 +814,8 @@ test("agent-authored integration content resolves agent identity for visible lab
 			requestId: "req-visible-agent-label",
 		}),
 		groupId: "group-1",
-		authenticate: ({ request }) => harness.authenticate(request),
+		authenticate: ({ request }: { request: Request }) =>
+			harness.authenticate(request),
 		db: harness.db as never,
 		rateLimit: harness.allowRateLimit,
 		writeAuditLog: harness.writeAuditLog as never,

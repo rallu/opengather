@@ -2,14 +2,14 @@ import type {
 	AgentMcpSessionSummary,
 	AgentServiceDb,
 } from "./agent.service.server.shared.ts";
+import { getDb } from "./db.server.ts";
 import { resolveAgentInstanceId } from "./agent.service.server.shared.ts";
 
 export async function listAgentMcpSessions(params?: {
 	instanceId?: string;
 	db?: AgentServiceDb;
 }): Promise<AgentMcpSessionSummary[]> {
-	const db = (params?.db ??
-		(await import("./db.server.ts")).getDb()) as AgentServiceDb;
+	const db = (params?.db ?? getDb()) as AgentServiceDb;
 	const instanceId = await resolveAgentInstanceId({
 		instanceId: params?.instanceId,
 	});
@@ -47,8 +47,7 @@ export async function revokeAgentMcpSession(params: {
 	db?: AgentServiceDb;
 	now?: Date;
 }): Promise<{ sessionId: string; revoked: true }> {
-	const db = (params.db ??
-		(await import("./db.server.ts")).getDb()) as AgentServiceDb;
+	const db = (params.db ?? getDb()) as AgentServiceDb;
 	const now = params.now ?? new Date();
 
 	await db.$transaction(async (trx) => {
@@ -90,8 +89,7 @@ export async function revokeAgentMcpSessionsForAgent(params: {
 	db?: AgentServiceDb;
 	now?: Date;
 }): Promise<{ agentId: string; revokedSessionIds: string[] }> {
-	const db = (params.db ??
-		(await import("./db.server.ts")).getDb()) as AgentServiceDb;
+	const db = (params.db ?? getDb()) as AgentServiceDb;
 	const now = params.now ?? new Date();
 	const sessions = await db.agentMcpSession.findMany({
 		where: {

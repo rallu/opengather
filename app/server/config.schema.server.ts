@@ -37,6 +37,7 @@ export type ConfigValueByKey = {
 	error_monitoring_alert_webhook_url: string;
 	error_monitoring_sample_rate: number;
 	error_monitoring_dedupe_window_seconds: number;
+	hosted_owner_hub_user_id: string;
 };
 
 export type ConfigKey = keyof ConfigValueByKey;
@@ -245,6 +246,10 @@ export const configDefinitions: { [K in ConfigKey]: ConfigDefinition<K> } = {
 	error_monitoring_dedupe_window_seconds: {
 		defaultValue: 60,
 		parse: (raw) => parseNumber(raw, 60),
+	},
+	hosted_owner_hub_user_id: {
+		defaultValue: "",
+		parse: (raw) => parseString(raw),
 	},
 };
 

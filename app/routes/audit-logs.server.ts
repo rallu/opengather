@@ -1,4 +1,5 @@
 import type { LoaderFunctionArgs } from "react-router";
+import { getDb } from "~/server/db.server";
 import {
 	canAccessAuditLogs,
 	getViewerContext,
@@ -119,7 +120,6 @@ export async function loadAuditLogs(
 	const logRows = await (
 		deps?.findLogs ??
 		(async ({ where: queryWhere }: { where: Record<string, string> }) => {
-			const { getDb } = await import("~/server/db.server");
 			return getDb().auditLog.findMany({
 				where: queryWhere,
 				orderBy: { createdAt: "desc" },

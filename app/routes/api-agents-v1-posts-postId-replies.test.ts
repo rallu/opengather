@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createAgentReply } from "./api-agents-v1-posts-postId-replies.ts";
+import { createAgentReply } from "./api-agents-v1-posts-postId-replies.server.ts";
 
 test("createAgentReply validates JSON body", async () => {
 	const response = await createAgentReply({

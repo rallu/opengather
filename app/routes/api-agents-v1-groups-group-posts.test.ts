@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createAgentGroupPost } from "./api-agents-v1-groups-group-posts.ts";
+import { createAgentGroupPost } from "./api-agents-v1-groups-group-posts.server.ts";
 
 test("createAgentGroupPost validates JSON body", async () => {
 	const response = await createAgentGroupPost({

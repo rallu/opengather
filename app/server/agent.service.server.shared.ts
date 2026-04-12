@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { getSetupInstanceId } from "./setup.service.server.ts";
 
 export type AgentServiceDb = {
 	$transaction: <T>(
@@ -181,11 +182,7 @@ export function generateAgentToken(params?: {
 export async function resolveAgentInstanceId(params?: {
 	instanceId?: string;
 }): Promise<string> {
-	const instanceId =
-		params?.instanceId ??
-		(await import("./setup.service.server.ts").then((module) =>
-			module.getSetupInstanceId(),
-		));
+	const instanceId = params?.instanceId ?? (await getSetupInstanceId());
 	if (!instanceId) {
 		throw new Error("Setup must be completed before continuing.");
 	}

@@ -111,6 +111,7 @@ export async function action({
 					: "",
 				instanceName: hubEnabled ? name : "",
 				instanceBaseUrl: hubEnabled ? appOrigin : "",
+				ownerHubUserId: "",
 			},
 		});
 

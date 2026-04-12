@@ -1,6 +1,7 @@
 import { Readable } from "node:stream";
 
 import { getAssetStorage } from "../asset-storage.server.ts";
+import { ensureInstanceMembershipForUser } from "../community.service.server.ts";
 import { getConfig } from "../config.service.server.ts";
 import { getDb } from "../db.server.ts";
 import {
@@ -32,9 +33,6 @@ async function resolveAssetAccess(params: {
 	const authUser = await getAuthUserFromRequest({ request: params.request });
 	const setup = await getSetupStatus();
 	if (authUser && setup.isSetup && setup.instance) {
-		const { ensureInstanceMembershipForUser } = await import(
-			"../community.service.server.ts"
-		);
 		await ensureInstanceMembershipForUser({
 			instanceId: params.post.instanceId,
 			approvalMode: setup.instance.approvalMode,

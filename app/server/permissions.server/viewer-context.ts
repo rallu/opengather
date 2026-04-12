@@ -1,10 +1,12 @@
+import { getDb } from "../db.server.ts";
+import { getAuthUserFromRequest } from "../session.server.ts";
+import { getSetupStatus } from "../setup.service.server.ts";
 import { resolveViewerRoleFromMembership, type ViewerRole } from "./shared.ts";
 
 export async function getInstanceViewerRole(params: {
 	instanceId: string;
 	userId: string;
 }): Promise<ViewerRole> {
-	const { getDb } = await import("../db.server.ts");
 	const membership = await getDb().instanceMembership.findFirst({
 		where: {
 			instanceId: params.instanceId,
@@ -36,11 +38,6 @@ export async function getViewerContext(params: { request: Request }): Promise<{
 	};
 	viewerRole: ViewerRole;
 }> {
-	const [{ getAuthUserFromRequest }, { getSetupStatus }] = await Promise.all([
-		import("../session.server.ts"),
-		import("../setup.service.server.ts"),
-	]);
-
 	const authUser = await getAuthUserFromRequest({ request: params.request });
 	const setup = await getSetupStatus();
 

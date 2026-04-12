@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { getDb } from "./db.server.ts";
+import { findActiveMcpAccessToken } from "./agent-oauth.server.ts";
 import {
 	type GroupRole,
 	resolveGroupRoleFromMembership,
@@ -210,7 +212,7 @@ export async function authenticateAgentRequest(params: {
 		return parsed;
 	}
 
-	const db = params.db ?? (await import("./db.server.ts")).getDb();
+	const db = params.db ?? getDb();
 	const tokenHash = hashAgentToken(parsed.token);
 	let agent = await db.agent.findUnique({
 		where: { apiKeyHash: tokenHash },
@@ -237,9 +239,6 @@ export async function authenticateAgentRequest(params: {
 	});
 
 	if (!agent) {
-		const { findActiveMcpAccessToken } = await import(
-			"./agent-oauth.server.ts"
-		);
 		const mcpAccessToken = await findActiveMcpAccessToken({
 			accessToken: parsed.token,
 			db: db as never,

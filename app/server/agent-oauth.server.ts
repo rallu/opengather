@@ -4,6 +4,7 @@ import {
 	randomUUID,
 	timingSafeEqual,
 } from "node:crypto";
+import { getDb } from "./db.server.ts";
 import {
 	type AccessTokenRecord,
 	type AgentOauthDb,
@@ -52,8 +53,7 @@ export async function createMcpAuthorizationCode(params: {
 	code: string;
 	expiresAt: Date;
 }> {
-	const db = (params.db ??
-		(await import("./db.server.ts")).getDb()) as AgentOauthDb;
+	const db = (params.db ?? getDb()) as AgentOauthDb;
 	const now = params.now ?? new Date();
 	const generateId = params.generateId ?? randomUUID;
 	const code = (
@@ -93,8 +93,7 @@ export async function exchangeMcpAuthorizationCode(params: {
 	generateId?: () => string;
 	generateToken?: (prefix: string) => string;
 }): Promise<AgentOauthTokenBundle> {
-	const db = (params.db ??
-		(await import("./db.server.ts")).getDb()) as AgentOauthDb;
+	const db = (params.db ?? getDb()) as AgentOauthDb;
 	const now = params.now ?? new Date();
 	const generateId = params.generateId ?? randomUUID;
 	const generateToken =
@@ -171,8 +170,7 @@ export async function refreshMcpSessionTokens(params: {
 	generateId?: () => string;
 	generateToken?: (prefix: string) => string;
 }): Promise<AgentOauthTokenBundle> {
-	const db = (params.db ??
-		(await import("./db.server.ts")).getDb()) as AgentOauthDb;
+	const db = (params.db ?? getDb()) as AgentOauthDb;
 	const now = params.now ?? new Date();
 	const generateId = params.generateId ?? randomUUID;
 	const generateToken =
@@ -235,8 +233,7 @@ export async function revokeMcpSession(params: {
 	db?: AgentOauthDb;
 	now?: Date;
 }): Promise<{ sessionId: string; revoked: true }> {
-	const db = (params.db ??
-		(await import("./db.server.ts")).getDb()) as AgentOauthDb;
+	const db = (params.db ?? getDb()) as AgentOauthDb;
 	const now = params.now ?? new Date();
 
 	await db.$transaction(
@@ -285,8 +282,7 @@ export async function findActiveMcpAccessToken(params: {
 	now?: Date;
 	updateLastUsedAt?: boolean;
 }): Promise<AccessTokenRecord | null> {
-	const db = (params.db ??
-		(await import("./db.server.ts")).getDb()) as AgentOauthDb;
+	const db = (params.db ?? getDb()) as AgentOauthDb;
 	const now = params.now ?? new Date();
 	const record = await db.agentMcpAccessToken.findUnique({
 		where: {

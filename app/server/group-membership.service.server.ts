@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { getDb } from "./db.server.ts";
 import type { GroupRole, GroupVisibilityMode } from "./permissions.server.ts";
 import { resolveGroupRoleFromMembership } from "./permissions.server.ts";
 
@@ -53,11 +54,6 @@ type GroupMembershipDb = {
 	};
 };
 
-async function getDefaultDb(): Promise<GroupMembershipDb> {
-	const { getDb } = await import("./db.server.ts");
-	return getDb();
-}
-
 export function parseGroupVisibilityMode(raw: unknown): GroupVisibilityMode {
 	if (
 		typeof raw === "string" &&
@@ -76,7 +72,7 @@ export async function getGroupVisibility(params: {
 	groupId: string;
 	db?: GroupMembershipDb;
 }): Promise<GroupVisibilityMode> {
-	const db = params.db ?? (await getDefaultDb());
+	const db = params.db ?? getDb();
 	const group = await db.communityGroup.findUnique({
 		where: { id: params.groupId },
 		select: { visibilityMode: true },
@@ -90,7 +86,7 @@ export async function getGroupMembership(params: {
 	userId: string;
 	db?: GroupMembershipDb;
 }): Promise<GroupMembershipRecord> {
-	const db = params.db ?? (await getDefaultDb());
+	const db = params.db ?? getDb();
 	const membership = await db.groupMembership.findFirst({
 		where: {
 			groupId: params.groupId,
@@ -126,7 +122,7 @@ export async function ensureGroupMembership(params: {
 		approvalStatus: string;
 	};
 }> {
-	const db = params.db ?? (await getDefaultDb());
+	const db = params.db ?? getDb();
 	const existing = await db.groupMembership.findFirst({
 		where: {
 			groupId: params.groupId,

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { hideAgentPost } from "./api-agents-v1-posts-postId-hide.ts";
+import { hideAgentPost } from "./api-agents-v1-posts-postId-hide.server.ts";
 
 test("hideAgentPost rejects non-admin agents", async () => {
 	const response = await hideAgentPost({

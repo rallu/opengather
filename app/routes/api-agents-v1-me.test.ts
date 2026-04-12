@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { loadAgentMe } from "./api-agents-v1-me.ts";
+import { loadAgentMe } from "./api-agents-v1-me.server.ts";
 
 test("loadAgentMe returns machine-readable auth failures", async () => {
 	const response = await loadAgentMe({

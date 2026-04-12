@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { handleMcpTokenRequest } from "./mcp-token.ts";
+import { handleMcpTokenRequest } from "./mcp-token.server.ts";
 
 test("MCP token endpoint exchanges authorization codes", async () => {
 	const response = await handleMcpTokenRequest({

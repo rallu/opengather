@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createAgentNotification } from "./api-agents-v1-notifications.ts";
+import { createAgentNotification } from "./api-agents-v1-notifications.server.ts";
 
 test("createAgentNotification validates required fields", async () => {
 	const response = await createAgentNotification({

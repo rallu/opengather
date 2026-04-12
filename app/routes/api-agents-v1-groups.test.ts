@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { loadAgentGroups } from "./api-agents-v1-groups.ts";
+import { loadAgentGroups } from "./api-agents-v1-groups.server.ts";
 
 test("loadAgentGroups returns machine-readable auth failures", async () => {
 	const response = await loadAgentGroups({

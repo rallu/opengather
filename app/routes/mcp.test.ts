@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { handleAgentMcpHttpRequest } from "./mcp.ts";
+import { handleAgentMcpHttpRequest } from "./mcp.server.ts";
 
 test("MCP HTTP route returns 405 for GET when SSE is not offered", async () => {
 	const response = await handleAgentMcpHttpRequest({
