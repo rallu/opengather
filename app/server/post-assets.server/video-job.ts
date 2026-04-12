@@ -130,14 +130,17 @@ export async function processVideoJob(params: {
 	sourceStorageKey: string;
 }): Promise<void> {
 	const storage = await getAssetStorage();
-	const sourcePath = await storage.resolvePath({
-		key: params.sourceStorageKey,
-	});
 	const tempDir = await mkdtemp(path.join(os.tmpdir(), "opengather-video-"));
+	const sourcePath = path.join(tempDir, "source");
 	const playbackPath = path.join(tempDir, "playback.mp4");
 	const posterPath = path.join(tempDir, "poster.png");
 
 	try {
+		await storage.materializeToFile({
+			key: params.sourceStorageKey,
+			filePath: sourcePath,
+		});
+
 		await runCommand("ffmpeg", [
 			"-y",
 			"-i",

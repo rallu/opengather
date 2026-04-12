@@ -3,6 +3,7 @@ import {
 	hasDatabaseConfig,
 	type HostedBootstrapEnv,
 } from "./env.server.ts";
+import { registerInstanceWithHub } from "./hub.service.server.ts";
 import { logError, logInfo } from "./logger.server.ts";
 import { getSetupStatus, initializeSetup } from "./setup.service.server.ts";
 
@@ -29,8 +30,6 @@ export function validateHostedBootstrapEnv(
 		["OPENGATHER_VISIBILITY_MODE", env.visibilityMode],
 		["OPENGATHER_APPROVAL_MODE", env.approvalMode],
 		["HUB_BASE_URL", env.hubBaseUrl],
-		["HUB_CLIENT_ID", env.hubClientId],
-		["HUB_CLIENT_SECRET", env.hubClientSecret],
 		["HUB_REDIRECT_URI", env.hubRedirectUri],
 		["OPENGATHER_OWNER_HUB_USER_ID", env.ownerHubUserId],
 		["OPENGATHER_BREAK_GLASS_EMAIL", env.breakGlassEmail],
@@ -49,12 +48,43 @@ export function validateHostedBootstrapEnv(
 	return env as ValidHostedBootstrapEnv;
 }
 
+async function resolveHostedHubRegistration(
+	env: ValidHostedBootstrapEnv,
+	deps?: {
+		registerInstanceWithHub?: typeof registerInstanceWithHub;
+	},
+) {
+	if (env.hubClientId && env.hubClientSecret) {
+		return {
+			hubClientId: env.hubClientId,
+			hubClientSecret: env.hubClientSecret,
+			hubOidcDiscoveryUrl: `${env.hubBaseUrl}/api/auth/.well-known/openid-configuration`,
+		};
+	}
+
+	return (
+		deps?.registerInstanceWithHub ?? registerInstanceWithHub
+	)({
+		instanceName: env.serverName,
+		instanceBaseUrl: env.appBaseUrl,
+		redirectUri: env.hubRedirectUri,
+		hubBaseUrl: env.hubBaseUrl,
+	});
+}
+
 export async function initializeHostedBootstrapFromEnv(
 	env = getHostedBootstrapEnv(),
+	deps?: {
+		initializeSetup?: typeof initializeSetup;
+		registerInstanceWithHub?: typeof registerInstanceWithHub;
+	},
 ): Promise<void> {
 	const validated = validateHostedBootstrapEnv(env);
+	const hubRegistration = await resolveHostedHubRegistration(validated, {
+		registerInstanceWithHub: deps?.registerInstanceWithHub,
+	});
 
-	const result = await initializeSetup({
+	const result = await (deps?.initializeSetup ?? initializeSetup)({
 		name: validated.serverName,
 		description: validated.serverDescription || undefined,
 		visibilityMode:
@@ -71,9 +101,9 @@ export async function initializeHostedBootstrapFromEnv(
 		hub: {
 			baseUrl: validated.hubBaseUrl,
 			enabled: true,
-			oidcDiscoveryUrl: `${validated.hubBaseUrl}/api/auth/.well-known/openid-configuration`,
-			clientId: validated.hubClientId,
-			clientSecret: validated.hubClientSecret,
+			oidcDiscoveryUrl: hubRegistration.hubOidcDiscoveryUrl,
+			clientId: hubRegistration.hubClientId,
+			clientSecret: hubRegistration.hubClientSecret,
 			redirectUri: validated.hubRedirectUri,
 			instanceName: validated.serverName,
 			instanceBaseUrl: validated.appBaseUrl,

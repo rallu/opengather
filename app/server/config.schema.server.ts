@@ -24,7 +24,7 @@ export type ConfigValueByKey = {
 	server_approval_mode: "automatic" | "manual";
 	render_locale: string;
 	render_time_zone: string;
-	media_storage_driver: "local";
+	media_storage_driver: "local" | "s3";
 	media_local_root: string;
 	setup_completed: boolean;
 	setup_instance_id: string;
@@ -60,6 +60,7 @@ const approvalModes = new Set<ConfigValueByKey["server_approval_mode"]>([
 
 const mediaStorageDrivers = new Set<ConfigValueByKey["media_storage_driver"]>([
 	"local",
+	"s3",
 ]);
 
 const appEnv = getAppEnv();

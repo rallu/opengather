@@ -99,7 +99,7 @@ export async function getServerConfig(): Promise<{
 	hubInstanceBaseUrl: string;
 	renderLocale: string;
 	renderTimeZone: string;
-	mediaStorageDriver: "local";
+	mediaStorageDriver: "local" | "s3";
 	mediaLocalRoot: string;
 }> {
 	const [

@@ -23,6 +23,12 @@ export type AppEnv = {
 	APP_BASE_URL: string;
 	DISABLE_SSL: string;
 	MEDIA_LOCAL_ROOT: string;
+	MEDIA_S3_ACCESS_KEY_ID: string;
+	MEDIA_S3_BUCKET: string;
+	MEDIA_S3_ENDPOINT: string;
+	MEDIA_S3_FORCE_PATH_STYLE: string;
+	MEDIA_S3_REGION: string;
+	MEDIA_S3_SECRET_ACCESS_KEY: string;
 	OPENGATHER_BOOTSTRAP: string;
 	OPENGATHER_BREAK_GLASS_EMAIL: string;
 	OPENGATHER_BREAK_GLASS_PASSWORD: string;
@@ -56,6 +62,15 @@ export type HostedBootstrapEnv = {
 	ownerHubUserId: string;
 	breakGlassEmail: string;
 	breakGlassPassword: string;
+};
+
+export type MediaS3Env = {
+	accessKeyId: string;
+	bucket: string;
+	endpoint: string;
+	forcePathStyle: boolean;
+	region: string;
+	secretAccessKey: string;
 };
 
 type RuntimeEnv = Partial<DatabaseEnv & HubEnv & AuthEnv & PushEnv & AppEnv>;
@@ -169,6 +184,18 @@ export function getAppEnv(): AppEnv {
 		MEDIA_LOCAL_ROOT:
 			getRuntimeEnvValue("MEDIA_LOCAL_ROOT", "") ||
 			(storageRoot ? path.posix.join(storageRoot, "media") : "./storage/media"),
+		MEDIA_S3_ACCESS_KEY_ID: getRuntimeEnvValue("MEDIA_S3_ACCESS_KEY_ID", ""),
+		MEDIA_S3_BUCKET: getRuntimeEnvValue("MEDIA_S3_BUCKET", ""),
+		MEDIA_S3_ENDPOINT: getRuntimeEnvValue("MEDIA_S3_ENDPOINT", ""),
+		MEDIA_S3_FORCE_PATH_STYLE: getRuntimeEnvValue(
+			"MEDIA_S3_FORCE_PATH_STYLE",
+			"",
+		),
+		MEDIA_S3_REGION: getRuntimeEnvValue("MEDIA_S3_REGION", ""),
+		MEDIA_S3_SECRET_ACCESS_KEY: getRuntimeEnvValue(
+			"MEDIA_S3_SECRET_ACCESS_KEY",
+			"",
+		),
 		OPENGATHER_BOOTSTRAP: getRuntimeEnvValue("OPENGATHER_BOOTSTRAP", ""),
 		OPENGATHER_BREAK_GLASS_EMAIL: getRuntimeEnvValue(
 			"OPENGATHER_BREAK_GLASS_EMAIL",
@@ -201,6 +228,34 @@ export function getAppEnv(): AppEnv {
 		SECRET_KEY_BASE: getRuntimeEnvValue("SECRET_KEY_BASE", ""),
 		STORAGE_ROOT: storageRoot || "./storage",
 	};
+}
+
+export function getMediaS3Env(): MediaS3Env {
+	const appEnv = getAppEnv();
+	const forcePathStyle = appEnv.MEDIA_S3_FORCE_PATH_STYLE.trim().toLowerCase();
+
+	return {
+		accessKeyId: appEnv.MEDIA_S3_ACCESS_KEY_ID.trim(),
+		bucket: appEnv.MEDIA_S3_BUCKET.trim(),
+		endpoint: appEnv.MEDIA_S3_ENDPOINT.trim(),
+		forcePathStyle:
+			forcePathStyle === "1" ||
+			forcePathStyle === "true" ||
+			forcePathStyle === "yes",
+		region: appEnv.MEDIA_S3_REGION.trim(),
+		secretAccessKey: appEnv.MEDIA_S3_SECRET_ACCESS_KEY.trim(),
+	};
+}
+
+export function hasMediaS3Config(): boolean {
+	const env = getMediaS3Env();
+	return Boolean(
+		env.bucket &&
+			env.region &&
+			env.endpoint &&
+			env.accessKeyId &&
+			env.secretAccessKey,
+	);
 }
 
 export function isSslDisabled(): boolean {

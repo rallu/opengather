@@ -4,8 +4,10 @@ import test from "node:test";
 import {
 	getHostedBootstrapEnv,
 	getHubEnv,
+	getMediaS3Env,
 	getPushEnv,
 	hasHubBaseUrlConfigured,
+	hasMediaS3Config,
 	isHostedBootstrapEnabled,
 	hasPushConfig,
 	setRuntimeEnv,
@@ -123,4 +125,25 @@ test("getHostedBootstrapEnv reads hosted bootstrap settings from runtime env", (
 		breakGlassEmail: "admin@example.com",
 		breakGlassPassword: "break-glass-password",
 	});
+});
+
+test("getMediaS3Env reads S3 storage settings from runtime env", () => {
+	setRuntimeEnv({
+		MEDIA_S3_BUCKET: "opengather-media",
+		MEDIA_S3_REGION: "fi-hel1",
+		MEDIA_S3_ENDPOINT: "https://example.upcloudobjects.com",
+		MEDIA_S3_ACCESS_KEY_ID: "access-key",
+		MEDIA_S3_SECRET_ACCESS_KEY: "secret-key",
+		MEDIA_S3_FORCE_PATH_STYLE: "true",
+	});
+
+	assert.deepEqual(getMediaS3Env(), {
+		bucket: "opengather-media",
+		region: "fi-hel1",
+		endpoint: "https://example.upcloudobjects.com",
+		accessKeyId: "access-key",
+		secretAccessKey: "secret-key",
+		forcePathStyle: true,
+	});
+	assert.equal(hasMediaS3Config(), true);
 });

@@ -115,8 +115,8 @@ export async function action({
 
 		if (actionType === "save-media") {
 			const mediaStorageDriver =
-				String(formData.get("mediaStorageDriver") ?? "local") === "local"
-					? "local"
+				String(formData.get("mediaStorageDriver") ?? "local") === "s3"
+					? "s3"
 					: "local";
 			const mediaLocalRoot =
 				String(formData.get("mediaLocalRoot") ?? "").trim() ||

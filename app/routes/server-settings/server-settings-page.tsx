@@ -226,6 +226,7 @@ export function ServerSettingsPage(params: {
 							className="w-full rounded-md border border-input bg-background px-3 py-2"
 						>
 							<option value="local">Local filesystem</option>
+							<option value="s3">S3-compatible object storage</option>
 						</select>
 					</label>
 					<label className="block space-y-2 text-sm">
@@ -240,7 +241,10 @@ export function ServerSettingsPage(params: {
 						/>
 					</label>
 					<p className="text-sm text-muted-foreground">
-						Video processing runs through the separate `npm run worker:media`
+						For `s3`, set `MEDIA_S3_BUCKET`, `MEDIA_S3_REGION`,
+						`MEDIA_S3_ENDPOINT`, `MEDIA_S3_ACCESS_KEY_ID`, and
+						`MEDIA_S3_SECRET_ACCESS_KEY` in the runtime environment. Video
+						processing still runs through the separate `npm run worker:media`
 						process.
 					</p>
 					<Button type="submit">Save media settings</Button>
