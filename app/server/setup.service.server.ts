@@ -78,6 +78,7 @@ export async function initializeSetup(params: {
 	description?: string;
 	visibilityMode: "public" | "registered" | "approval";
 	approvalMode: "automatic" | "manual";
+	mediaStorageDriver?: "local" | "s3";
 	betterAuthUrl: string;
 	adminName: string;
 	adminEmail: string;
@@ -195,6 +196,10 @@ export async function initializeSetup(params: {
 			setConfig("server_description", params.description ?? ""),
 			setConfig("server_visibility_mode", params.visibilityMode),
 			setConfig("server_approval_mode", params.approvalMode),
+			setConfig(
+				"media_storage_driver",
+				params.mediaStorageDriver ?? "local",
+			),
 		]);
 
 		if (params.hub.enabled && params.hub.ownerHubUserId) {

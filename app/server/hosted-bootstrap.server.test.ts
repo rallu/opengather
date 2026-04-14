@@ -88,6 +88,11 @@ test("validateHostedBootstrapEnv accepts Hub bootstrap without pre-provisioned c
 test("initializeHostedBootstrapFromEnv self-registers with Hub when credentials are missing", async () => {
 	let registered = 0;
 	let initialized = 0;
+	process.env.MEDIA_S3_BUCKET = "opengather-media";
+	process.env.MEDIA_S3_REGION = "fi-hel1";
+	process.env.MEDIA_S3_ENDPOINT = "https://objects.example.net";
+	process.env.MEDIA_S3_ACCESS_KEY_ID = "access-key";
+	process.env.MEDIA_S3_SECRET_ACCESS_KEY = "secret-key";
 
 	await initializeHostedBootstrapFromEnv(
 		{
@@ -126,6 +131,7 @@ test("initializeHostedBootstrapFromEnv self-registers with Hub when credentials 
 				initialized += 1;
 				assert.equal(params.hub.clientId, "registered-client-id");
 				assert.equal(params.hub.clientSecret, "registered-client-secret");
+				assert.equal(params.mediaStorageDriver, "s3");
 				return { ok: true };
 			},
 		},
@@ -133,4 +139,9 @@ test("initializeHostedBootstrapFromEnv self-registers with Hub when credentials 
 
 	assert.equal(registered, 1);
 	assert.equal(initialized, 1);
+	delete process.env.MEDIA_S3_BUCKET;
+	delete process.env.MEDIA_S3_REGION;
+	delete process.env.MEDIA_S3_ENDPOINT;
+	delete process.env.MEDIA_S3_ACCESS_KEY_ID;
+	delete process.env.MEDIA_S3_SECRET_ACCESS_KEY;
 });

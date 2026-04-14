@@ -1,5 +1,6 @@
 import {
 	getHostedBootstrapEnv,
+	hasMediaS3Config,
 	hasDatabaseConfig,
 	type HostedBootstrapEnv,
 } from "./env.server.ts";
@@ -98,6 +99,7 @@ export async function initializeHostedBootstrapFromEnv(
 		adminName: "Hosted admin",
 		adminEmail: validated.breakGlassEmail,
 		adminPassword: validated.breakGlassPassword,
+		mediaStorageDriver: hasMediaS3Config() ? "s3" : "local",
 		hub: {
 			baseUrl: validated.hubBaseUrl,
 			enabled: true,
